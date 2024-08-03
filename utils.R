@@ -1,0 +1,19 @@
+demean <- function(x, w = rep(1, length(x))) x - weighted.mean(x, w, na.rm = TRUE)
+
+
+# trimming functions for use with IPW estimators
+trim <- function(x, min = 0.01, max = 1) {
+  x[x<min] <- min
+  x[x>max] <- max
+  x
+}
+
+trimQ <- function(x, low = 0.01, high = 0.99) {
+  min <- quantile(x, low)
+  max <- quantile(x, high)
+  
+  x[x<min] <- min
+  x[x>max] <- max
+  x
+}
+
