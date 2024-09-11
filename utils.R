@@ -17,3 +17,10 @@ trimQ <- function(x, low = 0.01, high = 0.99) {
   x
 }
 
+
+# function to combine lists of vectors with the same structure
+# (used in the parallelized bootstraps)
+comb_list_vec <- function(...) {
+  mapply(c, ..., SIMPLIFY = FALSE)
+}
+
