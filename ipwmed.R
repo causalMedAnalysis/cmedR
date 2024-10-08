@@ -53,13 +53,13 @@ ipwmed_inner <- function(
   d_model1 <- glm(
     as.formula(formula1_string),
     data = df,
-    family = binomial(link = "logit"),
+    family = quasibinomial(link = "logit"),
     weights = base_weights_rsc
   )
   d_model2 <- glm(
     as.formula(formula2_string),
     data = df,
-    family = binomial(link = "logit"),
+    family = quasibinomial(link = "logit"),
     weights = base_weights_rsc
   )
   # enforcing a no-missing-data rule
