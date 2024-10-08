@@ -54,13 +54,13 @@ ipwcde_inner <- function(
   d_model <- glm(
     as.formula(formula_D_string),
     data = df,
-    family = binomial(link = "logit"),
+    family = quasibinomial(link = "logit"),
     weights = base_weights_rsc
   )
   m_model <- glm(
     as.formula(formula_M_string),
     data = df,
-    family = binomial(link = "logit"),
+    family = quasibinomial(link = "logit"),
     weights = base_weights_rsc
   )
   # enforcing a no-missing-data rule
@@ -72,7 +72,7 @@ ipwcde_inner <- function(
   m_model_no_cov <- glm(
     as.formula(paste0(M,"~",D)),
     data = df,
-    family = binomial(link = "logit"),
+    family = quasibinomial(link = "logit"),
     weights = base_weights_rsc
   )
   
