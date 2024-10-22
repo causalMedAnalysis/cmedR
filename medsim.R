@@ -284,7 +284,7 @@ medsim_core <- function(data, num_sim = 2000, cat_list = c("0", "1"), treatment,
   }
 
   if (!is.null(intv_med)) {
-    print("Simulating Interventional Effects")
+    #print("Simulating Interventional Effects")
 
     # Initialize vectors to store overall simulation results
     Y_all_treated_intv <- numeric(num_sim)
@@ -402,7 +402,7 @@ medsim_core <- function(data, num_sim = 2000, cat_list = c("0", "1"), treatment,
     }
 
   } else {
-    print("Simulating Path-Specific Effects")
+    #print("Simulating Path-Specific Effects")
 
     # Initialize vectors to store overall simulation results
     Y_all_treated_pse <- numeric(num_sim)
