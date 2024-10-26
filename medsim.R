@@ -1,10 +1,3 @@
-#' @importFrom parallel detectCores makeCluster clusterExport stopCluster
-#' @importFrom doParallel registerDoParallel
-#' @importFrom doRNG registerDoRNG %dorng%
-#' @importFrom foreach foreach
-#' @importFrom stats as.formula predict quantile rbinom rmultinom rnorm rpois runif sigma
-NULL
-
 #' Simulate Mediated Effects (Core)
 #'
 #' This function simulates mediation effects in a causal inference setting. It handles
@@ -24,7 +17,7 @@ NULL
 #'   weights are not used.
 #'
 #' @return A list of point estimates for the mediation effects.
-#' @export
+#' @noRd
 medsim_core <- function(data, num_sim = 2000, cat_list = c("0", "1"), treatment,
                         intv_med, model_spec, weights = NULL) {
 
@@ -617,6 +610,7 @@ medsim <- function(data, num_sim = 2000, cat_list = c("0", "1"), treatment,
     doRNG::registerDoRNG(seed)
 
     # Initialize a list to store bootstrap results
+    `%dorng%` <- doRNG::`%dorng%`
     bootstrap_results <- foreach::foreach(n = 1:reps, .combine = cbind, .packages = c("dplyr")) %dorng% {
       boot.df <- df[sample(nrow(df), nrow(df), replace = TRUE), ]
       medsim_core(data = boot.df, num_sim = num_sim, cat_list = cat_list, treatment = treatment,
