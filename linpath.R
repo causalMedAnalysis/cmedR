@@ -225,7 +225,7 @@ linpath_inner <- function(
 #' nlsy$std_cesd_age40 <- 
 #'   (nlsy$cesd_age40 - mean(nlsy$cesd_age40)) / 
 #'   sd(nlsy$cesd_age40)
-#' ## Estimate natural effects
+#' ## Estimate path-specific effects
 #' linpath(
 #'   data = nlsy,
 #'   D = "att22",
