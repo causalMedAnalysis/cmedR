@@ -71,14 +71,24 @@ linpath_inner <- function(
     else if (k==1) {
       PSE[[PSE_index]] <- est$NDE - prev_MNDE
       PSE[[n_PSE]] <- est$NIE
-      names(PSE)[PSE_index] <- paste0("D->M",k+1,"~>Y")
+      if (k+1==K) {
+        names(PSE)[PSE_index] <- paste0("D->M",k+1,"->Y")
+      }
+      else {
+        names(PSE)[PSE_index] <- paste0("D->M",k+1,"~>Y")
+      }
       names(PSE)[n_PSE] <- "D->M1~>Y"
       ATE <- est$ATE
     }
     ## 2+ total mediators: all other mediators
     else {
       PSE[[PSE_index]] <- est$NDE - prev_MNDE
-      names(PSE)[PSE_index] <- paste0("D->M",k+1,"~>Y")
+      if (k+1==K) {
+        names(PSE)[PSE_index] <- paste0("D->M",k+1,"->Y")
+      }
+      else {
+        names(PSE)[PSE_index] <- paste0("D->M",k+1,"~>Y")
+      }
       prev_MNDE <- est$NDE
     }
   }
