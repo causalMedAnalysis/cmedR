@@ -199,7 +199,10 @@ ipwcde_inner <- function(
 #'   Parallelized computing, as implemented in this function, requires that you 
 #'   have each of the following R packages installed: `doParallel`, `doRNG`, and 
 #'   `foreach`. (However, you do not need to load/attach these three packages 
-#'   with the `library` function prior to running this function.)
+#'   with the `library` function prior to running this function.) Note that the 
+#'   results of the parallelized bootstrap may differ slightly from the 
+#'   non-parallelized bootstrap, even if you specify the same seed, due to 
+#'   differences in how the seed is processed by the two methods.
 #' @param boot_cores An integer scalar specifying the number of CPU cores on 
 #'   which the parallelized bootstrap will run. This argument only has an effect 
 #'   if you requested a parallelized bootstrap (i.e., only if `boot` is TRUE and 
@@ -368,8 +371,7 @@ ipwcde <- function(
       stop(paste(strwrap("Error: You requested a parallelized bootstrap (boot=TRUE and boot_parallel=TRUE), but the required package 'foreach' has not been installed. Please install this package if you wish to run a parallelized bootstrap."), collapse = "\n"))
     }
     if (!is.null(base_weights_name)) {
-      #######################PLACEHOLDER TEXT#######################
-      warning(paste(strwrap("Warning: You requested a bootstrap, but your design includes base sampling weights. [NOTE TO GEOFF: This is a placeholder. Please insert your warning text regarding bootstrapping with base sampling weights.]"), collapse = "\n"))
+      warning(paste(strwrap("Warning: You requested a bootstrap, but your design includes base sampling weights. Note that this function does not internally rescale sampling weights for use with the bootstrap, and it does not account for any stratification or clustering in your sample design. Failure to properly adjust the bootstrap sampling to account for a complex sample design that requires weighting could lead to invalid inferential statistics."), collapse = "\n"))
     }
   }
   
