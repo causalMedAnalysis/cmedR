@@ -28,9 +28,12 @@ linpath_inner <- function(
     minimal = FALSE
 ) {
   # prep
-  K <- length(M) # number of mediators
+  K <- length(M) # number of mediators (treating multivariate mediators as a single mediator)
   n_PSE <- K + 1 # number of PSEs
   PSE <- rep(NA_real_, n_PSE) # vector to store path-specific effects
+  if (!minimal) {
+    models_y <- vector(mode = "list", length = K) # list to store fitted Y models
+  }
   
   # loop over mediators in reverse order to estimate PSEs
   for (k in rev(seq_len(K))) {
@@ -38,7 +41,7 @@ linpath_inner <- function(
     est <- linmed_inner(
       data = data,
       D = D,
-      M = M[1:k],
+      M = unlist(M[1:k]),
       Y = Y,
       C = C,
       d = d,
@@ -55,6 +58,8 @@ linpath_inner <- function(
       names(PSE) <- c("NDE", "NIE")
       ATE <- est$ATE
       if (!minimal) {
+        models_m <- est$model_m
+        models_y <- est$model_y
         miss_summary <- est$miss_summary
       }
     }
@@ -63,7 +68,10 @@ linpath_inner <- function(
       PSE[[PSE_index]] <- est$NDE
       names(PSE)[PSE_index] <- "D->Y"
       if (!minimal) {
+        models_m <- est$model_m
+        models_y[[k]] <- est$model_y
         miss_summary <- est$miss_summary
+        names(models_y)[k] <- paste0("M1:M",k)
       }
       prev_MNDE <- est$NDE
     }
@@ -79,6 +87,10 @@ linpath_inner <- function(
       }
       names(PSE)[n_PSE] <- "D->M1~>Y"
       ATE <- est$ATE
+      if (!minimal) {
+        models_y[[k]] <- est$model_y
+        names(models_y)[k] <- "M1"
+      }
     }
     ## 2+ total mediators: all other mediators
     else {
@@ -88,6 +100,10 @@ linpath_inner <- function(
       }
       else {
         names(PSE)[PSE_index] <- paste0("D->M",k+1,"~>Y")
+      }
+      if (!minimal) {
+        models_y[[k]] <- est$model_y
+        names(models_y)[k] <- paste0("M1:M",k)
       }
       prev_MNDE <- est$NDE
     }
@@ -104,6 +120,8 @@ linpath_inner <- function(
     out <- list(
       ATE = ATE,
       PSE = PSE,
+      models_m = models_m,
+      models_y = models_y,
       miss_summary = miss_summary
     )
   }
@@ -122,19 +140,57 @@ linpath_inner <- function(
 #' models, to estimate the total effect (ATE) and path-specific effects (PSEs).
 #' 
 #' @details
-#' TEMPORARY PLACEHOLDER
+#' Specifying the `M` Argument:
+#' 
+#' The `M` argument is a list of character vectors identifying the names of the 
+#' mediator variables. This argument is purposely a list of vectors rather than 
+#' simply a vector because it accommodates both univariate and multivariate 
+#' mediators. To explain, let's start with a simple example.
+#' 
+#' Suppose you have two single mediators, named `ever_unemp_age3539` and 
+#' `log_faminc_adj_age3539`, where `ever_unemp_age3539` causally precedes 
+#' `log_faminc_adj_age3539`. In this case, you would use the following syntax: 
+#' `M = list("ever_unemp_age3539", "log_faminc_adj_age3539")`.
+#' 
+#' Now, let's say you have a third mediator, named `m3`. You believe that 
+#' `ever_unemp_age3539` causally precedes both `log_faminc_adj_age3539` and 
+#' `m3`. But you are unwilling to make an assumption about the relative causal 
+#' order of `log_faminc_adj_age3539` and `m3` (whether `log_faminc_adj_age3539` 
+#' causally precedes `m3` or vice versa). In that case, you could treat 
+#' `log_faminc_adj_age3539` and `m3` as a whole, using the following syntax: 
+#' `M = list("ever_unemp_age3539", c("log_faminc_adj_age3539", "m3"))`.
+#' 
+#' Note that the order of the elements in the `c("log_faminc_adj_age3539", "m3")` 
+#' vector does not matter (it could alternatively be written as 
+#' `c("m3", "log_faminc_adj_age3539")`). But the order of the vectors in the 
+#' list does matter. And in this example, the mediator identified by the first 
+#' element in the list, the `"ever_unemp_age3539"` scalar, is assumed to 
+#' causally precede the two mediators collectively identified by the second 
+#' element in the list, the `c("log_faminc_adj_age3539", "m3")` vector.
+#' 
+#' Finally, note that if one of your mediators is a nominal factor variable, we 
+#' recommend that you dummy-encode the levels of the factor and treat the dummy 
+#' variables as a multivariate whole. For instance, let's say that you have a 
+#' fourth mediator, which causally follows `ever_unemp_age3539`, 
+#' `log_faminc_adj_age3539`, and `m3`. This fourth mediator is a nominal 
+#' variable with four levels. If you create numeric dummy variables for three 
+#' levels (omitting a reference level), named `level2`, `level3`, `level4`, 
+#' then you can use the following syntax for the `M` argument:
+#' `M = list("ever_unemp_age3539", c("log_faminc_adj_age3539", "m3"), c("level2","level3","level4"))`.
 #' 
 #' @param data A data frame.
 #' @param D A character scalar identifying the name of the exposure variable in 
 #'   `data`. `D` is a character string, but the exposure variable it identifies 
 #'   must be numeric.
-#' @param M A character vector (of one or more elements) identifying the names 
-#'   of the mediator variables in `data`. The character vector MUST specify the 
-#'   mediators in causal order, starting from the first in the hypothesized 
-#'   causal sequence to the last. If you only specify a single mediator 
-#'   variable, then the function will simply return the natural effects. Also 
-#'   note that `M` is a character vector, but the mediator variable(s) it 
-#'   identifies must each be numeric.
+#' @param M A list of character vectors identifying the names of the mediator 
+#'   variables in `data`. Each element of the list must consist of either (a) a 
+#'   character scalar with the name of a single mediator or (b) a character 
+#'   vector with the names of a group of mediators you wish to treat as a whole. 
+#'   And the elements must be arranged in the list in causal order, starting 
+#'   from the first in the hypothesized causal sequence to the last. Also, note 
+#'   that `M` is a list of character vectors, but the mediator variables they 
+#'   identify must each be numeric. See 'Details' for a guide on specifying the 
+#'   `M` argument.
 #' @param Y A character scalar identifying the name of the outcome variable in 
 #'   `data`. `Y` is a character string, but the outcome variable it identifies 
 #'   must be numeric.

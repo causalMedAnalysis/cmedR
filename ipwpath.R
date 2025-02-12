@@ -3,7 +3,15 @@
 #' 
 #' @description
 #' Internal function used within `ipwpath()`. See the `ipwpath()` function 
-#' documentation for a description of shared function arguments.
+#' documentation for a description of shared function arguments. Here, we will 
+#' only document the one argument that is not shared by `ipwpath_inner()` and 
+#' `ipwpath()`: the `minimal` argument.
+#' 
+#' @param minimal A logical scalar indicating whether the function should 
+#'   return only a minimal set of output. The `ipwpath()` function uses the 
+#'   default of FALSE when calling `ipwpath_inner()` to generate the point 
+#'   point estimates and sets the argument to TRUE when calling `ipwpath_inner()` 
+#'   to perform the bootstrap.
 #' 
 #' @noRd
 ipwpath_inner <- function(
@@ -16,12 +24,32 @@ ipwpath_inner <- function(
     stabilize = TRUE,
     censor = TRUE,
     censor_low = 0.01,
-    censor_high = 0.99
+    censor_high = 0.99,
+    minimal = FALSE
 ) {
   # prep
-  K <- length(M) # number of mediators
+  K <- length(M) # number of mediators (treating multivariate mediators as a single mediator)
   n_PSE <- K + 1 # number of PSEs
   PSE <- rep(NA_real_, n_PSE) # vector to store path-specific effects
+  if (!minimal) {
+    # matrix to store weights3 for each k iteration
+    # (weights1 and weights2 will be identical for each k iteration)
+    weights3 <- matrix(NA_real_, nrow = nrow(data), ncol = K)
+    # list to store the fitted second D models
+    # (the first D models will be identical for each k iteration)
+    models_d2 <- vector(mode = "list", length = K)
+  }
+  
+  
+  # build additive D model 1 formula: f(D|C)
+  # (will be the same for all iterations of the loop over mediators below)
+  if (is.null(C)) {
+    predictors1_D <- "1"
+  }
+  else {
+    predictors1_D <- paste(C, collapse = " + ")
+  }
+  formula1_D_string <- paste(D, "~", predictors1_D)
   
   
   # loop over mediators in reverse order to estimate PSEs
@@ -29,24 +57,15 @@ ipwpath_inner <- function(
     ## PSE index
     PSE_index <- K - k + 1
     
-    ## build model formulae (each model will be additive)
-    ### D model 1 formula: f(D|C)
-    if (is.null(C)) {
-      predictors1_D <- "1"
-    }
-    else {
-      predictors1_D <- paste(C, collapse = " + ")
-    }
-    formula1_D_string <- paste(D, "~", predictors1_D)
-    ### D model 2 formula: s(D|C,M)
-    predictors2_D <- paste(c(M[1:k],C), collapse = " + ")
+    ## build additive D model 2 formula: s(D|C,M)
+    predictors2_D <- paste(c(unlist(M[1:k]),C), collapse = " + ")
     formula2_D_string <- paste(D, "~", predictors2_D)
     
     ## estimate multivariate natural effects
     est <- ipwmed_inner(
       data = data,
       D = D,
-      M = M[1:k],
+      M = unlist(M[1:k]),
       Y = Y,
       formula1_string = formula1_D_string,
       formula2_string = formula2_D_string,
@@ -54,7 +73,8 @@ ipwpath_inner <- function(
       stabilize = stabilize,
       censor = censor,
       censor_low = censor_low,
-      censor_high = censor_high
+      censor_high = censor_high,
+      minimal = minimal
     )
     
     ## special case: only one total mediator
@@ -62,12 +82,27 @@ ipwpath_inner <- function(
       PSE <- c(est$NDE, est$NIE)
       names(PSE) <- c("NDE", "NIE")
       ATE <- est$ATE
+      if (!minimal) {
+        weights1 <- est$weights1
+        weights2 <- est$weights2
+        weights3 <- est$weights3
+        model_d1 <- est$model_d1
+        models_d2 <- est$model_d2
+      }
     }
     
     ## 2+ total mediators: last mediator
     else if (k==K) {
       PSE[[PSE_index]] <- est$NDE
       names(PSE)[PSE_index] <- "D->Y"
+      if (!minimal) {
+        weights1 <- est$weights1
+        weights2 <- est$weights2
+        weights3[,k] <- est$weights3
+        model_d1 <- est$model_d1
+        models_d2[[k]] <- est$model_d2
+        colnames(weights3)[k] <- names(models_d2)[k] <- paste0("M1:M",k)
+      }
       prev_MNDE <- est$NDE
     }
     
@@ -83,6 +118,11 @@ ipwpath_inner <- function(
       }
       names(PSE)[n_PSE] <- "D->M1~>Y"
       ATE <- est$ATE
+      if (!minimal) {
+        weights3[,k] <- est$weights3
+        models_d2[[k]] <- est$model_d2
+        colnames(weights3)[k] <- names(models_d2)[k] <- "M1"
+      }
     }
     
     ## 2+ total mediators: all other mediators
@@ -94,16 +134,34 @@ ipwpath_inner <- function(
       else {
         names(PSE)[PSE_index] <- paste0("D->M",k+1,"~>Y")
       }
+      if (!minimal) {
+        weights3[,k] <- est$weights3
+        models_d2[[k]] <- est$model_d2
+        colnames(weights3)[k] <- names(models_d2)[k] <- paste0("M1:M",k)
+      }
       prev_MNDE <- est$NDE
     }
   }
   
   
   # compile and output
-  out <- list(
-    ATE = ATE,
-    PSE = PSE
-  )
+  if (minimal) {
+    out <- list(
+      ATE = ATE,
+      PSE = PSE
+    )
+  }
+  else {
+    out <- list(
+      ATE = ATE,
+      PSE = PSE,
+      weights1 = weights1,
+      weights2 = weights2,
+      weights3 = weights3,
+      model_d1 = model_d1,
+      models_d2 = models_d2
+    )
+  }
   return(out)
 }
 
@@ -186,6 +244,31 @@ ipwpath_inner <- function(
 #' \item{PSE}{A numeric vector, of length `length(M)+1`, with the estimated 
 #'   path-specific effects for the exposure contrast `d - dstar`. The vector is 
 #'   named with the path each effect describes.}
+#' \item{weights1}{A numeric vector with the final inverse probability weights 
+#'   for w_1 (as defined in the book), used to estimate the multivariate natural 
+#'   effects for each set of mediators, M_1 to M_k.}
+#' \item{weights2}{A numeric vector with the final inverse probability weights 
+#'   for w_2 (as defined in the book), used to estimate the multivariate natural 
+#'   effects for each set of mediators, M_1 to M_k.}
+#' \item{weights3}{A numeric matrix with the final inverse probability weights 
+#'   for w_3 (as defined in the book), used to estimate the multivariate natural 
+#'   effects for each set of mediators, M_1 to M_k. Unlike w_1 and w_2, the w_3 
+#'   weights are unique for each set of mediators. Therefore, the matrix 
+#'   consists of `length(M)` columns, with each column containing the w_3 
+#'   weights for mediators M_1 to M_k.}
+#' \item{model_d1}{The model object from the first fitted exposure model 
+#'   (of the exposure given baseline covariates, denoted in the book as f(D|C)), 
+#'   used in the estimation of the multivariate natural effects for each set of 
+#'   mediators, M_1 to M_k. Since the predictors in the model do not include the 
+#'   mediators, the same model is used for each set of mediators, and there is 
+#'   only one model object returned.}
+#' \item{models_d2}{A list of the model objects from the second fitted exposure 
+#'   model (of the exposure given baseline covariates and the mediator(s), 
+#'   denoted in the book as s(D|C,M)), used in the estimation of the 
+#'   multivariate natural effects for each set of mediators, M_1 to M_k. Since 
+#'   the predictors in the model do include the mediators, a different model is 
+#'   fitted for each set of mediators, and the returned object is a list of 
+#'   model objects.}
 #' 
 #' If you request the bootstrap (by setting the `boot` argument to TRUE), then 
 #' the function returns all of the elements listed above, as well as the 
@@ -410,7 +493,8 @@ ipwpath <- function(
     stabilize = stabilize,
     censor = censor,
     censor_low = censor_low,
-    censor_high = censor_high
+    censor_high = censor_high,
+    minimal = FALSE
   )
   
   
@@ -432,7 +516,8 @@ ipwpath <- function(
         stabilize = stabilize,
         censor = censor,
         censor_low = censor_low,
-        censor_high = censor_high
+        censor_high = censor_high,
+        minimal = TRUE
       ) |>
         unlist()
       
