@@ -177,7 +177,44 @@ ipwpath_inner <- function(
 #' total effect (ATE) and path-specific effects (PSEs).
 #' 
 #' @details
-#' TEMPORARY PLACEHOLDER
+#' Specifying the `M` Argument:
+#' 
+#' The `M` argument is a list of character vectors identifying the names of the 
+#' mediator variables. This argument is purposely a list of vectors rather than 
+#' simply a vector because it accommodates both univariate and multivariate 
+#' mediators. To explain, let's start with a simple example.
+#' 
+#' Suppose you have two single mediators, named `ever_unemp_age3539` and 
+#' `log_faminc_adj_age3539`, where `ever_unemp_age3539` causally precedes 
+#' `log_faminc_adj_age3539`. In this case, you would use the following syntax: 
+#' `M = list("ever_unemp_age3539", "log_faminc_adj_age3539")`.
+#' 
+#' Now, let's say you have a third mediator, named `m3`. You believe that 
+#' `ever_unemp_age3539` causally precedes both `log_faminc_adj_age3539` and 
+#' `m3`. But you are unwilling to make an assumption about the relative causal 
+#' order of `log_faminc_adj_age3539` and `m3` (whether `log_faminc_adj_age3539` 
+#' causally precedes `m3` or vice versa). In that case, you could treat 
+#' `log_faminc_adj_age3539` and `m3` as a whole, using the following syntax: 
+#' `M = list("ever_unemp_age3539", c("log_faminc_adj_age3539", "m3"))`.
+#' 
+#' Note that the order of the elements in the `c("log_faminc_adj_age3539", "m3")` 
+#' vector does not matter (it could alternatively be written as 
+#' `c("m3", "log_faminc_adj_age3539")`). But the order of the vectors in the 
+#' list does matter. And in this example, the mediator identified by the first 
+#' element in the list, the `"ever_unemp_age3539"` scalar, is assumed to 
+#' causally precede the two mediators collectively identified by the second 
+#' element in the list, the `c("log_faminc_adj_age3539", "m3")` vector.
+#' 
+#' Finally, note that if one of your mediators is a nominal factor variable, we 
+#' recommend that you dummy-encode the levels of the factor and treat the dummy 
+#' variables as a multivariate whole. For instance, let's say that you have a 
+#' fourth mediator, which causally follows `ever_unemp_age3539`, 
+#' `log_faminc_adj_age3539`, and `m3`. This fourth mediator is a nominal 
+#' variable with four levels. If you create numeric dummy variables for three 
+#' levels (omitting a reference level), named `level2`, `level3`, `level4`, 
+#' then you can use the following syntax for the `M` argument:
+#' `M = list("ever_unemp_age3539", c("log_faminc_adj_age3539", "m3"), 
+#'  c("level2","level3","level4"))`.
 #' 
 #' @param data A data frame.
 #' @param D A character scalar identifying the name of the exposure variable in 
