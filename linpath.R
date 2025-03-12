@@ -248,7 +248,14 @@ linpath_inner <- function(
 #' \item{miss_summary}{A data frame with counts of non-missing (`nmiss`) and 
 #'   missing (`miss`) observations for each of the variables specified for `D`, 
 #'   `M`, `Y`, and `C`.}
-#' 
+#' \item{model_m}{A list of fitted mediator models, where each element corresponds 
+#' to a mediator variable. If multiple mediators are included, the list stores 
+#' separate models for each.}
+#' \item{models_y}{A list of models regressing the outcome on the treatment, 
+#' controls, and an increasing sequence of mediators. The first model (`M1`) 
+#' includes only the first mediator,the second (`M1:M2`) includes the first two, 
+#' the third (`M1:M3`) includes the first three, and so on.}
+#'
 #' If you request the bootstrap (by setting the `boot` argument to TRUE), then 
 #' the function returns all of the elements listed above, as well as the 
 #' following additional elements:
