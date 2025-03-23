@@ -248,7 +248,7 @@ sim_nat <- medsim(
 )
 ```
 
-#### Estimate Interventional and Controlled Direct Effects
+#### Estimate Interventional and Controlled Direct Effects, Include Bootstrap CIs and P-values
 
 ```r
 # Specify models for the mediator, exposure-induced confounder, and the outcome
