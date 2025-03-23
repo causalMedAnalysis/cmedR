@@ -5,9 +5,6 @@ This repository contains R functions for conducting causal mediation analysis us
 ## Table of Contents
 - [linmed – mediation analysis using linear models](#linmed--mediation-analysis-using-linear-models)
 
----
-
-If you'd like, I can help generate anchor links for each function's documentation once you've added more (just send their roxygen2 blocks like you did with `linmed()`), and I’ll keep the table updated. Let me know if you’d like a full draft of the README, including overview, install, citation, etc., as well.
 
 ## `linmed()`: mediation analysis using linear models
 
