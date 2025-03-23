@@ -84,7 +84,7 @@ If `boot = TRUE`, the list also includes:
 
 ```r
 linmed(
-  data = nlsy1,
+  data = nlsy,
   D = "att22",
   M = "ever_unemp_age3539",
   Y = "std_cesd_age40",
@@ -98,7 +98,7 @@ linmed(
 
 ```r
 linmed(
-  data = nlsy1,
+  data = nlsy,
   D = "att22",
   M = "ever_unemp_age3539",
   Y = "std_cesd_age40",
@@ -115,7 +115,7 @@ linmed(
 
 ```r
 linmed(
-  data = nlsy1,
+  data = nlsy,
   D = "att22",
   M = "ever_unemp_age3539",
   Y = "std_cesd_age40",
@@ -130,7 +130,7 @@ linmed(
 
 ```r
 linmed(
-  data = nlsy2,
+  data = nlsy,
   D = "att22",
   M = c("ever_unemp_age3539", "log_faminc_adj_age3539"),
   Y = "std_cesd_age40",
@@ -144,7 +144,7 @@ linmed(
 
 ```r
 linmed(
-  data = nlsy1,
+  data = nlsy,
   D = "att22",
   M = "ever_unemp_age3539",
   Y = "std_cesd_age40",
@@ -161,7 +161,7 @@ linmed(
 
 ```r
 linmed(
-  data = nlsy1,
+  data = nlsy,
   D = "att22",
   M = "ever_unemp_age3539",
   Y = "std_cesd_age40",
