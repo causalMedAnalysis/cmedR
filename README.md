@@ -2,8 +2,14 @@
 This repository contains R functions for conducting causal mediation analysis using the methods outlined in Wodtke and Zhou "Causal Mediation Analysis."
 
 
+## Table of Contents
+- [linmed() – Product-of-Coefficients Estimator](#linmed--product-of-coefficients-estimator)
 
-## `linmed()`: mediation analysis using linear models
+---
+
+If you'd like, I can help generate anchor links for each function's documentation once you've added more (just send their roxygen2 blocks like you did with `linmed()`), and I’ll keep the table updated. Let me know if you’d like a full draft of the README, including overview, install, citation, etc., as well.
+
+## `linmed()`: mediation analysis using linear models(#linmed)
 
 The `linmed()` function estimates **natural direct**, **natural indirect**, **controlled direct**, and **total effects** using linear models. It supports mediation analysis with a single mediator and with multiple mediators, and includes built-in support for **nonparametric bootstrapping** with optional **parallel computation**.
 
