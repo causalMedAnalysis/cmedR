@@ -4,13 +4,14 @@ This repository contains R functions for conducting causal mediation analysis us
 
 ## Table of Contents
 - [linmed – mediation analysis using linear models](#linmed--mediation-analysis-using-linear-models)
+- [medsim – mediation analysis using a simulation approach](#medsim--causal-mediation-analysis-using-a-simulation-approach)
 
 
-## `linmed()`: mediation analysis using linear models
+## `linmed`: mediation analysis using linear models
 
-The `linmed()` function estimates **natural direct**, **natural indirect**, **controlled direct**, and **total effects** using linear models. It supports mediation analysis with a single mediator and with multiple mediators, and includes built-in support for **nonparametric bootstrapping** with optional **parallel computation**.
+The `linmed` function estimates **natural direct**, **natural indirect**, **controlled direct**, and **total effects** using linear models. It supports mediation analysis with a single mediator and with multiple mediators, and includes built-in support for **nonparametric bootstrapping** with optional **parallel computation**.
 
-### Function Signature
+### Function
 
 ```r
 linmed(
@@ -173,3 +174,56 @@ linmed(
   boot_parallel = TRUE
 )
 ```
+
+Thanks! With those additional arguments and the updated return description, here's the **revised and complete user-facing documentation** for `medsim()` in Markdown format for your GitHub README.
+
+---
+
+## `medsim`: causal mediation analysis using a simulation approach
+
+The `medsim` function estimates natural direct and indirect effects, interventional direct and indirect effects, controlled direct effects, and path-specific effects using a simulation approach. It supports a wide variety of models (including the entire family of GLMs, multinomial logit, and ordered logistic), and includes optional support for bootstrapping with parallel processing.
+
+### Function
+
+```r
+medsim(
+  data,
+  num_sim = 2000,
+  cat_list,
+  treatment,
+  intv_med,
+  model_spec,
+  weights = NULL,
+  boot = FALSE,
+  reps = 100,
+  resv_core = 1,
+  seed = NULL
+)
+```
+
+### Arguments
+
+| Argument      | Description |
+|---------------|-------------|
+| `data`        | A data frame containing all variables referenced in the model specifications. |
+| `num_sim`     | Integer. Number of Monte Carlo simulation draws (default: `2000`). |
+| `cat_list`    | Character vector of treatment levels to compare (default: `c(0, 1)`). |
+| `treatment`   | Name of the treatment variable (string). |
+| `intv_med`    | A list specifying the intervention on the mediators. Set to `NULL` if interventional or controlled direct effects are not of interest. |
+| `model_spec`  | A list of lists defining the models for the mediators and outcome. Each model must include: <br> • `func`: model-fitting function (e.g., `"glm"`, `"polr"`) <br> • `formula`: model formula <br> • `args`: (optional) list of additional arguments to pass to the function. |
+| `weights`     | (Optional) Name of the variable containing weights to use in model fitting. If `NULL`, no weights are applied. |
+| `boot`        | Logical. If `TRUE`, performs nonparametric bootstrap to obtain confidence intervals and p-values (default: `FALSE`). Requires `doParallel`, `doRNG`, and `foreach`. |
+| `reps`        | Integer. Number of bootstrap replications (default: `100`). |
+| `resv_core`   | Integer. Number of CPU cores to reserve (i.e., not use) when bootstrapping via parallel processing (default: `1`). |
+| `seed`        | Integer or `NULL`. Seed for reproducibility. |
+
+### Returns
+
+- If `boot = FALSE`:  
+  A **list** of point estimates for the mediation effects of interest.
+
+- If `boot = TRUE`:  
+  A **data frame** containing:
+  - Point estimates  
+  - 95% bootstrap confidence intervals  
+  - P-values from test of no effect
