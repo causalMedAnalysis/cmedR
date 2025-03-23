@@ -3,8 +3,8 @@ This repository contains R functions for conducting causal mediation analysis us
 
 
 ## Table of Contents
-- [linmed – mediation analysis using linear models](#linmed--mediation-analysis-using-linear-models)
-- [medsim – mediation analysis using a simulation approach](#medsim--causal-mediation-analysis-using-a-simulation-approach)
+- [linmed – mediation analysis using linear models](#linmed-mediation-analysis-using-linear-models)
+- [medsim – mediation analysis using a simulation approach](#medsim-causal-mediation-analysis-using-a-simulation-approach)
 
 
 ## `linmed`: mediation analysis using linear models
