@@ -9,7 +9,7 @@ This repository contains R functions for conducting causal mediation analysis us
 
 ## `linmed`: mediation analysis using linear models
 
-The `linmed` function estimates **natural direct**, **natural indirect**, **controlled direct**, and **total effects** using linear models. It supports mediation analysis with a single mediator and with multiple mediators, and includes built-in support for **nonparametric bootstrapping** with optional **parallel computation**.
+The `linmed` function estimates natural direct, natural indirect, controlled direct, and total effects using linear models. It supports mediation analysis with a single mediator and with multiple mediators, and includes built-in support for nonparametric bootstrapping with optional parallel computation.
 
 ### Function
 
