@@ -571,7 +571,7 @@ ipwcde(
 | `D` | Name of the exposure variable (character). Must be numeric and binary (0/1). |
 | `M` | Name of the single mediator variable (character). Must be numeric and binary (0/1). |
 | `Y` | Name of the numeric outcome variable (character). |
-| `m` | Value to set the mediator to for CDE estimation (numeric scalar). |
+| `m` | Numeric value at which to fix the mediator for CDE estimation. |
 | `formula_D_string` | A string representing the formula for a logit model for the exposure, e.g., `"att22 ~ female + black + paredu"` (used to estimate _f(D \| C)_). |
 | `formula_M_string` | A string representing the formula for a logit model for the mediator, e.g., `"M ~ D + C"` (used to estimate _g(M \| C, D)_). |
 | `base_weights_name` | (Optional) Name of the base weights variable. |
