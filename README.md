@@ -7,6 +7,7 @@ This repository contains R functions for conducting causal mediation analysis us
 - [medsim – mediation analysis using a simulation approach](#medsim-mediation-analysis-using-a-simulation-approach)
 - [ipwmed – mediation analysis using inverse probability weights](#ipwmed-mediation-analysis-using-inverse-probability-weights)
 - [impcde – a regression imputation estimator for controlled direct effects](#impcde-a-regression-imputation-estimator-for-controlled-direct-effects)
+- [ipwcde – an inverse probability weighting estimator for controlled direct effects](#ipwcde-an-inverse-probability-weighting-estimator-for-controlled-direct-effects)
 
 
 ## `linmed`: mediation analysis using linear models
