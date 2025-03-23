@@ -8,8 +8,6 @@ This repository contains R functions for conducting causal mediation analysis us
 - [ipwmed – mediation analysis using inverse probability weights](#ipwmed-mediation-analysis-using-inverse-probability-weights)
 
 
-## `ipwmed`: causal mediation analysis using inverse probability weights
-
 ## `linmed`: mediation analysis using linear models
 
 The `linmed` function estimates natural direct, natural indirect, controlled direct, and total effects using linear models. It supports mediation analysis with a single mediator and with multiple mediators, and includes built-in support for nonparametric bootstrapping with optional parallel computation.
@@ -333,8 +331,8 @@ ipwmed(
 | `D` | Name of the exposure variable (character scalar; must identify a binary variable). |
 | `M` | Name(s) of mediator variable(s); a character vector (length 1 or more) identifying numeric variables. |
 | `Y` | Name of the outcome variable (character scalar; must identify a numeric variable). |
-| `formula1_string` | A formula (as a string) for estimating the probability of exposure given baseline covariates, i.e., _f(D \| C)_. |
-| `formula2_string` | A formula (as a string) for estimating the probability of exposure given baseline covariates and mediators, i.e., _s(D \| C, M)_. |
+| `formula1_string` | A formula (as a string) for estimating the probability of exposure given baseline covariates using a logit model, i.e., _f(D \| C)_. |
+| `formula2_string` | A formula (as a string) for estimating the probability of exposure given baseline covariates and mediators using a logit model, i.e., _s(D \| C, M)_. |
 | `base_weights_name` | (Optional) Name of a variable containing sampling or base weights. |
 | `stabilize` | Logical. If `TRUE`, uses stabilized weights (default: `FALSE`). |
 | `censor` | Logical. If `TRUE`, applies weight censoring (default: `FALSE`). |
@@ -352,7 +350,7 @@ ipwmed(
   A **list** with the following elements:
   - `ATE`, `NDE`, `NIE`: Estimated effects
   - `weights1`, `weights2`, `weights3`: the inverse probability weights
-  - `model_d1`, `model_d2`: Fitted GLMs from `formula1_string` and `formula2_string`
+  - `model_d1`, `model_d2`: Fitted logit models from `formula1_string` and `formula2_string`
 
 - If `boot = TRUE`, the return includes the above, plus:
   - `ci_ATE`, `ci_NDE`, `ci_NIE`: Bootstrap confidence intervals
@@ -361,7 +359,7 @@ ipwmed(
 
 ### Examples
 
-#### Example 1: Single Mediator
+#### Example 1: Natural Effects Through a Single Mediator
 
 ```r
 ipw_nat <- ipwmed(
@@ -374,7 +372,7 @@ ipw_nat <- ipwmed(
 )
 ```
 
-#### Example 2: Multiple Mediators
+#### Example 2: Natural Effects Through Multiple Mediators
 
 ```r
 ipw_mnat <- ipwmed(
@@ -387,7 +385,7 @@ ipw_mnat <- ipwmed(
 )
 ```
 
-#### Example 3: Bootstrapped Estimates
+#### Example 3: Using the Bootstrap
 
 ```r
 ipw_nat_boot <- ipwmed(
@@ -403,7 +401,7 @@ ipw_nat_boot <- ipwmed(
 )
 ```
 
-#### Example 4: Parallel Bootstrap
+#### Example 4: Parallelizing the Bootstrap
 
 ```r
 ipw_nat_bootpar <- ipwmed(
