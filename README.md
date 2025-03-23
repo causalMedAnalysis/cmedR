@@ -175,9 +175,6 @@ linmed(
 )
 ```
 
-Thanks! With those additional arguments and the updated return description, here's the **revised and complete user-facing documentation** for `medsim()` in Markdown format for your GitHub README.
-
----
 
 ## `medsim`: causal mediation analysis using a simulation approach
 
