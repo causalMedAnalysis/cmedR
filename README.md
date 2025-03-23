@@ -4,8 +4,11 @@ This repository contains R functions for conducting causal mediation analysis us
 
 ## Table of Contents
 - [linmed – mediation analysis using linear models](#linmed-mediation-analysis-using-linear-models)
-- [medsim – mediation analysis using a simulation approach](#medsim-causal-mediation-analysis-using-a-simulation-approach)
+- [medsim – mediation analysis using a simulation approach](#medsim-mediation-analysis-using-a-simulation-approach)
+- [ipwmed – mediation analysis using inverse probability weights](#ipwmed-mediation-analysis-using-inverse-probability-weights)
 
+
+## `ipwmed`: causal mediation analysis using inverse probability weights
 
 ## `linmed`: mediation analysis using linear models
 
@@ -174,7 +177,7 @@ linmed(
 ```
 
 
-## `medsim`: causal mediation analysis using a simulation approach
+## `medsim`: mediation analysis using a simulation approach
 
 The `medsim` function estimates natural direct and indirect effects, interventional direct and indirect effects, controlled direct effects, and path-specific effects using a simulation approach. It supports a wide variety of models (including the entire family of GLMs, multinomial logit, and ordered logistic), and includes optional support for bootstrapping with parallel processing.
 
@@ -293,3 +296,126 @@ sim_cde <- medsim(
 )
 ```
 
+
+## `ipwmed`: mediation analysis using inverse probability weights
+
+The `ipwmed` function implements the inverse probability weighting (IPW) estimator for the total effect, natural direct effect, and natural indirect effect. This function supports both univariate and multivariate mediators and includes built-in support for bootstrap inference and parallelized computation.
+
+### Function
+
+```r
+ipwmed(
+  data,
+  D,
+  M,
+  Y,
+  formula1_string,
+  formula2_string,
+  base_weights_name = NULL,
+  stabilize = FALSE,
+  censor = FALSE,
+  censor_low = 0.01,
+  censor_high = 0.99,
+  boot = FALSE,
+  boot_reps = 1000,
+  boot_conf_level = 0.95,
+  boot_seed = NULL,
+  boot_parallel = FALSE,
+  boot_cores = NULL
+)
+```
+
+### Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `data` | A data frame. |
+| `D` | Name of the exposure variable (character scalar; must identify a binary variable). |
+| `M` | Name(s) of mediator variable(s); a character vector (length 1 or more) identifying numeric variables. |
+| `Y` | Name of the outcome variable (character scalar; must identify a numeric variable). |
+| `formula1_string` | A formula (as a string) for estimating the probability of exposure given baseline covariates, i.e., _f(D \| C)_. |
+| `formula2_string` | A formula (as a string) for estimating the probability of exposure given baseline covariates and mediators, i.e., _s(D \| C, M)_. |
+| `base_weights_name` | (Optional) Name of a variable containing sampling or base weights. |
+| `stabilize` | Logical. If `TRUE`, uses stabilized weights (default: `FALSE`). |
+| `censor` | Logical. If `TRUE`, applies weight censoring (default: `FALSE`). |
+| `censor_low`, `censor_high` | Quantile cutoffs for censoring weights (default: 0.01 and 0.99, respectively). |
+| `boot` | Logical. If `TRUE`, performs a bootstrap to return confidence intervals and p-values (default: `FALSE`). |
+| `boot_reps` | Number of bootstrap replications (default: `1000`). |
+| `boot_conf_level` | Confidence level for bootstrap intervals (default: `0.95`). |
+| `boot_seed` | Integer seed for reproducibility. |
+| `boot_parallel` | Logical. If `TRUE`, parallelizes the bootstrap (requires `doParallel`, `doRNG`, and `foreach`). |
+| `boot_cores` | Number of CPU cores for parallel bootstrap. If `NULL`, defaults to available cores minus 2. |
+
+### Returns
+
+- If `boot = FALSE`:
+  A **list** with the following elements:
+  - `ATE`, `NDE`, `NIE`: Estimated effects
+  - `weights1`, `weights2`, `weights3`: the inverse probability weights
+  - `model_d1`, `model_d2`: Fitted GLMs from `formula1_string` and `formula2_string`
+
+- If `boot = TRUE`, the return includes the above, plus:
+  - `ci_ATE`, `ci_NDE`, `ci_NIE`: Bootstrap confidence intervals
+  - `pvalue_ATE`, `pvalue_NDE`, `pvalue_NIE`: Two-sided p-values
+  - `boot_ATE`, `boot_NDE`, `boot_NIE`: Vectors of replicate bootstrap estimates
+
+### Examples
+
+#### Example 1: Single Mediator
+
+```r
+ipw_nat <- ipwmed(
+  data = nlsy,
+  D = "att22",
+  M = "ever_unemp_age3539",
+  Y = "std_cesd_age40",
+  formula1_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3",
+  formula2_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3+ever_unemp_age3539"
+)
+```
+
+#### Example 2: Multiple Mediators
+
+```r
+ipw_mnat <- ipwmed(
+  data = nlsy,
+  D = "att22",
+  M = c("ever_unemp_age3539", "log_faminc_adj_age3539"),
+  Y = "std_cesd_age40",
+  formula1_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3",
+  formula2_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3+ever_unemp_age3539+log_faminc_adj_age3539"
+)
+```
+
+#### Example 3: Bootstrapped Estimates
+
+```r
+ipw_nat_boot <- ipwmed(
+  data = nlsy,
+  D = "att22",
+  M = "ever_unemp_age3539",
+  Y = "std_cesd_age40",
+  formula1_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3",
+  formula2_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3+ever_unemp_age3539",
+  boot = TRUE,
+  boot_reps = 2000,
+  boot_seed = 1234
+)
+```
+
+#### Example 4: Parallel Bootstrap
+
+```r
+ipw_nat_bootpar <- ipwmed(
+  data = nlsy,
+  D = "att22",
+  M = "ever_unemp_age3539",
+  Y = "std_cesd_age40",
+  formula1_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3",
+  formula2_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3+ever_unemp_age3539",
+  boot = TRUE,
+  boot_reps = 2000,
+  boot_seed = 1234,
+  boot_parallel = TRUE
+)
+```
