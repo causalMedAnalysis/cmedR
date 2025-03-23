@@ -76,8 +76,6 @@ If `boot = TRUE`, the list also includes:
 - `pvalue_ATE`, `pvalue_NDE`, `pvalue_NIE`, `pvalue_CDE`: Bootstrap-based p-values from tests of no effect.
 - `boot_ATE`, `boot_NDE`, `boot_NIE`, `boot_CDE`: Bootstrap replicate estimates.
 
----
-
 ### Examples
 
 #### Single Mediator, No Interactions
@@ -224,3 +222,74 @@ medsim(
   - Point estimates  
   - 95% bootstrap confidence intervals  
   - P-values from test of no effect
+
+### Examples
+
+#### Estimate Natural Direct and Indirect Effects
+
+```r
+# Specify models for M (logit) and Y (normal linear)
+formula_M <- paste(M, "~", paste(c(D, C), collapse = " + "))
+formula_Y <- paste(Y, "~", paste(c(D, M, C), collapse = " + "))
+
+specs <- list(
+  list(func = "glm", formula = as.formula(formula_M), args = list(family = "binomial")),
+  list(func = "lm", formula = as.formula(formula_Y))
+)
+
+# Compute estimates
+sim_nat <- medsim(
+  data = nlsy,
+  num_sim = 1000,
+  treatment = D,
+  intv_med = NULL,
+  model_spec = specs,
+  seed = 60637
+)
+```
+
+#### Estimate Interventional and Controlled Direct Effects
+
+```r
+# Specify models for the mediator, exposure-induced confounder, and the outcome
+Lform <- ever_unemp_age3539 ~ att22 * (female + black + hispan +
+  paredu + parprof + parinc_prank + famsize + afqt3)
+
+Mform <- log_faminc_adj_age3539 ~ att22 * (female + black + hispan +
+  paredu + parprof + parinc_prank + famsize + afqt3)
+
+Yform <- std_cesd_age40 ~ (log_faminc_adj_age3539 * att22) *
+  (female + black + hispan + paredu + parprof + parinc_prank +
+   famsize + afqt3 + ever_unemp_age3539)
+
+specs <- list(
+  list(func = "glm", formula = as.formula(Lform), args = list(family = "binomial")),
+  list(func = "lm", formula = as.formula(Mform)),
+  list(func = "lm", formula = as.formula(Yform))
+)
+
+# Estimate interventional effects
+sim_ie <- medsim(
+  data = nlsy,
+  num_sim = 1000,
+  treatment = D,
+  intv_med = M,
+  model_spec = specs,
+  boot = TRUE,
+  reps = 2000,
+  seed = 60637
+)
+
+# Estimate controlled direct effect setting M (income) to log(50000)
+sim_cde <- medsim(
+  data = nlsy,
+  num_sim = 1000,
+  treatment = D,
+  intv_med = paste0(M, "=log(5e4)"),
+  model_spec = specs,
+  boot = TRUE,
+  reps = 2000,
+  seed = 60637
+)
+```
+
