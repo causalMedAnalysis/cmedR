@@ -359,7 +359,7 @@ ipwmed(
 
 ### Examples
 
-#### Example 1: Natural Effects Through a Single Mediator
+#### Natural Effects Through a Single Mediator
 
 ```r
 ipw_nat <- ipwmed(
@@ -372,7 +372,7 @@ ipw_nat <- ipwmed(
 )
 ```
 
-#### Example 2: Natural Effects Through Multiple Mediators
+#### Natural Effects Through Multiple Mediators
 
 ```r
 ipw_mnat <- ipwmed(
@@ -385,7 +385,7 @@ ipw_mnat <- ipwmed(
 )
 ```
 
-#### Example 3: Using the Bootstrap
+#### Bootstrap
 
 ```r
 ipw_nat_boot <- ipwmed(
@@ -401,7 +401,7 @@ ipw_nat_boot <- ipwmed(
 )
 ```
 
-#### Example 4: Parallelizing the Bootstrap
+#### Parallel Bootstrap
 
 ```r
 ipw_nat_bootpar <- ipwmed(
