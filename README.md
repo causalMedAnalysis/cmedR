@@ -532,3 +532,121 @@ impcde(
 )
 ```
 
+
+## `ipwcde`: an inverse probability weighting estimator for controlled direct effects
+
+The `ipwcde` function estimates controlled direct effects using inverse probability weighting. This function supports only a single mediator, which must be numeric and binary. It supports optional weight stabilization, weight censoring, bootstrap confidence intervals, and parallelized bootstrap computation.
+
+### Function
+
+```r
+ipwcde(
+  data,
+  D,
+  M,
+  Y,
+  m,
+  formula_D_string,
+  formula_M_string,
+  base_weights_name = NULL,
+  stabilize = FALSE,
+  censor = FALSE,
+  censor_low = 0.01,
+  censor_high = 0.99,
+  boot = FALSE,
+  boot_reps = 1000,
+  boot_conf_level = 0.95,
+  boot_seed = NULL,
+  boot_parallel = FALSE,
+  boot_cores = NULL
+)
+```
+
+### Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `data` | A data frame. |
+| `D` | Name of the exposure variable (character). Must be numeric and binary (0/1). |
+| `M` | Name of the single mediator variable (character). Must be numeric and binary (0/1). |
+| `Y` | Name of the numeric outcome variable (character). |
+| `m` | Value to set the mediator to for CDE estimation (numeric scalar). |
+| `formula_D_string` | A string representing the formula for a logit model for the exposure, e.g., `"att22 ~ female + black + paredu"` (used to estimate _f(D \| C)_). |
+| `formula_M_string` | A string representing the formula for a logit model for the mediator, e.g., `"M ~ D + C"` (used to estimate _g(M \| C, D)_). |
+| `base_weights_name` | (Optional) Name of the base weights variable. |
+| `stabilize` | Logical. If `TRUE`, stabilizes the IPW weights. |
+| `censor` | Logical. If `TRUE`, applies weight censoring. |
+| `censor_low`, `censor_high` | Quantiles for censoring the weights (default: 0.01 and 0.99). |
+| `boot` | Logical. If `TRUE`, performs a bootstrap to compute CIs and p-values. |
+| `boot_reps` | Number of bootstrap replications (default: `1000`). |
+| `boot_conf_level` | Confidence level for bootstrap interval (default: `0.95`). |
+| `boot_seed` | Integer seed for reproducibility. |
+| `boot_parallel` | Logical. If `TRUE`, runs bootstrap in parallel (requires `doParallel`, `doRNG`, `foreach`). |
+| `boot_cores` | Number of CPU cores for parallel bootstrap. Defaults to available cores minus two. |
+
+### Returns
+
+- If `boot = FALSE`:
+  A list with:
+  - `CDE`: Estimated controlled direct effect
+  - `weights`: Final IPWs
+  - `model_d`: Fitted logit model for the exposure (`formula_D_string`)
+  - `model_m`: Fitted logit model for the mediator (`formula_M_string`)
+
+- If `boot = TRUE`, the list also includes:
+  - `ci_CDE`: Bootstrap confidence interval
+  - `pvalue_CDE`: Two-sided p-value
+  - `boot_CDE`: Vector of bootstrap replicate estimates
+
+### Examples
+
+#### Estimate the CDE
+
+```r
+cde_est <- ipwcde(
+  data = nlsy,
+  D = "att22",
+  M = "ever_unemp_age3539",
+  Y = "std_cesd_age40",
+  m = 1,
+  formula_D_string = "att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3",
+  formula_M_string = "ever_unemp_age3539 ~ att22 + female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3"
+)
+```
+
+#### Bootstrap
+
+```r
+cde_est_boot <- ipwcde(
+  data = nlsy,
+  D = "att22",
+  M = "ever_unemp_age3539",
+  Y = "std_cesd_age40",
+  m = 1,
+  formula_D_string = "att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3",
+  formula_M_string = "ever_unemp_age3539 ~ att22 + female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3",
+  boot = TRUE,
+  boot_reps = 2000,
+  boot_seed = 1234
+)
+```
+
+#### Parallelized Bootstrap
+
+```r
+cde_est_bootpar <- ipwcde(
+  data = nlsy,
+  D = "att22",
+  M = "ever_unemp_age3539",
+  Y = "std_cesd_age40",
+  m = 1,
+  formula_D_string = "att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3",
+  formula_M_string = "ever_unemp_age3539 ~ att22 + female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3",
+  boot = TRUE,
+  boot_reps = 2000,
+  boot_seed = 1234,
+  boot_parallel = TRUE
+)
+```
+
+
