@@ -6,6 +6,7 @@ This repository contains R functions for conducting causal mediation analysis us
 - [linmed – mediation analysis using linear models](#linmed-mediation-analysis-using-linear-models)
 - [medsim – mediation analysis using a simulation approach](#medsim-mediation-analysis-using-a-simulation-approach)
 - [ipwmed – mediation analysis using inverse probability weights](#ipwmed-mediation-analysis-using-inverse-probability-weights)
+- [impcde – a regression imputation estimator for controlled direct effects](#impcde-a-regression-imputation-estimator-for-controlled-direct-effects)
 
 
 ## `linmed`: mediation analysis using linear models
@@ -417,3 +418,117 @@ ipw_nat_bootpar <- ipwmed(
   boot_parallel = TRUE
 )
 ```
+
+
+## `impcde`: a regression imputation estimator for controlled direct effects
+
+The `impcde` function estimates controlled direct effects using a regression imputation approach. It requires a fitted outcome model and computes the CDE by comparing predicted outcomes under different exposure levels, while holding the mediator fixed at a specified value. This function supports optional sampling weights and the nonparametric bootstrap for computing confidence intervals and p-values. Parallelized bootstrap computation is also supported.
+
+### Function
+
+```r
+impcde(
+  data,
+  model_y,
+  D,
+  M,
+  d,
+  dstar,
+  m,
+  weights_name = NULL,
+  boot = FALSE,
+  boot_reps = 1000,
+  boot_conf_level = 0.95,
+  boot_seed = NULL,
+  boot_parallel = FALSE,
+  boot_cores = NULL
+)
+```
+
+### Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `data` | A data frame containing the variables used in `model_y`, `D`, and `M`. |
+| `model_y` | A fitted outcome model object (e.g., from `lm()` or `glm()`). |
+| `D` | Name of the exposure variable (character scalar). |
+| `M` | Name of the mediator variable (character scalar). |
+| `d`, `dstar` | Numeric values representing two levels of the exposure. The exposure contrast of interest is `d - dstar`. |
+| `m` | Numeric value at which to fix the mediator for CDE estimation. |
+| `weights_name` | (Optional) Name of a variable containing sampling weights. |
+| `boot` | Logical. If `TRUE`, use the nonparametric bootstrap to obtain confidence intervals and p-values. |
+| `boot_reps` | Number of bootstrap replications (default: `1000`). |
+| `boot_conf_level` | Confidence level for bootstrap interval (default: `0.95`). |
+| `boot_seed` | Integer seed for reproducibility. |
+| `boot_parallel` | Logical. If `TRUE`, parallelizes the bootstrap (requires `doParallel`, `doRNG`, and `foreach`). |
+| `boot_cores` | Number of CPU cores for parallel bootstrap. If `NULL`, defaults to available cores minus 2. |
+
+### Returns
+
+- If `boot = FALSE`:  
+  A numeric scalar representing the estimated CDE for the contrast `d - dstar` at mediator value `m`.
+
+- If `boot = TRUE`:  
+  A list with the following elements:
+  - `CDE`: Point estimate
+  - `ci_CDE`: Bootstrap confidence interval
+  - `pvalue_CDE`: Two-sided bootstrap p-value
+  - `boot_CDE`: Vector of bootstrap replicate estimates
+
+### Examples
+
+#### Basic Usage
+
+```r
+mod1 <- lm(
+  std_cesd_age40 ~ att22 * (ever_unemp_age3539 +  + female + black + hispan + paredu +
+    parprof + parinc_prank + famsize + afqt3),
+  data = nlsy
+)
+
+impcde(
+  data = nlsy,
+  model_y = mod1,
+  D = "att22",
+  M = "ever_unemp_age3539",
+  d = 1,
+  dstar = 0,
+  m = 1
+)
+```
+
+#### Bootstrap 
+
+```r
+impcde(
+  data = nlsy,
+  model_y = mod1,
+  D = "att22",
+  M = "ever_unemp_age3539",
+  d = 1,
+  dstar = 0,
+  m = 1,
+  boot = TRUE,
+  boot_reps = 2000,
+  boot_seed = 1234
+)
+```
+
+#### Parallel Bootstrap
+
+```r
+impcde(
+  data = nlsy,
+  model_y = mod1,
+  D = "att22",
+  M = "ever_unemp_age3539",
+  d = 1,
+  dstar = 0,
+  m = 1,
+  boot = TRUE,
+  boot_reps = 2000,
+  boot_seed = 1234,
+  boot_parallel = TRUE
+)
+```
+
