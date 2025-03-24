@@ -711,14 +711,14 @@ rwrlite(
 - If `boot = FALSE`:  
   A list with:
   - `OE`, `IDE`, `IIE`, `CDE`: Estimated interventional and controlled effects
-  - `models_L`: Fitted exposure-induced confounder models
+  - `models_L`: Fitted models for the exposure-induced confounders
   - `model_M`: Fitted mediator model
   - `model_Y`: Fitted outcome model
   - `data_ed`: Processed dataset with mean-centered covariates and residualized confounders
 
 - If `boot = TRUE`, also includes:
   - `ci_*`: Bootstrap confidence intervals
-  - `pvalue_*`: Two-sided bootstrap p-values
+  - `pvalue_*`: Bootstrap p-values from tests of no effect
   - `boot_*`: Vectors of bootstrap replicates for each effect
 
 ### Examples
