@@ -8,7 +8,7 @@ This repository contains R functions for conducting causal mediation analysis us
 - [ipwmed – mediation analysis using inverse probability weights](#ipwmed-mediation-analysis-using-inverse-probability-weights)
 - [impcde – a regression imputation estimator for controlled direct effects](#impcde-a-regression-imputation-estimator-for-controlled-direct-effects)
 - [ipwcde – an inverse probability weighting estimator for controlled direct effects](#ipwcde-an-inverse-probability-weighting-estimator-for-controlled-direct-effects)
-
+- [rwrlite – regression-with-residuals estimation for interventional effects](#rwrlite-regression-with-residuals-estimation-for-interventional-effects)
 
 ## `linmed`: mediation analysis using linear models
 
@@ -650,4 +650,129 @@ cde_est_bootpar <- ipwcde(
 )
 ```
 
+
+## `rwrlite`: regression-with-residuals estimation for interventional effects
+
+The `rwrlite` function is a wrapper for two core functions in the [`rwrmed`](https://github.com/xiangzhou09/rwrmed) package. It implements regression-with-residuals (RWR) estimation to compute overall effects, interventional direct and indirect effects, and controlled direct effects.
+
+To use this function, first install the `rwrmed` package using:
+
+```r
+devtools::install_github("xiangzhou09/rwrmed")
+```
+
+### Function
+
+```r
+rwrlite(
+  data,
+  D,
+  C = NULL,
+  d,
+  dstar,
+  m,
+  Y_formula,
+  M_formula,
+  M_family,
+  L_formula_list,
+  weights = NULL,
+  boot = FALSE,
+  boot_reps = 1000,
+  boot_conf_level = 0.95,
+  boot_seed = NULL,
+  boot_parallel = FALSE,
+  boot_cores = NULL
+)
+```
+
+### Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `data` | A data frame. |
+| `D` | Name of the exposure variable (character scalar). |
+| `C` | Covariates to include in all models (character vector). |
+| `d`, `dstar` | Two numeric values of the exposure; the contrast of interest is `d - dstar`. |
+| `m` | Numeric value at which to fix the mediator when estimating the CDE. |
+| `Y_formula` | Formula object for the outcome model. |
+| `M_formula` | Formula object for the mediator model. |
+| `M_family` | Family for the mediator model passed to `glm` (e.g., `"gaussian"` or `binomial()`). |
+| `L_formula_list` | A list of formulas for the exposure-induced confounder models. |
+| `weights` | Optional numeric vector of weights used across models. |
+| `boot` | Logical. If `TRUE`, performs a nonparametric bootstrap. |
+| `boot_reps` | Number of bootstrap replications. |
+| `boot_conf_level` | Confidence level for bootstrap intervals (default: 0.95). |
+| `boot_seed` | Random seed for reproducibility. |
+| `boot_parallel` | Logical. If `TRUE`, parallelizes the bootstrap. |
+| `boot_cores` | Number of CPU cores to use. (default: all but two available cores) |
+
+### Returns
+
+- If `boot = FALSE`:  
+  A list with:
+  - `OE`, `IDE`, `IIE`, `CDE`: Estimated interventional and controlled effects
+  - `models_L`: Fitted exposure-induced confounder models
+  - `model_M`: Fitted mediator model
+  - `model_Y`: Fitted outcome model
+  - `data_ed`: Processed dataset with mean-centered covariates and residualized confounders
+
+- If `boot = TRUE`, also includes:
+  - `ci_*`: Bootstrap confidence intervals
+  - `pvalue_*`: Two-sided bootstrap p-values
+  - `boot_*`: Vectors of bootstrap replicates for each effect
+
+### Examples
+
+#### Estimate Interventional Effects
+
+```r
+formula_L <- ever_unemp_age3539 ~ att22 + female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3
+formula_M <- log_faminc_adj_age3539 ~ att22 + female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3
+formula_Y <- std_cesd_age40 ~ att22 * log_faminc_adj_age3539 + ever_unemp_age3539 + female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3
+
+rwr_est <- rwrlite(
+  data = nlsy,
+  D = "att22",
+  C = c("female", "black", "hispan", "paredu", "parprof", "parinc_prank", "famsize", "afqt3"),
+  m = log(5e4),
+  Y_formula = formula_Y,
+  M_formula = formula_M,
+  L_formula_list = list(formula_L)
+)
+```
+
+#### Bootstrap
+
+```r
+rwr_est_boot <- rwrlite(
+  data = nlsy,
+  D = "att22",
+  C = c("female", "black", "hispan", "paredu", "parprof", "parinc_prank", "famsize", "afqt3"),
+  m = log(5e4),
+  Y_formula = formula_Y,
+  M_formula = formula_M,
+  L_formula_list = list(formula_L),
+  boot = TRUE,
+  boot_reps = 2000,
+  boot_seed = 60637
+)
+```
+
+#### Parallelized Bootstrap
+
+```r
+rwr_est_bootpar <- rwrlite(
+  data = nlsy,
+  D = "att22",
+  C = c("female", "black", "hispan", "paredu", "parprof", "parinc_prank", "famsize", "afqt3"),
+  m = log(5e4),
+  Y_formula = formula_Y,
+  M_formula = formula_M,
+  L_formula_list = list(formula_L),
+  boot = TRUE,
+  boot_reps = 2000,
+  boot_seed = 1234,
+  boot_parallel = TRUE
+)
+```
 
