@@ -551,8 +551,8 @@ ipwcde(
   formula_D_string,
   formula_M_string,
   base_weights_name = NULL,
-  stabilize = FALSE,
-  censor = FALSE,
+  stabilize = TRUE,
+  censor = TRUE,
   censor_low = 0.01,
   censor_high = 0.99,
   boot = FALSE,
@@ -576,8 +576,8 @@ ipwcde(
 | `formula_D_string` | A string representing the formula for a logit model for the exposure, e.g., `"att22 ~ female + black + paredu"` (used to estimate _f(D \| C)_). |
 | `formula_M_string` | A string representing the formula for a logit model for the mediator, e.g., `"M ~ D + C"` (used to estimate _g(M \| C, D)_). |
 | `base_weights_name` | (Optional) Name of the base weights variable. |
-| `stabilize` | Logical. If `TRUE`, stabilizes the IPW weights. |
-| `censor` | Logical. If `TRUE`, applies weight censoring. |
+| `stabilize` | Logical. If `TRUE`, stabilizes the IPW weights (default: `TRUE`). |
+| `censor` | Logical. If `TRUE`, applies weight censoring  (default: `TRUE`). |
 | `censor_low`, `censor_high` | Quantiles for censoring the weights (default: 0.01 and 0.99). |
 | `boot` | Logical. If `TRUE`, performs a bootstrap to compute CIs and p-values. |
 | `boot_reps` | Number of bootstrap replications (default: `1000`). |
