@@ -313,8 +313,8 @@ ipwmed(
   formula1_string,
   formula2_string,
   base_weights_name = NULL,
-  stabilize = FALSE,
-  censor = FALSE,
+  stabilize = TRUE,
+  censor = TRUE,
   censor_low = 0.01,
   censor_high = 0.99,
   boot = FALSE,
@@ -337,8 +337,8 @@ ipwmed(
 | `formula1_string` | A formula (as a string) for estimating the probability of exposure given baseline covariates using a logit model, i.e., _f(D \| C)_. |
 | `formula2_string` | A formula (as a string) for estimating the probability of exposure given baseline covariates and mediators using a logit model, i.e., _s(D \| C, M)_. |
 | `base_weights_name` | (Optional) Name of a variable containing sampling or base weights. |
-| `stabilize` | Logical. If `TRUE`, uses stabilized weights (default: `FALSE`). |
-| `censor` | Logical. If `TRUE`, applies weight censoring (default: `FALSE`). |
+| `stabilize` | Logical. If `TRUE`, uses stabilized weights (default: `TRUE`). |
+| `censor` | Logical. If `TRUE`, applies weight censoring (default: `TRUE`). |
 | `censor_low`, `censor_high` | Quantile cutoffs for censoring weights (default: 0.01 and 0.99, respectively). |
 | `boot` | Logical. If `TRUE`, performs a bootstrap to return confidence intervals and p-values (default: `FALSE`). |
 | `boot_reps` | Number of bootstrap replications (default: `1000`). |
