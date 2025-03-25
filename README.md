@@ -10,7 +10,7 @@ This repository contains R functions for conducting causal mediation analysis us
 - [rwrlite – regression-with-residuals estimation for interventional effects](#rwrlite-regression-with-residuals-estimation-for-interventional-effects)
 - [linpath – analysis of path-specific effects using linear models](#linpath-analysis-of-path-specific-effects-using-linear-models)
 - [ipwpath – analysis of path-specific effects using inverse probability weights](#ipwpath-analysis-of-path-specific-effects-using-inverse-probability-weights)
-- [utils – utility functions](#utility-functions-(utils.R))
+- [utils – utility functions](#utils-utility-functions)
 
 ## `linmed`: mediation analysis using linear models
 
@@ -1061,7 +1061,7 @@ pse_bootpar <- ipwpath(
 ```
 
 
-## utility functions (`utils.R`)
+## `utils`: utility functions
 
 This script defines helper functions used internally by many of the other other functions in this repository.
 
