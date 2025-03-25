@@ -1,7 +1,6 @@
 # causalMedR
 This repository contains R functions for conducting causal mediation analysis using the methods described in Wodtke and Zhou "Causal Mediation Analysis."
 
-
 ## Table of Contents
 - [linmed – mediation analysis using linear models](#linmed-mediation-analysis-using-linear-models)
 - [medsim – mediation analysis using a simulation approach](#medsim-mediation-analysis-using-a-simulation-approach)
@@ -10,6 +9,9 @@ This repository contains R functions for conducting causal mediation analysis us
 - [ipwcde – an inverse probability weighting estimator for controlled direct effects](#ipwcde-an-inverse-probability-weighting-estimator-for-controlled-direct-effects)
 - [rwrlite – regression-with-residuals estimation for interventional effects](#rwrlite-regression-with-residuals-estimation-for-interventional-effects)
 - [linpath – analysis of path-specific effects using linear models](#linpath-analysis-of-path-specific-effects-using-linear-models)
+- [ipwpath – analysis of path-specific effects using inverse probability weights](#ipwpath-analysis-of-path-specific-effects-using-inverse-probability-weights)
+
+## `ipwpath`: analysis of path-specific effects inverse probability weighting
 
 ## `linmed`: mediation analysis using linear models
 
@@ -818,14 +820,14 @@ linpath(
 |------------------|-------------|
 | `data`           | A data frame. |
 | `D`              | Name of the exposure variable (character). |
-| `M`              | A list of character vectors, each specifying one or more mediators in causal order. See below for examples. |
+| `M`              | A character vector or list of vectors identifying mediators, in hypothesized causal order. See below for examples. |
 | `Y`              | Name of the outcome variable (character). |
 | `C`              | Optional character vector of baseline covariates to include in both the mediator and outcome models. |
 | `d`, `dstar`     | Numeric values defining the exposure contrast of interest (`d - dstar`). |
 | `interaction_DM` | Logical. If `TRUE`, includes exposure × mediator interactions in the outcome model. |
 | `interaction_DC` | Logical. If `TRUE`, includes exposure × covariate interactions in both the mediator and outcome models. |
 | `interaction_MC` | Logical. If `TRUE`, includes mediator × covariate interactions in the outcome model. |
-| `weights_name`   | Optional: name of sampling weights variable in `data`. |
+| `weights_name`   | Optional name of sampling weights variable in `data`. |
 | `boot` | Logical. If `TRUE`, use the nonparametric bootstrap to obtain confidence intervals and p-values. |
 | `boot_reps` | Number of bootstrap replications (default: `1000`). |
 | `boot_conf_level` | Confidence level for bootstrap interval (default: `0.95`). |
@@ -838,25 +840,25 @@ linpath(
 
 The `M` argument supports both univariate and multivariate mediators and encodes their assumed causal order.
 
-- **Two sequential mediators:**
+- **Two ordered mediators:**
 
   ```r
   M = list("m1", "m2")
   ```
 
-- **Treat a pair of mediators as a multivariate whole (no assumed causal order within pair):**
+- **Partial ordering (treat two mediators as a block):**
 
   ```r
   M = list("m1", c("m2", "m3"))
   ```
 
-- **Add a nominal factor mediator with dummy-coded levels:**
+- **Add a dummy-encoded factor mediator:**
 
   ```r
   M = list("m1", c("m2", "m3"), c("level2", "level3", "level4"))
   ```
 
-The order of the list elements matters. Within a multivariate group (e.g., `c("m2", "m3")`), the order does not matter.
+The order of items within a group (e.g., `c("m2", "m3")`) doesn’t matter, but order of groups in the list does.
 
 ### Returns
 
@@ -922,3 +924,139 @@ pse_est_boot <- linpath(
 )
 ```
 
+
+## `ipwpath`: analysis of path-specific effects inverse probability weighting
+
+The `ipwpath` function implements an inverse probability weighting approach to estimate path-specific effects.
+
+### Function
+
+```r
+ipwpath(
+  data,
+  D,
+  M,
+  Y,
+  C = NULL,
+  base_weights_name = NULL,
+  stabilize = TRUE,
+  censor = FALSE,
+  censor_low = 0.01,
+  censor_high = 0.99,
+  boot = FALSE,
+  boot_reps = 1000,
+  boot_conf_level = 0.95,
+  boot_seed = NULL,
+  boot_parallel = FALSE,
+  boot_cores = NULL
+)
+```
+
+### Arguments
+
+| Argument             | Description |
+|----------------------|-------------|
+| `data`               | A data frame. |
+| `D`                  | Name of the exposure variable (character). |
+| `M`                  | A character vector or list of vectors identifying mediators, in hypothesized causal order. |
+| `Y`                  | Name of the outcome variable (character). |
+| `C`                  | Optional vector of baseline covariates for the exposure models. |
+| `base_weights_name`  | Optional name of a sampling weights variable. |
+| `stabilize`          | Logical. If `TRUE`, stabilizes the weights using marginal probabilities of exposure |
+| `censor` | Logical. If `TRUE`, applies weight censoring. |
+| `censor_low`, `censor_high` | Quantiles for censoring the weights (default: 0.01 and 0.99). |
+| `boot` | Logical. If `TRUE`, use the nonparametric bootstrap to obtain confidence intervals and p-values. |
+| `boot_reps` | Number of bootstrap replications (default: `1000`). |
+| `boot_conf_level` | Confidence level for bootstrap interval (default: `0.95`). |
+| `boot_seed` | Integer seed for reproducibility. |
+| `boot_parallel` | Logical. If `TRUE`, parallelizes the bootstrap (requires `doParallel`, `doRNG`, and `foreach`). |
+| `boot_cores` | Number of CPU cores for parallel bootstrap. If `NULL`, defaults to available cores minus 2. |
+
+### Specifying Mediators with `M`
+
+The `M` argument supports both univariate and multivariate mediators and encodes their assumed causal order.
+
+- **Two ordered mediators:**
+
+  ```r
+  M = list("m1", "m2")
+  ```
+
+- **Partial ordering (treat two mediators as a block):**
+
+  ```r
+  M = list("m1", c("m2", "m3"))
+  ```
+
+- **Add a dummy-encoded factor mediator:**
+
+  ```r
+  M = list("m1", c("m2", "m3"), c("level2", "level3", "level4"))
+  ```
+
+The order of items within a group (e.g., `c("m2", "m3")`) doesn’t matter, but order of groups in the list does.
+
+### Returns
+
+By default, `ipwpath` returns:
+
+- `ATE`: Estimated average total effect.
+- `PSE`: Named vector of estimated path-specific effects.
+- `weights1`, `weights2`: IP weights used for multivariate natural effect estimation.
+- `weights3`: A matrix of IP weights for each set of mediators.
+- `model_d1`: Fitted exposure model without mediators (`f(D|C)`).
+- `models_d2`: List of exposure models with mediators (`s(D|C,M)`), one for each set of mediators.
+
+If `boot = TRUE`, it also includes:
+
+- `ci_ATE`: Bootstrap confidence interval for ATE.
+- `ci_PSE`: Confidence intervals for PSEs.
+- `pvalue_ATE`: P-value for test that ATE is zero.
+- `pvalue_PSE`: P-values for tests that PSEs are zero.
+- `boot_ATE`: ATE estimates from bootstrap samples.
+- `boot_PSE`: PSE estimates from bootstrap samples.
+
+### Examples
+
+#### Estimate PSEs with two ordered mediators
+
+```r
+pse_est <- ipwpath(
+  data = nlsy,
+  D = "att22",
+  M = c("ever_unemp_age3539", "log_faminc_adj_age3539"),
+  Y = "std_cesd_age40",
+  C = c("female", "black", "hispan", "paredu", "parprof", "parinc_prank", "famsize", "afqt3")
+)
+```
+
+#### Bootstrap
+
+```r
+pse_boot <- ipwpath(
+  data = nlsy,
+  D = "att22",
+  M = c("ever_unemp_age3539", "log_faminc_adj_age3539"),
+  Y = "std_cesd_age40",
+  C = c("female", "black", "hispan", "paredu", "parprof", "parinc_prank", "famsize", "afqt3"),
+  boot = TRUE,
+  boot_reps = 2000,
+  boot_seed = 1234
+)
+```
+
+#### Parallelized bootstrap
+
+```r
+pse_bootpar <- ipwpath(
+  data = nlsy,
+  D = "att22",
+  M = c("ever_unemp_age3539", "log_faminc_adj_age3539"),
+  Y = "std_cesd_age40",
+  C = c("female", "black", "hispan", "paredu", "parprof", "parinc_prank", "famsize", "afqt3"),
+  boot = TRUE,
+  boot_reps = 2000,
+  boot_seed = 1234,
+  boot_parallel = TRUE
+)
+```
