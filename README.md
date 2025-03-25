@@ -10,6 +10,7 @@ This repository contains R functions for conducting causal mediation analysis us
 - [rwrlite – regression-with-residuals estimation for interventional effects](#rwrlite-regression-with-residuals-estimation-for-interventional-effects)
 - [linpath – analysis of path-specific effects using linear models](#linpath-analysis-of-path-specific-effects-using-linear-models)
 - [ipwpath – analysis of path-specific effects using inverse probability weights](#ipwpath-analysis-of-path-specific-effects-using-inverse-probability-weights)
+- [utils – utility functions](#utility-functions-(utils.R))
 
 ## `linmed`: mediation analysis using linear models
 
@@ -1058,3 +1059,22 @@ pse_bootpar <- ipwpath(
   boot_parallel = TRUE
 )
 ```
+
+
+## Utility Functions (`utils.R`)
+
+This script defines helper functions used internally by many of the other other functions in this repository.
+
+- **`demean(x, w)`**  
+  Returns a weighted, mean-centered version of `x`. If no weights are provided, it defaults to equal weights.
+
+- **`trim(x, min, max)`**  
+  Top- and bottom-codes the vector `x` at fixed limits `min` and `max`. Useful for censoring inverse probability weights.
+
+- **`trimQ(x, low, high)`**  
+  Censors `x` at empirical quantiles defined by `low` and `high`. For example, `trimQ(x, 0.01, 0.99)` trims at the 1st and 99th percentiles. Useful for censoring inverse probability weights.
+
+- **`comb_list_vec(...)`**  
+  Combines multiple lists of vectors into a single list using `mapply()`.
+
+These functions are are intended for internal use only.
