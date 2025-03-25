@@ -937,8 +937,8 @@ ipwpath(
   Y,
   C = NULL,
   base_weights_name = NULL,
-  stabilize = FALSE,
-  censor = FALSE,
+  stabilize = TRUE,
+  censor = TRUE,
   censor_low = 0.01,
   censor_high = 0.99,
   boot = FALSE,
@@ -960,8 +960,8 @@ ipwpath(
 | `Y`                  | Name of the outcome variable (character). |
 | `C`                  | Optional vector of baseline covariates for the exposure models. |
 | `base_weights_name`  | Optional name of a sampling weights variable. |
-| `stabilize`          | Logical. If `TRUE`, stabilizes the weights using marginal probabilities of exposure (default: `FALSE`). |
-| `censor` | Logical. If `TRUE`, applies weight censoring (default: `FALSE`). |
+| `stabilize`          | Logical. If `TRUE`, stabilizes the weights using marginal probabilities of exposure (default: `TRUE`). |
+| `censor` | Logical. If `TRUE`, applies weight censoring (default: `TRUE`). |
 | `censor_low`, `censor_high` | Quantiles for censoring the weights (default: 0.01 and 0.99). |
 | `boot` | Logical. If `TRUE`, use the nonparametric bootstrap to obtain confidence intervals and p-values. |
 | `boot_reps` | Number of bootstrap replications (default: `1000`). |
