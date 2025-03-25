@@ -782,3 +782,146 @@ rwr_est_bootpar <- rwrlite(
 )
 ```
 
+
+Great—thanks for sharing such a detailed `roxygen2` block! Below is a **Markdown-formatted** section you can include in your GitHub `README.md` to document the `linpath()` function. This version is written to be user-friendly while preserving technical clarity.
+
+---
+
+## `linpath()`: analysis of path-specific effects using linear models
+
+The `linpath()` function estimates path-specific effects using a linear models for each mediator and the outcome.
+
+### Function
+
+```r
+linpath(
+  data,
+  D,
+  M,
+  Y,
+  C = NULL,
+  d,
+  dstar,
+  interaction_DM = FALSE,
+  interaction_DC = FALSE,
+  interaction_MC = FALSE,
+  weights_name = NULL,
+  boot = FALSE,
+  boot_reps = 1000,
+  boot_conf_level = 0.95,
+  boot_seed = NULL,
+  boot_parallel = FALSE,
+  boot_cores = NULL
+)
+```
+
+### Arguments
+
+| Argument         | Description |
+|------------------|-------------|
+| `data`           | A data frame. |
+| `D`              | Name of the exposure variable (character). |
+| `M`              | A list of character vectors, each specifying one or more mediators in causal order. See below for examples. |
+| `Y`              | Name of the outcome variable (character). |
+| `C`              | Optional character vector of baseline covariates to include in both the mediator and outcome models. |
+| `d`, `dstar`     | Numeric values defining the exposure contrast of interest (`d - dstar`). |
+| `interaction_DM` | Logical. If `TRUE`, includes exposure × mediator interactions in the outcome model. |
+| `interaction_DC` | Logical. If `TRUE`, includes exposure × covariate interactions in both the mediator and outcome models. |
+| `interaction_MC` | Logical. If `TRUE`, includes mediator × covariate interactions in the outcome model. |
+| `weights_name`   | Optional: name of sampling weights variable in `data`. |
+| `boot` | Logical. If `TRUE`, use the nonparametric bootstrap to obtain confidence intervals and p-values. |
+| `boot_reps` | Number of bootstrap replications (default: `1000`). |
+| `boot_conf_level` | Confidence level for bootstrap interval (default: `0.95`). |
+| `boot_seed` | Integer seed for reproducibility. |
+| `boot_parallel` | Logical. If `TRUE`, parallelizes the bootstrap (requires `doParallel`, `doRNG`, and `foreach`). |
+| `boot_cores` | Number of CPU cores for parallel bootstrap. If `NULL`, defaults to available cores minus 2. |
+
+
+### Specifying Mediators with `M`
+
+The `M` argument supports both univariate and multivariate mediators and encodes their assumed causal order.
+
+- **Two sequential mediators:**
+
+  ```r
+  M = list("m1", "m2")
+  ```
+
+- **Treat a pair of mediators as a multivariate whole (no assumed causal order within pair):**
+
+  ```r
+  M = list("m1", c("m2", "m3"))
+  ```
+
+- **Add a nominal factor mediator with dummy-coded levels:**
+
+  ```r
+  M = list("m1", c("m2", "m3"), c("level2", "level3", "level4"))
+  ```
+
+The order of the list elements matters. Within a multivariate group (e.g., `c("m2", "m3")`), the order does not matter.
+
+### Returns
+
+By default, `linpath()` returns a list containing:
+
+- `ATE`: Estimated average total effect for the contrast `d - dstar`.
+- `PSE`: Named vector of path-specific effects.
+- `miss_summary`: Counts of missing and non-missing values for `D`, `M`, `Y`, and `C`.
+- `models_m`: Fitted mediator models.
+- `models_y`: Outcome models, each with increasing numbers of mediators.
+
+If `boot = TRUE`, it also returns:
+
+- `ci_ATE`: Bootstrap confidence interval for ATE.
+- `ci_PSE`: Bootstrap confidence intervals for PSEs.
+- `pvalue_ATE`: P-value for test that the ATE is zero.
+- `pvalue_PSE`: P-values for tests that the PSEs are zero.
+- `boot_ATE`: ATE estimates from each bootstrap sample.
+- `boot_PSE`: Matrix of PSE estimates from each bootstrap samples.
+
+### Examples
+
+#### Estimate Path-specific Effects through Two Mediators
+
+```r
+pse_est <- linpath(
+  data = nlsy,
+  D = "att22",
+  M = list("ever_unemp_age3539", "log_faminc_adj_age3539"),
+  Y = "std_cesd_age40",
+  C = c("female", "black", "hispan", "paredu", "parprof", "parinc_prank", "famsize", "afqt3")
+)
+```
+
+#### Add interactions
+
+```r
+pse_est_inter <- linpath(
+  data = nlsy,
+  D = "att22",
+  M = list("ever_unemp_age3539", "log_faminc_adj_age3539"),
+  Y = "std_cesd_age40",
+  C = c("female", "black", "hispan", "paredu", "parprof", "parinc_prank", "famsize", "afqt3"),
+  interaction_DM = TRUE,
+  interaction_DC = TRUE,
+  interaction_MC = TRUE
+)
+```
+
+#### Parallelized Bootstrap
+
+```r
+pse_est_boot <- linpath(
+  data = nlsy,
+  D = "att22",
+  M = list("ever_unemp_age3539", "log_faminc_adj_age3539"),
+  Y = "std_cesd_age40",
+  C = c("female", "black", "hispan", "paredu", "parprof", "parinc_prank", "famsize", "afqt3"),
+  boot = TRUE,
+  boot_reps = 2000,
+  boot_seed = 60637,
+  boot_parallel = TRUE
+)
+```
+
