@@ -9,6 +9,7 @@ This repository contains R functions for conducting causal mediation analysis us
 - [impcde – a regression imputation estimator for controlled direct effects](#impcde-a-regression-imputation-estimator-for-controlled-direct-effects)
 - [ipwcde – an inverse probability weighting estimator for controlled direct effects](#ipwcde-an-inverse-probability-weighting-estimator-for-controlled-direct-effects)
 - [rwrlite – regression-with-residuals estimation for interventional effects](#rwrlite-regression-with-residuals-estimation-for-interventional-effects)
+- [linpath – analysis of path-specific effects using linear models](#linpath-analysis-of-path-specific-effects-using-linear-models)
 
 ## `linmed`: mediation analysis using linear models
 
@@ -783,13 +784,9 @@ rwr_est_bootpar <- rwrlite(
 ```
 
 
-Great—thanks for sharing such a detailed `roxygen2` block! Below is a **Markdown-formatted** section you can include in your GitHub `README.md` to document the `linpath()` function. This version is written to be user-friendly while preserving technical clarity.
+## `linpath`: analysis of path-specific effects using linear models
 
----
-
-## `linpath()`: analysis of path-specific effects using linear models
-
-The `linpath()` function estimates path-specific effects using a linear models for each mediator and the outcome.
+The `linpath` function estimates path-specific effects using a linear models for each mediator and the outcome.
 
 ### Function
 
