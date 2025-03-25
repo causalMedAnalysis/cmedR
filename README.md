@@ -923,7 +923,7 @@ pse_est_boot <- linpath(
 ```
 
 
-## `ipwpath`: analysis of path-specific effects inverse probability weights
+## `ipwpath`: analysis of path-specific effects using inverse probability weights
 
 The `ipwpath` function implements an inverse probability weighting approach to estimate path-specific effects.
 
