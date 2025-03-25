@@ -1061,7 +1061,7 @@ pse_bootpar <- ipwpath(
 ```
 
 
-## Utility Functions (`utils.R`)
+## utility functions (`utils.R`)
 
 This script defines helper functions used internally by many of the other other functions in this repository.
 
