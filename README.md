@@ -11,8 +11,6 @@ This repository contains R functions for conducting causal mediation analysis us
 - [linpath – analysis of path-specific effects using linear models](#linpath-analysis-of-path-specific-effects-using-linear-models)
 - [ipwpath – analysis of path-specific effects using inverse probability weights](#ipwpath-analysis-of-path-specific-effects-using-inverse-probability-weights)
 
-## `ipwpath`: analysis of path-specific effects inverse probability weighting
-
 ## `linmed`: mediation analysis using linear models
 
 The `linmed` function estimates natural direct, natural indirect, controlled direct, and total effects using linear models. It supports mediation analysis with a single mediator and with multiple mediators, and includes built-in support for nonparametric bootstrapping with optional parallel computation.
@@ -925,7 +923,7 @@ pse_est_boot <- linpath(
 ```
 
 
-## `ipwpath`: analysis of path-specific effects inverse probability weighting
+## `ipwpath`: analysis of path-specific effects inverse probability weights
 
 The `ipwpath` function implements an inverse probability weighting approach to estimate path-specific effects.
 
