@@ -207,10 +207,10 @@ medsim(
 |---------------|-------------|
 | `data`        | A data frame containing all variables referenced in the model specifications. |
 | `num_sim`     | Integer. Number of Monte Carlo simulation draws (default: `2000`). |
-| `cat_list`    | Character vector of treatment levels to compare (default: `c(0, 1)`). |
-| `treatment`   | Name of the treatment variable (string). |
-| `intv_med`    | A list specifying the intervention on the mediators. Set to `NULL` if interventional or controlled direct effects are not of interest. |
-| `model_spec`  | A list of lists defining the models for the mediators and outcome. Each model must include: <br> • `func`: model-fitting function (e.g., `"glm"`, `"polr"`) <br> • `formula`: model formula <br> • `args`: (optional) list of additional arguments to pass to the function. |
+| `cat_list`    | A vector of treatment levels to compare (default: `c(0, 1)`). |
+| `treatment`   | Name of the treatment variable (character). |
+| `intv_med`    | A list specifying the intervention(s) on the mediators. Set to `NULL` if interventional or controlled direct effects are not of interest. |
+| `model_spec`  | A list of lists defining the models for the mediators and the outcome. Each model must include: <br> • `func`: model-fitting function (e.g., `"glm"`, `"polr"`) <br> • `formula`: model formula <br> • `args`: (optional) list of additional arguments to pass to the function. |
 | `weights`     | (Optional) Name of the variable containing weights to use in model fitting. If `NULL`, no weights are applied. |
 | `boot`        | Logical. If `TRUE`, performs nonparametric bootstrap to obtain confidence intervals and p-values (default: `FALSE`). Requires `doParallel`, `doRNG`, and `foreach`. |
 | `reps`        | Integer. Number of bootstrap replications (default: `100`). |
@@ -220,13 +220,13 @@ medsim(
 ### Returns
 
 - If `boot = FALSE`:  
-  A **list** of point estimates for the mediation effects of interest.
+  A list of point estimates for the mediation effects of interest.
 
 - If `boot = TRUE`:  
-  A **data frame** containing:
-  - Point estimates  
+  A data frame containing:
+  - Point estimates for the mediation effects of interest  
   - 95% bootstrap confidence intervals  
-  - P-values from test of no effect
+  - P-values from tests of no effect
 
 ### Examples
 
