@@ -38,7 +38,7 @@ linmed(
   boot_conf_level = 0.95,
   boot_seed = NULL,
   boot_parallel = FALSE,
-  boot_cores = NULL
+  boot_cores = max(c(parallel::detectCores() - 2, 1))
 )
 ```
 
@@ -62,7 +62,7 @@ linmed(
 | `boot_conf_level` | Confidence level for bootstrap intervals (default: 0.95). |
 | `boot_seed` | Random seed for reproducibility. |
 | `boot_parallel` | Whether to parallelize bootstrap (requires `doParallel`, `doRNG`, `foreach`). |
-| `boot_cores` | Number of CPU cores to use when parallelizing. |
+| `boot_cores` | Number of CPU cores to use when parallelizing. Defaults to available cores minus 2. |
 
 ### Returns
 
@@ -324,7 +324,7 @@ ipwmed(
   boot_conf_level = 0.95,
   boot_seed = NULL,
   boot_parallel = FALSE,
-  boot_cores = NULL
+  boot_cores = max(c(parallel::detectCores() - 2, 1))
 )
 ```
 
@@ -347,7 +347,7 @@ ipwmed(
 | `boot_conf_level` | Confidence level for bootstrap intervals (default: `0.95`). |
 | `boot_seed` | Integer seed for reproducibility. |
 | `boot_parallel` | Logical. If `TRUE`, parallelizes the bootstrap (requires `doParallel`, `doRNG`, and `foreach`). |
-| `boot_cores` | Number of CPU cores for parallel bootstrap. If `NULL`, defaults to available cores minus 2. |
+| `boot_cores` | Number of CPU cores for parallel bootstrap. Defaults to available cores minus 2. |
 
 ### Returns
 
@@ -445,7 +445,7 @@ impcde(
   boot_conf_level = 0.95,
   boot_seed = NULL,
   boot_parallel = FALSE,
-  boot_cores = NULL
+  boot_cores = max(c(parallel::detectCores() - 2, 1))
 )
 ```
 
@@ -465,7 +465,7 @@ impcde(
 | `boot_conf_level` | Confidence level for bootstrap interval (default: `0.95`). |
 | `boot_seed` | Integer seed for reproducibility. |
 | `boot_parallel` | Logical. If `TRUE`, parallelizes the bootstrap (requires `doParallel`, `doRNG`, and `foreach`). |
-| `boot_cores` | Number of CPU cores for parallel bootstrap. If `NULL`, defaults to available cores minus 2. |
+| `boot_cores` | Number of CPU cores for parallel bootstrap. Defaults to available cores minus 2. |
 
 ### Returns
 
@@ -562,7 +562,7 @@ ipwcde(
   boot_conf_level = 0.95,
   boot_seed = NULL,
   boot_parallel = FALSE,
-  boot_cores = NULL
+  boot_cores = max(c(parallel::detectCores() - 2, 1))
 )
 ```
 
@@ -684,7 +684,7 @@ rwrlite(
   boot_conf_level = 0.95,
   boot_seed = NULL,
   boot_parallel = FALSE,
-  boot_cores = NULL
+  boot_cores = max(c(parallel::detectCores() - 2, 1))
 )
 ```
 
@@ -707,7 +707,7 @@ rwrlite(
 | `boot_conf_level` | Confidence level for bootstrap intervals (default: 0.95). |
 | `boot_seed` | Random seed for reproducibility. |
 | `boot_parallel` | Logical. If `TRUE`, parallelizes the bootstrap. |
-| `boot_cores` | Number of CPU cores to use. (default: all but two available cores) |
+| `boot_cores` | Number of CPU cores for parallel bootstrap. Defaults to available cores minus 2. |
 
 ### Returns
 
@@ -810,7 +810,7 @@ linpath(
   boot_conf_level = 0.95,
   boot_seed = NULL,
   boot_parallel = FALSE,
-  boot_cores = NULL
+  boot_cores = max(c(parallel::detectCores() - 2, 1))
 )
 ```
 
@@ -833,7 +833,7 @@ linpath(
 | `boot_conf_level` | Confidence level for bootstrap interval (default: `0.95`). |
 | `boot_seed` | Integer seed for reproducibility. |
 | `boot_parallel` | Logical. If `TRUE`, parallelizes the bootstrap (requires `doParallel`, `doRNG`, and `foreach`). |
-| `boot_cores` | Number of CPU cores for parallel bootstrap. If `NULL`, defaults to available cores minus 2. |
+| `boot_cores` | Number of CPU cores for parallel bootstrap. Defaults to available cores minus 2. |
 
 
 ### Specifying Mediators with `M`
@@ -948,7 +948,7 @@ ipwpath(
   boot_conf_level = 0.95,
   boot_seed = NULL,
   boot_parallel = FALSE,
-  boot_cores = NULL
+  boot_cores = max(c(parallel::detectCores() - 2, 1))
 )
 ```
 
@@ -970,7 +970,7 @@ ipwpath(
 | `boot_conf_level` | Confidence level for bootstrap interval (default: `0.95`). |
 | `boot_seed` | Integer seed for reproducibility. |
 | `boot_parallel` | Logical. If `TRUE`, parallelizes the bootstrap (requires `doParallel`, `doRNG`, and `foreach`). |
-| `boot_cores` | Number of CPU cores for parallel bootstrap. If `NULL`, defaults to available cores minus 2. |
+| `boot_cores` | Number of CPU cores for parallel bootstrap. Defaults to available cores minus 2. |
 
 ### Specifying Mediators with `M`
 
@@ -1087,13 +1087,13 @@ pathimp(
   M,
   Y_models,
   D_model = NULL,
+  out_ipw = FALSE,
   boot_reps,
   boot_conf_level = 0.95,
   boot_seed = NULL,
   boot_parallel = "no",
+  boot_cores = max(c(parallel::detectCores() - 2, 1))
   round_decimal = 3,
-  boot_cores = max(c(parallel::detectCores() - 2, 1)),
-  out_ipw=FALSE
 )
 ```
 
@@ -1107,13 +1107,13 @@ pathimp(
 | `M`              | List of mediator variables, ordered causally (all numeric) |
 | `Y_models`       | List outcome models |
 | `D_model`        | Optional treatment model (`glm`, `gbm`, `ps`, `pbart`) |
+| `out_ipw`        | Logical: compute imputation-based weighting estimator? |
 | `boot_reps`      | Number of bootstrap samples |
 | `boot_conf_level`| Confidence level for bootstrap intervals |
 | `boot_seed`      | Random seed for reproducibility |
 | `boot_parallel`  | Parallel backend (`"no"`, `"multicore"`) |
-| `boot_cores`     | Number of cores to use for parallel bootstrapping |
+| `boot_cores`     | Number of CPU cores for parallel bootstrap. Defaults to available cores minus 2. |
 | `round_decimal`  | Digits to round estimates |
-| `out_ipw`        | Logical: include IPW estimator? |
 
 ---
 
@@ -1158,7 +1158,7 @@ res <- pathimp(
   Y = "std_cesd_age40",
   Y_models = glm_ymodels,
   boot_reps = 2000,
-  boot_seed = 60637,
+  boot_seed = 60637
 )
 
 res$summary_df
@@ -1180,8 +1180,9 @@ res_wt <- pathimp(
   Y = "std_cesd_age40",
   Y_models = glm_ymodels,
   D_model = glm_ps,
+  out_ipw = TRUE,
   boot_reps = 2000,
-  boot_seed = 60637,
+  boot_seed = 60637
 )
 
 res_wt$summary_df
@@ -1198,6 +1199,7 @@ res_wt_boot <- pathimp(
   Y = "std_cesd_age40",
   Y_models = glm_ymodels,
   D_model = glm_ps,
+  out_ipw = TRUE,
   boot_reps = 2000,
   boot_seed = 60637,
   boot_parallel = "multicore"
