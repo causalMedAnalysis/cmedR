@@ -10,6 +10,7 @@ This repository contains R functions for conducting causal mediation analysis us
 - [rwrlite – regression-with-residuals estimation for interventional effects](#rwrlite-regression-with-residuals-estimation-for-interventional-effects)
 - [linpath – analysis of path-specific effects using linear models](#linpath-analysis-of-path-specific-effects-using-linear-models)
 - [ipwpath – analysis of path-specific effects using inverse probability weights](#ipwpath-analysis-of-path-specific-effects-using-inverse-probability-weights)
+- [pathimp – analysis of path-specific effects using regression imputation](#pathimp-analysis-of-path-specific-effects-using-regression-imputation)
 - [utils – utility functions](#utils-utility-functions)
 
 ## `linmed`: mediation analysis using linear models
