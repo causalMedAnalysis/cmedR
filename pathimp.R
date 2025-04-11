@@ -5,7 +5,7 @@
 #' implements the pure imputation estimator and the imputation-based weighting
 #' estimator (when a propensity score model is provided) as detailed in Zhou 
 #' and Yamamoto (2020).You may install the `paths` package from the 
-#' xiangzhou09/rwrmed GitHub repository, using the following code:
+#' xiangzhou09/paths GitHub repository, using the following code:
 #' `devtools::install_github("xiangzhou09/paths")`
 #' 
 #' @details
