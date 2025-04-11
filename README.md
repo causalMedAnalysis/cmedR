@@ -1061,6 +1061,150 @@ pse_bootpar <- ipwpath(
 ```
 
 
+## `pathimp`: analysis of path-specific effects using regression imputation
+
+`pathimp` is a wrapper for several functions from the [`paths`](https://github.com/xiangzhou09/paths) package that estimate path-specific effects using either:
+
+- a pure imputation estimator, or  
+- an imputation-based weighting estimator (if a propensity model is supplied)
+
+It computes the total effect and the path-specific effects (PSEs) of a binary treatment variable on an outcome through one or more causally ordered mediators. It supports bootstrap confidence intervals and (optionally) parallel computation.
+
+To use `pathimp`, you must first install the `paths` package from GitHub:
+
+```r
+devtools::install_github("xiangzhou09/paths")
+```
+
+### Function
+
+```r
+pathimp(
+  data,
+  D,
+  Y,
+  M,
+  Y_models,
+  D_model = NULL,
+  boot_reps,
+  boot_conf_level = 0.95,
+  boot_seed = NULL,
+  boot_parallel = "no",
+  round_decimal = 3,
+  boot_cores = max(c(parallel::detectCores() - 2, 1)),
+  out_ipw=FALSE
+)
+```
+
+### Arguments
+
+| Argument         | Description |
+|------------------|-------------|
+| `data`           | Data frame |
+| `D`              | Name of binary treatment variable (numeric) |
+| `Y`              | Name of outcome variable (numeric) |
+| `M`              | List of mediator variables, ordered causally (all numeric) |
+| `Y_models`       | List outcome models |
+| `D_model`        | Optional treatment model (`glm`, `gbm`, `ps`, `pbart`) |
+| `boot_reps`      | Number of bootstrap samples |
+| `boot_conf_level`| Confidence level for bootstrap intervals |
+| `boot_seed`      | Random seed for reproducibility |
+| `boot_parallel`  | Parallel backend (`"no"`, `"multicore"`) |
+| `boot_cores`     | Number of cores to use for parallel bootstrapping |
+| `round_decimal`  | Digits to round estimates |
+| `out_ipw`        | Logical: include IPW estimator? |
+
+---
+
+### Output
+
+Returns a named list containing:
+
+- `summary_df`: A tidy `data.frame` with formatted effect estimates and confidence intervals
+- `org_obj`: The full `paths` model object (for further inspection)
+
+Each row in `summary_df` includes:
+
+- The estimator type  
+- The causal estimand (ATE or PSE through each mediator)  
+- The point estimate and confidence interval
+
+---
+
+### Examples
+
+#### Estimate PSEs with two ordered mediators using pure regression imputation
+
+```r
+## specify outcome models
+
+# E(Y|D,C)
+glm_m0 <- glm(std_cesd_age40 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22, data = nlsy)
+
+# E(Y|D,C,M1)
+glm_m1 <- glm(std_cesd_age40 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22 + ever_unemp_age3539, data = nlsy)
+
+# E(Y|D,C,M1,M2)
+glm_m2 <- glm(std_cesd_age40 ~ female + black + hispan + paredu + parprof +  parinc_prank + famsize + afqt3 + att22 + ever_unemp_age3539 + log_faminc_adj_age3539, data = nlsy)
+
+glm_ymodels <- list(glm_m0, glm_m1, glm_m2)
+
+# compute estimates
+res <- pathimp(
+  data = nlsy,
+  D = "att22",
+  M = list("ever_unemp_age3539", "log_faminc_adj_age3539"),
+  Y = "std_cesd_age40",
+  Y_models = glm_ymodels,
+  boot_reps = 2000,
+  boot_seed = 60637,
+)
+
+res$summary_df
+```
+
+#### Estimate PSEs with two ordered mediators using imputation-based weighting
+
+```r
+## specify propensity model
+
+# E(D|C):
+glm_ps <- glm(att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3, family = binomial("logit"), data = nlsy)
+
+# compute estimates
+res_wt <- pathimp(
+  data = nlsy,
+  D = "att22",
+  M = list("ever_unemp_age3539", "log_faminc_adj_age3539"),
+  Y = "std_cesd_age40",
+  Y_models = glm_ymodels,
+  D_model = glm_ps,
+  boot_reps = 2000,
+  boot_seed = 60637,
+)
+
+res_wt$summary_df
+```
+
+#### Parallelized bootstrap
+
+```r
+# compute estimates
+res_wt_boot <- pathimp(
+  data = nlsy,
+  D = "att22",
+  M = list("ever_unemp_age3539", "log_faminc_adj_age3539"),
+  Y = "std_cesd_age40",
+  Y_models = glm_ymodels,
+  D_model = glm_ps,
+  boot_reps = 2000,
+  boot_seed = 60637,
+  boot_parallel = "multicore"
+)
+
+res_wt_boot$summary_df
+```
+
 ## `utils`: utility functions
 
 This script defines helper functions used internally by many of the other other functions in this repository.
