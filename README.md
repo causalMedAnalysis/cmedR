@@ -340,6 +340,38 @@ sim_cde <- medsim(
 )
 ```
 
+#### Estimate Path-specific Effects, Include Bootstrap CIs and P-values
+
+```r
+# Specify models for the mediators and the outcome
+M1form <- ever_unemp_age3539 ~ att22 * (female + black + hispan +
+  paredu + parprof + parinc_prank + famsize + afqt3)
+
+M2form <- log_faminc_adj_age3539 ~ att22 * (female + black + hispan +
+  paredu + parprof + parinc_prank + famsize + afqt3 + ever_unemp_age3539)
+
+Yform <- std_cesd_age40 ~ (ever_unemp_age3539 + log_faminc_adj_age3539 + att22) *
+  (female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3)
+
+specs <- list(
+  list(func = "glm", formula = as.formula(M1form), args = list(family = "binomial")),
+  list(func = "lm", formula = as.formula(M2form)),
+  list(func = "lm", formula = as.formula(Yform))
+)
+
+# Estimate path-specific effects
+sim_pse <- medsim(
+  data = nlsy,
+  num_sim = 1000,
+  treatment = D,
+  intv_med = NULL,
+  model_spec = specs,
+  boot = TRUE,
+  reps = 2000,
+  seed = 60637
+)
+
+```
 
 ## `ipwmed`: mediation analysis using inverse probability weights
 
