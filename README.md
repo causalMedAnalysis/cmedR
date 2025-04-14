@@ -276,19 +276,23 @@ See below for additional examples.
 
 ```r
 # Specify models for M (logit) and Y (normal linear)
-formula_M <- paste(M, "~", paste(c(D, C), collapse = " + "))
-formula_Y <- paste(Y, "~", paste(c(D, M, C), collapse = " + "))
+Mform <- ever_unemp_age3539 ~ att22 + female + black + hispan +
+  paredu + parprof + parinc_prank + famsize + afqt3
+
+Yform <- std_cesd_age40 ~ (ever_unemp_age3539 * att22) +
+  female + black + hispan + paredu + parprof + parinc_prank +
+  famsize + afqt3
 
 specs <- list(
-  list(func = "glm", formula = as.formula(formula_M), args = list(family = "binomial")),
-  list(func = "lm", formula = as.formula(formula_Y))
+  list(func = "glm", formula = as.formula(Mform), args = list(family = "binomial")),
+  list(func = "lm", formula = as.formula(Yform))
 )
 
 # Compute estimates
 sim_nat <- medsim(
   data = nlsy,
   num_sim = 1000,
-  treatment = D,
+  treatment = "att22",
   intv_med = NULL,
   model_spec = specs,
   seed = 60637
@@ -305,9 +309,8 @@ Lform <- ever_unemp_age3539 ~ att22 * (female + black + hispan +
 Mform <- log_faminc_adj_age3539 ~ att22 * (female + black + hispan +
   paredu + parprof + parinc_prank + famsize + afqt3)
 
-Yform <- std_cesd_age40 ~ (log_faminc_adj_age3539 * att22) *
-  (female + black + hispan + paredu + parprof + parinc_prank +
-   famsize + afqt3 + ever_unemp_age3539)
+Yform <- std_cesd_age40 ~ (ever_unemp_age3539 + log_faminc_adj_age3539 + att22) *
+  (female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3)
 
 specs <- list(
   list(func = "glm", formula = as.formula(Lform), args = list(family = "binomial")),
@@ -319,8 +322,8 @@ specs <- list(
 sim_ie <- medsim(
   data = nlsy,
   num_sim = 1000,
-  treatment = D,
-  intv_med = M,
+  treatment = "att22",
+  intv_med = "log_faminc_adj_age3539",
   model_spec = specs,
   boot = TRUE,
   reps = 2000,
@@ -331,8 +334,8 @@ sim_ie <- medsim(
 sim_cde <- medsim(
   data = nlsy,
   num_sim = 1000,
-  treatment = D,
-  intv_med = paste0(M, "=log(5e4)"),
+  treatment = "att22",
+  intv_med = "log_faminc_adj_age3539=log(5e4)",
   model_spec = specs,
   boot = TRUE,
   reps = 2000,
@@ -363,7 +366,7 @@ specs <- list(
 sim_pse <- medsim(
   data = nlsy,
   num_sim = 1000,
-  treatment = D,
+  treatment = "att22",
   intv_med = NULL,
   model_spec = specs,
   boot = TRUE,
