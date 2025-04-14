@@ -211,13 +211,54 @@ medsim(
 | `cat_list`    | A vector of treatment levels to compare (default: `c(0, 1)`). |
 | `treatment`   | Name of the treatment variable (character). |
 | `intv_med`    | A list specifying the intervention(s) on the mediators. Set to `NULL` if interventional or controlled direct effects are not of interest. |
-| `model_spec`  | A list of lists defining the models for the mediators and the outcome. Each model must include: <br> • `func`: model-fitting function (e.g., `"glm"`, `"polr"`) <br> • `formula`: model formula <br> • `args`: (optional) list of additional arguments to pass to the function. |
+| `model_spec`  | A list of lists defining the models for the mediators and the outcome supplied according to their assumed causal ordering. Each model must include: <br> • `func`: model-fitting function (e.g., `"glm"`, `"polr"`) <br> • `formula`: model formula <br> • `args`: (optional) list of additional arguments to pass to the function. |
 | `weights`     | (Optional) Name of the variable containing weights to use in model fitting. If `NULL`, no weights are applied. |
 | `boot`        | Logical. If `TRUE`, performs nonparametric bootstrap to obtain confidence intervals and p-values (default: `FALSE`). Requires `doParallel`, `doRNG`, and `foreach`. |
 | `reps`        | Integer. Number of bootstrap replications (default: `100`). |
 | `resv_core`   | Integer. Number of CPU cores to reserve (i.e., not use) when bootstrapping via parallel processing (default: `1`). |
 | `seed`        | Integer or `NULL`. Seed for reproducibility. |
 
+
+### Specifying the `model_spec` argument
+
+The `model_spec` argument requires a list of lists detailing the model specifications for each mediator and the outcome. The the models for each mediator should be listed in their assumed causal order, with the outcome model last, as the function automatically uses the last model specified as the outcome model and derives the causal order of the mediators from the order of the models supplied to this argument. At least one mediator model must be included, along with an outcome model.
+
+The `model_spec` argument accomodates many different types of models through its `func` and `args' options:
+
+- **`multinom` (from the `nnet` package)**: for multinomial logit or probit regressions, where the `args` can include `family` to specify `"logit"` or `"probit"`.
+- **`polr` (from the `MASS` package)**: for ordinal logit or probit regressions, where the `args` can include `method` to specify `"logit"` or `"probit"`. 
+- **`lm`**: for normal linear regression, where no `args` are required.
+- **`glm`**: for generalized linear models, where the `args` can include `family` to specify different distributions and link functions. Current options include `"binomial"` (for logit or probit regressions) and `"poisson"` (for count data).
+
+Here is an example of how to specify the the `model_spec` argument with two causally ordered mediators modeled using ordinal logit and poisson models, respectively, and an outcome modeled using normal linear regression:
+
+```r
+
+# Specify models for M1 (ordinal logit), M2 (poisson) and Y (normal linear)
+formula_M1 <- paste(M1, "~", paste(c(D, C), collapse = " + "))
+formula_M2 <- paste(M2, "~", paste(c(M1, D, C), collapse = " + "))
+formula_Y <- paste(Y, "~", paste(c(M2, M1, D, C), collapse = " + "))
+
+specs <- list(
+  list(func = "polr", formula = as.formula(formula_M1), args = list(method = "logit")),
+  list(func = "glm", formula = as.formula(formula_M2), args = list(family = "poisson")),
+  list(func = "lm", formula = as.formula(formula_Y))
+)
+
+# Call medsim function using the above model specifications
+sim_nat <- medsim(
+  data = df,
+  num_sim = 1000,
+  treatment = D,
+  intv_med = NULL,
+  model_spec = specs,
+  seed = 60637
+)
+```
+
+See below for additional examples.
+
+ 
 ### Returns
 
 - If `boot = FALSE`:  
