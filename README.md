@@ -246,7 +246,7 @@ specs <- list(
 )
 
 # Call medsim function using the above model specifications
-sim_pse <- medsim(
+sim_example <- medsim(
   data = df,
   num_sim = 1000,
   treatment = D,
