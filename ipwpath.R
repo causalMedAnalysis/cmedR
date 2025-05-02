@@ -177,6 +177,18 @@ ipwpath_inner <- function(
 #' total effect (ATE) and path-specific effects (PSEs).
 #' 
 #' @details
+#' `ipwpath()` uses inverse probability weighting to estimate path-specific effects through 
+#' multiple mediators, and it computes inferential statistics using the nonparametric bootstrap. 
+#' It constructs weights using logit models for the exposure, each conditioned on different combinations 
+#' of mediators and the baseline confounders. This approach allows the isolation of effects 
+#' that pass through specific causal pathways defined by the ordered mediators. For example, 
+#' with two causally ordered mediators (M1, M2), it estimates: a model for the exposure with 
+#' no mediators, just the baseline confounders as predictors; a model for the exposure with M1 
+#' and the baseline confounders as predictors; and a model for the exposure with M1, M2, and the 
+#' baseline confounders as predictors. These models are used to construct a set of inverse probability 
+#' weights, which then enable the calculation of direct and path-specific effects that operate through 
+#' each mediator, net of the mediators that precede it causal order.
+#' 
 #' Specifying the `M` Argument:
 #' 
 #' The `M` argument is a list of character vectors identifying the names of the 
