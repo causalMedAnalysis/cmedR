@@ -4,12 +4,30 @@
 #' `pathimp()` is a wrapper for two functions from the `paths` package. It 
 #' implements the pure imputation estimator and the imputation-based weighting
 #' estimator (when a propensity score model is provided) as detailed in Zhou 
-#' and Yamamoto (2020).You may install the `paths` package from the 
+#' and Yamamoto (2020). You may install the `paths` package from the 
 #' xiangzhou09/paths GitHub repository, using the following code:
 #' `devtools::install_github("xiangzhou09/paths")`
 #' 
 #' @details
-#' TEMPORARY PLACEHOLDER
+#' `pathimp()` estimates path-specific effects using pure regression imputation and (optionally)
+#' an imputation-based weighting estimator, and it computes inferential statistics using the 
+#' nonparametric bootstrap. 
+#' 
+#' With K causally ordered mediators, the implementation proceeds as follows:
+#' (i) it fits a model for the mean of the outcome conditional on the exposure and baseline confounders; 
+#' (ii) it imputes conventional potential outcomes under using model from (i); (iii) for each mediator 
+#' k = 1, 2, ..., K, it then fits (iiia) a model for the mean of the outcome conditional on the exposure, 
+#' baseline confounders, and the mediators Mk = {M1, ..., Mk}; (iv) it uses the models from (iii) to 
+#' impute cross-world potential outcomes; and (v) and finally, it uses the imputed outcomes from all 
+#' the previous steps to calculate estimates for the path-specific effects.
+#' 
+#' `pathimp()` provides estimates for the total effect and K+1 path-specific effects: the direct effect 
+#' of the exposure on the outcome that does not operate through any of the mediators, and separate 
+#' path-specific effects operating through each of the K mediators, net of the mediators that precede 
+#' them in causal order.
+#' 
+#' If only a single mediator is specified, `pathimp()` reverts to estimates of conventional natural 
+#' direct and indirect effects through a univariate mediator.
 #' 
 #' @param data A data frame.
 #' 
