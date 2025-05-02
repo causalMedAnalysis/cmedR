@@ -117,7 +117,15 @@ rwrlite_inner <- function(
 #' `devtools::install_github("xiangzhou09/rwrmed")`
 #' 
 #' @details
-#' TEMPORARY PLACEHOLDER
+#' `rwrlite()` estimates interventional and controlled direct effects as follows: (i) it 
+#' fits a model for the mediator conditional on treatment and the baseline covariates, after
+#' centering these covariates around their sample means, and (ii) it fits a model for the 
+#' outcome conditional on treatment, the mediator, the baseline covariates after centering them 
+#' around their sample means, and any exposure-induced covariates after residualizing them with 
+#' respect to the treatment and baseline covariates. These models then allow for estimation of 
+#' controlled direct effects, interventional direct effects, interventional indirect effects, 
+#' and the overall effect, using simple functions of their parameters. Inferential statistics 
+#' are computed with the nonparametric bootstrap.
 #' 
 #' @param data A data frame.
 #' @param D A character scalar identifying the name of the exposure variable in 
