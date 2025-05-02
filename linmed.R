@@ -1,4 +1,4 @@
-#' Product-of-coefficients estimator for natural effects: inner function
+#' Linear models estimator for natural effects: inner function
 #' 
 #' @description
 #' Internal function used within `linmed()`. See the `linmed()` function 
@@ -200,17 +200,28 @@ linmed_inner <- function(
 
 
 
-#' Product-of-coefficients estimator for natural effects
+#' Linear models estimator for natural effects
 #' 
 #' @description
-#' `linmed()` uses the product-of-coefficients estimator, based on linear 
-#' models, to estimate the total effect (ATE), natural direct effect (NDE), 
-#' natural indirect effect (NIE), and controlled direct effect (CDE). The 
-#' function supports estimation of both univariate and multivariate natural 
-#' effects.
+#' `linmed()` uses a product-of-coefficients estimator, based on linear 
+#' models for the mediator(s) and outcome, to estimate the total effect (ATE), 
+#' natural direct effect (NDE), natural indirect effect (NIE), and controlled direct effect (CDE). 
+#' The function supports estimation of both univariate and multivariate natural effects.
 #' 
 #' @details
-#' TEMPORARY PLACEHOLDER
+#' `linmed()` performs causal mediation analysis using linear models for both the mediator(s) 
+#' and outcome, and it computes inferential statistics using the nonparametric bootstrap. When a 
+#' single mediator is specified, it estimates total, natural direct, and natural indirect effects 
+#' using two linear models: a model for the mediator conditional on treatment and baseline covariates 
+#' after centering them around their sample means, and a model for the outcome conditional on treatment, 
+#' the mediator, and the baseline covariates after centering them around their sample means.
+#' 
+#' When multiple mediators are specified, `linmed()` provides estimates for the total effect and then 
+#' for the multivariate natural direct and indirect effects operating through the entire set of 
+#' mediators considered together. To this end, it fits separate models for each mediator conditional 
+#' on treatment and the baseline covariates after centering them around their sample means, and then 
+#' a model for the outcome conditional on treatment, all the mediators, and the baseline covariates 
+#' after centering them around their sample means.
 #' 
 #' @param data A data frame.
 #' @param D A character scalar identifying the name of the exposure variable in 
