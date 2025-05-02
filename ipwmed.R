@@ -160,7 +160,15 @@ ipwmed_inner <- function(
 #' multivariate natural effects.
 #' 
 #' @details
-#' TEMPORARY PLACEHOLDER
+#' `ipwmed()` performs causal mediation analysis using inverse probability weighting, 
+#' and it computes inferential statistics using the nonparametric bootstrap. It estimates 
+#' two models to construct the weights: a logit model for the exposure conditional on 
+#' baseline covariates (if specified), and another logit model for the exposure conditional 
+#' on the mediator(s) and the baseline covariates. Using these weights, ipwmed estimates the 
+#' total, natural direct, and natural indirect effects when a single mediator is specified. 
+#' When multiple mediators are specified, it provides estimates for the total effect and 
+#' the multivariate natural direct and indirect effects operating through the entire set of 
+#' mediators.
 #' 
 #' @param data A data frame.
 #' @param D A character scalar identifying the name of the exposure variable in 
