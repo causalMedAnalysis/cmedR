@@ -50,7 +50,10 @@ impcde_inner <- function(
 #' imputation estimator.
 #' 
 #' @details
-#' TEMPORARY PLACEHOLDER
+#' `impcde()` fits a single model for the outcome conditional on treatment, the mediator, 
+#' and baseline covariates. This model can be any in the family of GLMs. The outcome model 
+#' is then used to construct regression imputation estimates for the controlled direct effect. 
+#' Inferential statistics are computed using the nonparametric bootstrap.
 #' 
 #' @param data A data frame.
 #' @param model_y A model object for the fitted outcome model.
