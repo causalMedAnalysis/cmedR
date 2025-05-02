@@ -148,7 +148,14 @@ ipwcde_inner <- function(
 #' ipwcde() requires a single mediator. Multiple mediators are not supported.
 #' 
 #' @details
-#' TEMPORARY PLACEHOLDER
+#' `ipwcde()` estimates controlled direct effects using inverse probability weights, 
+#' and it computes inferential statistics using the nonparametric bootsrtap. To compute 
+#' the weights, ipwcde fits the following models: (i) a logit model for exposure 
+#' conditional on baseline covariates, and (ii) a logit model for the mediator 
+#' conditional on both the exposure and baseline covariates, plus any specified 
+#' post-treatment covariates. These models are used to generate inverse probability 
+#' weights, which are then applied to fit an outcome model and estimate the controlled 
+#' direct effect.
 #' 
 #' @param data A data frame.
 #' @param D A character scalar identifying the name of the exposure variable in 
