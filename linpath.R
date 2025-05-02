@@ -1,4 +1,4 @@
-#' Product-of-coefficients estimator for path-specific effects: inner function
+#' Linear models estimator for path-specific effects: inner function
 #' 
 #' @description
 #' Internal function used within `linpath()`. See the `linpath()` function 
@@ -133,13 +133,27 @@ linpath_inner <- function(
 
 
 
-#' Product-of-coefficients estimator for path-specific effects
+#' Linear models estimator for path-specific effects
 #' 
 #' @description
 #' `linpath()` uses the product-of-coefficients estimator, based on linear 
 #' models, to estimate the total effect (ATE) and path-specific effects (PSEs).
 #' 
 #' @details
+#' `linpath()` estimates path-specific effects by fitting linear models for the mediators 
+#' and outcome, and it computes inferential statistics using the nonparametric bootstrap. 
+#' If there are K causally ordered mediators, linpath provides estimates for: a direct effect 
+#' of the exposure on the outcome that does not operate through any of the mediators, and then 
+#' K path-specific effects, with each of these effects operating through one mediator, net of the 
+#' mediators preceding it in causal order. If only one mediator is specified, `linpath()` computes 
+#' conventional natural direct and indirect effects.
+#' 
+#' To compute path-specific effects with K causally ordered mediators, linpath proceeds as follows:
+#' For k = 1, 2, . . ., K: (i) it fits a linear model for the kth mediator conditional on the exposure and 
+#' baseline confounders; (ii) it then fits a linear model for the outcome conditional on the exposure, 
+#' baseline confounders, and all the mediators in Mk={M1,...,Mk}; finally, it calculate estimates for 
+#' the path-specific effects using coefficients from the mediator and outcome models.
+#' 
 #' Specifying the `M` Argument:
 #' 
 #' The `M` argument is a list of character vectors identifying the names of the 
