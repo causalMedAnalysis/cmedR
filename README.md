@@ -1284,6 +1284,160 @@ res_wt_boot <- pathimp(
 res_wt_boot$summary_df
 ```
 
+
+## `mrmed()`: mediation analysis using multiply robust estimation
+
+### Description
+
+`mrmed()` implements two different multiply robust (MR) estimators for the total effect (ATE), natural direct effect (NDE), and natural indirect effect (NIE) in causal mediation analysis. It supports both univariate mediator and multivariate mediators. It also supports bootstrap confidence intervals and (optionally) parallel computation.
+
+The `mrmed()` function uses a multiply robust estimation procedure and computes inferential statistics via nonparametric bootstrap. It estimates causal effects using two different approaches, depending on which nuisance models the user supplies:
+
+* **Type 1 Estimator (Wodtke and Zhou, Equation 6.17)**: Requires:
+
+  * A logit model for $P(M|D,C)$
+  * A logit model for $P(D|C)$
+  * A linear model for $E(Y|C,D,M)$
+
+* **Type 2 Estimator (Wodtke and Zhou, Equation 6.20)**: Requires:
+
+  * A logit model for $P(D|C)$
+  * A logit model for $P(D|C,M)$
+  * A linear model for $E(Y|C,M,D)$
+  * A linear model for $E(E(Y|C,M,D=d)|C,D)$
+
+When multiple mediators are analyzed, only the **Type 2 Estimator** can be used, and the function estimates multivariate natural effects across the set of mediators.
+
+---
+
+### Function
+
+```r
+mrmed(
+    D,
+    Y,
+    M,
+    D_C_model, # D ~ C
+    D_MC_model = NULL, # D ~ M,C
+    Y_DC_model = NULL, # Y ~ D,C
+    Y_DMC_model, # Y ~ D,M,C
+    M_DC_model = NULL, # M ~ D,C
+    data,
+    d = 1,
+    dstar = 0,
+    censor = TRUE,
+    censor_low = 0.01,
+    censor_high = 0.99,
+    boot = TRUE,
+    boot_reps = 2,
+    boot_conf_level = 0.95,
+    boot_seed = NULL,
+    boot_parallel = FALSE,
+    boot_cores = max(c(parallel::detectCores()-2,1))
+)
+```
+
+### Arguments
+
+| Argument         | Description |
+|------------------|-------------|
+| `data`           | A data frame containing the dataset for analysis |
+| `D`              | A character string for the exposure variable (binary, numeric) |
+| `Y`              | A character string for the outcome variable (numeric) |
+| `M`              | A character vector (or list) of mediator variables (all numeric) |
+| `D_C_model`       | Formula for logit model of $P(D|C)$ (required). |
+| `D_MC_model`        | Formula for logit model of $P(D|C,M)$ (required for Type 2 estimator) |
+| `Y_DMC_model`        | Formula for linear model of $E(Y|C,M,D)$ (required) |
+| `Y_DC_model`        | Formula for linear model of $E(E(Y|C,D=d,M)|C,D)$ (required for Type 2 estimator) |
+| `M_DC_model`        | Formula for logit model of $P(M|C,D)$ (required for Type 1 estimator) |
+| `d`, `dstar` | Numeric values specifying the exposure contrast of interest (`d - dstar`) |
+| `censor`  | Logical indicating whether IPW weights should be censored (default: `TRUE`) |
+| `censor_low`, `censor_high` | Quantiles for censoring IPW weights |
+| `boot_reps`      | Number of bootstrap samples |
+| `boot_conf_level`| Confidence level for bootstrap intervals |
+| `boot_seed`      | Random seed for reproducibility |
+| `boot_parallel`  | Parallel backend (`"no"`, `"multicore"`) |
+| `boot_cores`     | Number of CPU cores for parallel bootstrap. Defaults to available cores minus 2. |
+
+---
+
+### Returns
+
+The function returns a list containing:
+
+* `est1`, `est2`: Tibble with point estimates for ATE, NDE, and NIE (for Type 1 and Type 2 estimators).
+* `models_D`: List of model objects for the exposure models.
+* `models_M`: Model for the mediator (if specified to implement Type 1 estimator).
+* `models_Y`: List of model objects for the outcome models.
+* Bootstrap results (if `boot = TRUE`):
+
+### Examples
+
+#### Initial Specification and Data Cleaning
+
+```r
+data(nlsy)
+
+# Outcome
+Y <- "std_cesd_age40"
+
+# Exposure
+D <- "att22"
+
+# Mediators
+M <- list(
+  "ever_unemp_age3539",
+  "log_faminc_adj_age3539"
+)
+
+# Baseline Confounders
+C <- c(
+  "female",
+  "black",
+  "hispan",
+  "paredu",
+  "parprof",
+  "parinc_prank",
+  "famsize",
+  "afqt3"
+)
+
+# Clean the Data
+key_vars <- c("cesd_age40", D, unlist(M), C)
+df <- nlsy[complete.cases(nlsy[, key_vars]), ] %>%
+  mutate(std_cesd_age40 = (cesd_age40 - mean(cesd_age40)) / sd(cesd_age40))
+```
+
+#### Specify the Models
+
+```r
+# D Models
+D_C_model <- as.formula(paste(D, " ~ ", paste(C, collapse= "+")))
+D_MC_model <- as.formula(paste(D, " ~ ", paste(c(C, M[1]), collapse= "+")))
+
+# Y Models
+Y_DC_model <- as.formula(paste(Y, " ~ ", paste(c(C, D), collapse= "+")))
+Y_DMC_model <- as.formula(paste(Y, " ~ ", paste(c(C, D, M[1]), collapse= "+")))
+```
+
+#### Implement Type 2 Estimator with a Single Mediator
+
+```r
+mrmed_rst1 <- mrmed(
+  D=D,
+  Y=Y,
+  M=M[[1]],
+  D_C_model=D_C_model,
+  D_MC_model=D_MC_model,
+  Y_DC_model=Y_DC_model,
+  Y_DMC_model=Y_DMC_model,
+  data = df,
+  boot = TRUE, boot_reps = 2000
+  boot_parallel = FALSE
+)
+```
+
+
 ## `utils`: utility functions
 
 This script defines helper functions used internally by many of the other other functions in this repository.
