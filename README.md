@@ -11,7 +11,9 @@ This repository contains R functions for conducting causal mediation analysis us
 - [linpath – analysis of path-specific effects using linear models](#linpath-analysis-of-path-specific-effects-using-linear-models)
 - [ipwpath – analysis of path-specific effects using inverse probability weights](#ipwpath-analysis-of-path-specific-effects-using-inverse-probability-weights)
 - [pathimp – analysis of path-specific effects using regression imputation](#pathimp-analysis-of-path-specific-effects-using-regression-imputation)
+- [mrmed – mediation analysis using multiply robust estimation](#mrmed-mediation-analysis-using-multiply-robust-estimation)
 - [utils – utility functions](#utils-utility-functions)
+
 
 ## `linmed`: mediation analysis using linear models
 
@@ -1295,16 +1297,16 @@ The `mrmed()` function uses a multiply robust estimation procedure and computes 
 
 * **Type 1 Estimator (Wodtke and Zhou, Equation 6.17)**: Requires:
 
-  * A logit model for $P(M|D,C)$
-  * A logit model for $P(D|C)$
-  * A linear model for $E(Y|C,D,M)$
+  * A logit model for P(M|D,C)
+  * A logit model for P(D|C)
+  * A linear model for E(Y|C,D,M)
 
 * **Type 2 Estimator (Wodtke and Zhou, Equation 6.20)**: Requires:
 
-  * A logit model for $P(D|C)$
-  * A logit model for $P(D|C,M)$
-  * A linear model for $E(Y|C,M,D)$
-  * A linear model for $E(E(Y|C,M,D=d)|C,D)$
+  * A logit model for P(D|C)
+  * A logit model for P(D|C,M)
+  * A linear model for E(Y|C,M,D)
+  * A linear model for E(E(Y|C,D=d,M)|C,D)
 
 When multiple mediators are analyzed, only the **Type 2 Estimator** can be used, and the function estimates multivariate natural effects across the set of mediators.
 
@@ -1317,11 +1319,11 @@ mrmed(
     D,
     Y,
     M,
-    D_C_model, # D ~ C
-    D_MC_model = NULL, # D ~ M,C
-    Y_DC_model = NULL, # Y ~ D,C
-    Y_DMC_model, # Y ~ D,M,C
-    M_DC_model = NULL, # M ~ D,C
+    D_C_model,
+    D_MC_model = NULL,
+    Y_DC_model = NULL,
+    Y_DMC_model,
+    M_DC_model = NULL,
     data,
     d = 1,
     dstar = 0,
@@ -1345,11 +1347,11 @@ mrmed(
 | `D`              | A character string for the exposure variable (binary, numeric) |
 | `Y`              | A character string for the outcome variable (numeric) |
 | `M`              | A character vector (or list) of mediator variables (all numeric) |
-| `D_C_model`       | Formula for logit model of $P(D|C)$ (required). |
-| `D_MC_model`        | Formula for logit model of $P(D|C,M)$ (required for Type 2 estimator) |
-| `Y_DMC_model`        | Formula for linear model of $E(Y|C,M,D)$ (required) |
-| `Y_DC_model`        | Formula for linear model of $E(E(Y|C,D=d,M)|C,D)$ (required for Type 2 estimator) |
-| `M_DC_model`        | Formula for logit model of $P(M|C,D)$ (required for Type 1 estimator) |
+| `D_C_model`       | Formula for logit model of P(D|C) (required). |
+| `D_MC_model`        | Formula for logit model of P(D|C,M) (required for Type 2 estimator) |
+| `Y_DMC_model`        | Formula for linear model of E(Y|C,M,D) (required) |
+| `Y_DC_model`        | Formula for linear model of E(E(Y|C,D=d,M)|C,D) (required for Type 2 estimator) |
+| `M_DC_model`        | Formula for logit model of P(M|C,D) (required for Type 1 estimator) |
 | `d`, `dstar` | Numeric values specifying the exposure contrast of interest (`d - dstar`) |
 | `censor`  | Logical indicating whether IPW weights should be censored (default: `TRUE`) |
 | `censor_low`, `censor_high` | Quantiles for censoring IPW weights |
