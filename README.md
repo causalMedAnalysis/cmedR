@@ -217,7 +217,7 @@ medsim(
 | `model_spec`  | A list of lists defining the models for the mediators and the outcome supplied according to their assumed causal ordering. Each model must include: <br> • `func`: model-fitting function (e.g., `"glm"`, `"polr"`) <br> • `formula`: model formula <br> • `args`: (optional) list of additional arguments to pass to the function. |
 | `weights`     | (Optional) Name of the variable containing weights to use in model fitting. If `NULL`, no weights are applied. |
 | `boot`        | Logical. If `TRUE`, performs nonparametric bootstrap to obtain confidence intervals and p-values (default: `FALSE`). Requires `doParallel`, `doRNG`, and `foreach`. |
-| `boot_reps` | Number of bootstrap replications (default: 1000). |
+| `boot_reps` | Number of bootstrap replications (default: 100). |
 | `boot_conf_level` | Confidence level for bootstrap intervals (default: 0.95). |
 | `boot_cores` | Number of CPU cores to use when parallelizing. Defaults to available cores minus 2. |
 | `seed`        | Integer or `NULL`. Seed for reproducibility. |
@@ -1291,7 +1291,7 @@ res_wt_boot$summary_df
 ```
 
 
-## `mrmed()`: mediation analysis using multiply robust estimation
+## `mrmed`: mediation analysis using multiply robust estimation
 
 ### Description
 
