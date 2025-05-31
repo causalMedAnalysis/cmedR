@@ -332,7 +332,7 @@ sim_ie <- medsim(
   intv_med = "log_faminc_adj_age3539",
   model_spec = specs,
   boot = TRUE,
-  reps = 2000,
+  boot_reps = 2000,
   seed = 60637
 )
 
@@ -344,7 +344,7 @@ sim_cde <- medsim(
   intv_med = "log_faminc_adj_age3539=log(5e4)",
   model_spec = specs,
   boot = TRUE,
-  reps = 2000,
+  boot_reps = 2000,
   seed = 60637
 )
 ```
@@ -376,7 +376,7 @@ sim_pse <- medsim(
   intv_med = NULL,
   model_spec = specs,
   boot = TRUE,
-  reps = 2000,
+  boot_reps = 2000,
   seed = 60637
 )
 
