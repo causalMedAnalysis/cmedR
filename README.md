@@ -196,11 +196,12 @@ medsim(
   treatment,
   intv_med,
   model_spec,
+  seed = NULL
   weights = NULL,
   boot = FALSE,
-  reps = 100,
-  resv_core = 1,
-  seed = NULL
+  boot_reps = 100,
+  boot_conf_level = 0.95,
+  boot_cores = max(c(parallel::detectCores() - 2, 1))
 )
 ```
 
@@ -216,8 +217,9 @@ medsim(
 | `model_spec`  | A list of lists defining the models for the mediators and the outcome supplied according to their assumed causal ordering. Each model must include: <br> • `func`: model-fitting function (e.g., `"glm"`, `"polr"`) <br> • `formula`: model formula <br> • `args`: (optional) list of additional arguments to pass to the function. |
 | `weights`     | (Optional) Name of the variable containing weights to use in model fitting. If `NULL`, no weights are applied. |
 | `boot`        | Logical. If `TRUE`, performs nonparametric bootstrap to obtain confidence intervals and p-values (default: `FALSE`). Requires `doParallel`, `doRNG`, and `foreach`. |
-| `reps`        | Integer. Number of bootstrap replications (default: `100`). |
-| `resv_core`   | Integer. Number of CPU cores to reserve (i.e., not use) when bootstrapping via parallel processing (default: `1`). |
+| `boot_reps` | Number of bootstrap replications (default: 1000). |
+| `boot_conf_level` | Confidence level for bootstrap intervals (default: 0.95). |
+| `boot_cores` | Number of CPU cores to use when parallelizing. Defaults to available cores minus 2. |
 | `seed`        | Integer or `NULL`. Seed for reproducibility. |
 
 
@@ -265,11 +267,13 @@ See below for additional examples.
 
 - If `boot = FALSE`:  
   A list of point estimates for the mediation effects of interest.
+  Fitted models for each mediator and the outcome
 
-- If `boot = TRUE`:  
+- If `boot = TRUE`:
+  Fitted models for each mediator and the outcome
   A data frame containing:
   - Point estimates for the mediation effects of interest  
-  - 95% bootstrap confidence intervals  
+  - bootstrap confidence intervals  
   - P-values from tests of no effect
 
 ### Examples
