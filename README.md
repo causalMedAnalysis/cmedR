@@ -1295,7 +1295,7 @@ res_wt_boot$summary_df
 
 ### Description
 
-`mrmed()` implements two different multiply robust (MR) estimators for the total effect (ATE), natural direct effect (NDE), and natural indirect effect (NIE) in causal mediation analysis. It supports both univariate mediator and multivariate mediators. It also supports bootstrap confidence intervals and (optionally) parallel computation.
+`mrmed()` implements two different multiply robust (MR) estimators for the total effect (ATE), natural direct effect (NDE), and natural indirect effect (NIE) in causal mediation analysis. It supports both univariate and multivariate mediators. It also supports bootstrap confidence intervals and (optionally) parallel computation.
 
 The `mrmed()` function uses a multiply robust estimation procedure and computes inferential statistics via nonparametric bootstrap. It estimates causal effects using two different approaches, depending on which nuisance models the user supplies:
 
