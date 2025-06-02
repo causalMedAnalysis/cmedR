@@ -1314,7 +1314,6 @@ The `mrmed()` function uses a multiply robust estimation procedure and computes 
 
 When multiple mediators are analyzed, only the **Type 2 Estimator** can be used, and the function estimates multivariate natural effects across the set of mediators.
 
----
 
 ### Function
 
@@ -1351,11 +1350,11 @@ mrmed(
 | `D`              | A character string for the exposure variable (binary, numeric) |
 | `Y`              | A character string for the outcome variable (numeric) |
 | `M`              | A character vector (or list) of mediator variables (all numeric) |
-| `D_C_model`       | Formula for logit model of P(D\C) (required). |
-| `D_MC_model`        | Formula for logit model of P(D\C,M) (required for Type 2 estimator) |
+| `D_C_model`       | Formula for logit model of P(D\C) (required) |
+| `D_MC_model`        | Formula for logit model of P(D\C,M) (required for type 2 estimator) |
 | `Y_DMC_model`        | Formula for linear model of E(Y\C,M,D) (required) |
-| `Y_DC_model`        | Formula for linear model of E(E(Y\C,D=d,M)\C,D) (required for Type 2 estimator) |
-| `M_DC_model`        | Formula for logit model of P(M\C,D) (required for Type 1 estimator) |
+| `Y_DC_model`        | Formula for linear model of E(E(Y\C,D=d,M)\C,D) (required for type 2 estimator) |
+| `M_DC_model`        | Formula for logit model of P(M\C,D) (required for type 1 estimator) |
 | `d`, `dstar` | Numeric values specifying the exposure contrast of interest (`d - dstar`) |
 | `censor`  | Logical indicating whether IPW weights should be censored (default: `TRUE`) |
 | `censor_low`, `censor_high` | Quantiles for censoring IPW weights |
@@ -1365,7 +1364,6 @@ mrmed(
 | `boot_parallel`  | Parallel backend (`"no"`, `"multicore"`) |
 | `boot_cores`     | Number of CPU cores for parallel bootstrap. Defaults to available cores minus 2. |
 
----
 
 ### Returns
 
@@ -1376,6 +1374,7 @@ The function returns a list containing:
 * `models_M`: Model for the mediator (if specified to implement Type 1 estimator).
 * `models_Y`: List of model objects for the outcome models.
 * Bootstrap results (if `boot = TRUE`):
+
 
 ### Examples
 
