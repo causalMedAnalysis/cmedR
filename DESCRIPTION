@@ -1,11 +1,12 @@
 Package: causalMedR
-Title: What the Package Does (One Line, Title Case)
+Title: Causal Mediation Analysis
 Version: 0.0.0.9000
-Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
-License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
-    license
+Authors@R: c(
+    person("Geoffrey T.", "Wodtke", email = "wodtke@uchicago.edu", role = c("cre", "aut")),
+    person("Xiang", "Zhou", email = "xiang_zhou@fas.harvard.edu", role = "aut"))
+Description: This package contains R functions for conducting causal mediation analysis
+  using the methods described in Wodtke and Zhou "Causal Mediation Analysis."
+License: GPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
