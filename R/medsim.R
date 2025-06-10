@@ -12,14 +12,14 @@ NULL
 #' Displays only the point estimates and suppresses the full model output.
 #'
 #' @param x   An object of class \code{medsim}.
-#' @param …   Other arguments (ignored).
+#' @param ...   Other arguments (ignored).
 #'
 #' @noRd
 #' @export
 #' @method print medsim
 print.medsim <- function(x, ...) {
   est_names <- setdiff(names(x), c("Mmodels", "Ymodel"))
-  cat("→ medsim point estimates:\n")
+  cat("\u2192 medsim point estimates:\n")
   print(unlist(x[est_names]))
   invisible(x)
 }
@@ -29,14 +29,14 @@ print.medsim <- function(x, ...) {
 #' Displays only the bootstrap results table (point estimates, p-values, and confidence intervals)
 #' and suppresses the full model output.
 #'
-#' @param x   An object of class \code{medsim_boot}, as returned by \code{\link{medsim}(…, boot = TRUE)}.
+#' @param x   An object of class \code{medsim_boot}, as returned by \code{\link{medsim}(..., boot = TRUE)}.
 #' @param ... Other arguments (ignored).
 #'
 #' @noRd
 #' @export
 #' @method print medsim_boot
 print.medsim_boot <- function(x, ...) {
-  cat("→ medsim (bootstrap) results:\n")
+  cat("\u2192 medsim (bootstrap) results:\n")
   # 'results' is a data.frame with columns: point.est, p.value, ll.*, ul.*
   print(x$results, row.names = TRUE)
   invisible(x)
@@ -86,30 +86,19 @@ medsim_core <- function(data, num_sim = 2000, cat_list = c("0", "1"), treatment,
 
   # Define the modify_formula function for intv_med
   modify_formula <- function(formula, mediators) {
-    # Expand the formula into its individual term labels
+    # get the character vector of individual terms
     expanded_terms <- attr(terms(formula), "term.labels")
 
-    # Process each term: if it includes any mediator, remove it.
-    processed_terms <- sapply(expanded_terms, function(term) {
-      # Split interaction terms into individual variables
-      variables <- unlist(strsplit(term, ":"))
-      # If any variable in the term is a mediator, drop the term.
-      if (any(variables %in% mediators)) {
-        return(NULL)
-      } else {
-        return(term)
-      }
-    })
+    # keep only those terms whose all.vars() does _not_ include any mediator name
+    keep <- vapply(expanded_terms, function(term) {
+      vars_in_term <- all.vars(as.formula(paste("~", term)))
+      !any(vars_in_term %in% mediators)
+    }, logical(1))
 
-    # Remove any dropped (NULL) terms and ensure uniqueness
-    processed_terms <- unique(processed_terms[!sapply(processed_terms, is.null)])
-
-    # Reconstruct the new formula with the original left-hand side.
+    # rebuild
     lhs <- as.character(formula)[2]
-    new_formula_str <- paste(lhs, "~", paste(processed_terms, collapse = " + "))
-    new_formula <- as.formula(new_formula_str)
-
-    return(new_formula)
+    new_rhs <- paste(expanded_terms[keep], collapse = " + ")
+    as.formula(paste(lhs, "~", new_rhs))
   }
 
   parse_intv_med <- function(intv_med) {

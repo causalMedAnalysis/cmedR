@@ -1,3 +1,5 @@
 ^causalMedR\.Rproj$
 ^\.Rproj\.user$
 ^LICENSE\.md$
+^data-raw$
+^test-raw$

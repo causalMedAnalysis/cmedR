@@ -58,7 +58,7 @@ be stabilized (multiplied by the marginal probabilities of the exposure).}
 be censored.}
 
 \item{censor_low, censor_high}{A pair of arguments, each a numeric scalar
-denoting a probability with values in \link{0,1}. If the \code{censor} argument is
+denoting a probability with values in [0,1]. If the \code{censor} argument is
 TRUE, then IPW weights below the \code{censor_low} quantile will be
 bottom-coded, and IPW weights above the \code{censor_high} quantile will be
 top-coded (before multiplying by a rescaled version of the base weights, if
@@ -200,7 +200,7 @@ fourth mediator, which causally follows \code{ever_unemp_age3539},
 variable with four levels. If you create numeric dummy variables for three
 levels (omitting a reference level), named \code{level2}, \code{level3}, \code{level4},
 then you can use the following syntax for the \code{M} argument:
-\code{M = list("ever_unemp_age3539", c("log_faminc_adj_age3539", "m3"),  c("level2","level3","level4"))}.
+\code{M = list("ever_unemp_age3539", c("log_faminc_adj_age3539", "m3"), c("level2","level3","level4"))}.
 }
 \examples{
 # Example 1: Two mediators
@@ -225,15 +225,15 @@ key_variables <- c(
   covariates
 )
 nlsy <- nlsy[complete.cases(nlsy[,key_variables]),]
-nlsy$std_cesd_age40 <- 
-  (nlsy$cesd_age40 - mean(nlsy$cesd_age40)) / 
+nlsy$std_cesd_age40 <-
+  (nlsy$cesd_age40 - mean(nlsy$cesd_age40)) /
   sd(nlsy$cesd_age40)
 ## Estimate path-specific effects
 ipwpath(
   data = nlsy,
   D = "att22",
   M = c("ever_unemp_age3539", "log_faminc_adj_age3539"),
-  # ^ note that this order encodes our assumption that ever_unemp_age3539 
+  # ^ note that this order encodes our assumption that ever_unemp_age3539
   # causally precedes log_faminc_adj_age3539
   Y = "std_cesd_age40",
   C = c(
@@ -248,7 +248,7 @@ ipwpath(
   )
 )
 
-# Example 2: If you specify only a single mediator, the function will return 
+# Example 2: If you specify only a single mediator, the function will return
 # the natural effects (NDE and NIE), in addition to the ATE
 ipwpath(
   data = nlsy,
@@ -310,7 +310,7 @@ ipwpath(
 }
 
 # Example 5: Parallelize the bootstrap, to attempt to reduce runtime
-# Note that this requires you to have installed the `doParallel`, `doRNG`, 
+# Note that this requires you to have installed the `doParallel`, `doRNG`,
 # and `foreach` packages.
 \dontrun{
   ipwpath(

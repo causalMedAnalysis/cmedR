@@ -26,10 +26,10 @@ pathimp(
 
 \item{Y}{A character string indicating the name of the outcome variable.}
 
-\item{M}{a list of \eqn{K} character vectors indicating the names of \eqn{K}
+\item{M}{A list of \eqn{K} character vectors indicating the names of \eqn{K}
 causally ordered mediators \eqn{M_1,\ldots, M_K}.}
 
-\item{Y_models}{a list of \eqn{K+1} fitted model objects describing how the
+\item{Y_models}{A list of \eqn{K+1} fitted model objects describing how the
 outcome depends on treatment, pretreatment confounders, and varying sets of
 mediators, where \eqn{K} is the number of mediators.
 \itemize{
@@ -41,11 +41,19 @@ pretreatment confounders, and mediators \eqn{M_1,\ldots, M_{k-1}}.
 pretreatment confounders, and all of the mediators, i.e.,
 \eqn{M_1,\ldots, M_K}.
 }
-
 The fitted model objects can be of type \code{\link{lm}}, \code{\link{glm}},
 \code{\link[gbm]{gbm}}, \code{\link[BART]{wbart}}, or \code{\link[BART]{pbart}}.}
 
+\item{D_model}{An optional propensity score model for treatment. It can be
+of type \code{\link{glm}},\code{\link[gbm]{gbm}}, \code{\link[twang]{ps}}, or
+\code{\link[BART]{pbart}}. When it is provided, the imputation-based weighting
+estimator is also used to compute path-specific causal effects. Defaults to
+\code{NULL}. Must be explicitly specified when \code{out_ipw = TRUE} to compute the
+imputation-based weighting estimator.}
+
 \item{data}{A data frame.}
+
+\item{boot_reps}{An integer scalar for the number of bootstrap replications to perform.}
 
 \item{boot_conf_level}{A numeric scalar for the confidence level of the
 bootstrap interval.}
@@ -72,13 +80,6 @@ imputation-based weighting estimator. If set to \code{TRUE}, the user must
 specify the propensity score model to calculate the Imputation-based Weighting
 Estimator . If \code{FALSE}, only the Pure Imputation Estimator will be
 returned.}
-
-\item{D_model:}{an optional propensity score model for treatment. It can be
-of type \code{\link{glm}},\code{\link[gbm]{gbm}}, \code{\link[twang]{ps}}, or
-\code{\link[BART]{pbart}}. When it is provided, the imputation-based weighting
-estimator is also used to compute path-specific causal effects. Defaults to
-\code{NULL}. Must be explicitly specified when \code{out_ipw = TRUE} to compute the
-imputation-based weighting estimator.}
 }
 \value{
 When \code{out_ipw = TRUE}, \code{pathimp()} returns a dataframe with the
@@ -96,8 +97,7 @@ returned.
 \code{pathimp()} is a wrapper for two functions from the \code{paths} package. It
 implements the pure imputation estimator and the imputation-based weighting
 estimator (when a propensity score model is provided) as detailed in Zhou
-and Yamamoto (2020). You may install the \code{paths} package from the
-xiangzhou09/paths GitHub repository, using the following code:
+and Yamamoto (2020). You may install the \code{paths} package from CRAN or Github:
 \code{devtools::install_github("xiangzhou09/paths")}
 }
 \details{
@@ -109,7 +109,7 @@ With K causally ordered mediators, the implementation proceeds as follows:
 (i) it fits a model for the mean of the outcome conditional on the exposure and baseline confounders;
 (ii) it imputes conventional potential outcomes under using model from (i); (iii) for each mediator
 k = 1, 2, ..., K, it then fits (iiia) a model for the mean of the outcome conditional on the exposure,
-baseline confounders, and the mediators Mk = {M1, ..., Mk}; (iv) it uses the models from (iii) to
+baseline confounders, and the mediators Mk = \{M1, ..., Mk\}; (iv) it uses the models from (iii) to
 impute cross-world potential outcomes; and (v) and finally, it uses the imputed outcomes from all
 the previous steps to calculate estimates for the path-specific effects.
 
@@ -125,38 +125,55 @@ direct and indirect effects through a univariate mediator.
 # Example 1: With one exposure-induced confounder
 ## Prepare data:
 data(nlsy)
-df <- 
-nlsy[complete.cases(nlsy[,key_vars]),] |>
-mutate(
+covariates <- c(
+"female",
+"black",
+"hispan",
+"paredu",
+"parprof",
+"parinc_prank",
+"famsize",
+"afqt3"
+)
+key_variables <- c(
+"cesd_age40",
+"ever_unemp_age3539",
+"log_faminc_adj_age3539",
+"att22",
+covariates
+)
+df <-
+nlsy[complete.cases(nlsy[,key_variables]),] |>
+dplyr::mutate(
 std_cesd_age40 = (cesd_age40 - mean(cesd_age40)) / sd(cesd_age40)
 )
 ## Set up the Y_models:
   glm_m0 <- glm(
-    std_cesd_age40 ~ female + black + hispan + paredu + parprof + 
+    std_cesd_age40 ~ female + black + hispan + paredu + parprof +
      parinc_prank + famsize + afqt3 + att22,
     data = df
     )
-    
+
   glm_m1 <- glm(
-    std_cesd_age40 ~ female + black + hispan + paredu + parprof + 
+    std_cesd_age40 ~ female + black + hispan + paredu + parprof +
     parinc_prank + famsize + afqt3 + att22 +  ever_unemp_age3539,
     data = df
     )
-    
+
   glm_m2 <- glm(
-    std_cesd_age40 ~ female + black + hispan + paredu + parprof + 
-    parinc_prank + famsize + afqt3 + att22 + ever_unemp_age3539 + 
-    log_faminc_adj_age3539, 
+    std_cesd_age40 ~ female + black + hispan + paredu + parprof +
+    parinc_prank + famsize + afqt3 + att22 + ever_unemp_age3539 +
+    log_faminc_adj_age3539,
     data = df
     )
-  
+
 glm_ymodels <- list(glm_m0, glm_m1, glm_m2)
 
 
-## Set up the D_model: 
+## Set up the D_model:
 glm_ps <- glm(
-att22 ~ female + black + hispan + paredu + parprof + parinc_prank + 
-famsize + afqt3, 
+att22 ~ female + black + hispan + paredu + parprof + parinc_prank +
+famsize + afqt3,
 family = binomial("logit"),
 data = df
 )
@@ -172,14 +189,16 @@ M = list("ever_unemp_age3539","log_faminc_adj_age3539"),
 Y_models = glm_ymodels,
 D_model = glm_ps,
 data = df,
-boot_reps = 2000,
+boot_reps = 250,
 boot_conf_level = 0.95,
 boot_seed = 2138,
 boot_parallel = "multicore", # Parallel the bootstrapping
 boot_cores = 5,
 out_ipw = TRUE
  )
+print(glm_paths)
 
+\dontrun{
 # Example 2: Only Calculate Pure Imputation Estimator:
 glm_paths <-
 pathimp(
@@ -188,11 +207,13 @@ Y = "std_cesd_age40",
 M = list("ever_unemp_age3539","log_faminc_adj_age3539"),
 Y_models = glm_ymodels,
 data = df,
-boot_reps = 2000,
+boot_reps = 250,
 boot_conf_level = 0.95,
 boot_seed = 2138,
 boot_parallel = "multicore", # Parallel the bootstrapping
 boot_cores = 5,
-out_ipw = FALSE 
+out_ipw = FALSE
  )
+print(glm_paths)
+}
 }

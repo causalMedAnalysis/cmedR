@@ -64,7 +64,7 @@ be stabilized.}
 be censored.}
 
 \item{censor_low, censor_high}{A pair of arguments, each a numeric scalar
-denoting a probability with values in \link{0,1}. If the \code{censor} argument is
+denoting a probability with values in \eqn{[0, 1]}. If the \code{censor} argument is
 TRUE, then IPW weights below the \code{censor_low} quantile will be
 bottom-coded, and IPW weights above the \code{censor_high} quantile will be
 top-coded (before multiplying by a rescaled version of the base weights, if
@@ -162,8 +162,8 @@ key_variables1 <- c(
   covariates
 )
 nlsy1 <- nlsy1[complete.cases(nlsy1[,key_variables1]),]
-nlsy1$std_cesd_age40 <- 
-  (nlsy1$cesd_age40 - mean(nlsy1$cesd_age40)) / 
+nlsy1$std_cesd_age40 <-
+  (nlsy1$cesd_age40 - mean(nlsy1$cesd_age40)) /
   sd(nlsy1$cesd_age40)
 ## Estimate CDE for m=1
 out1 <- ipwcde(
@@ -172,8 +172,10 @@ out1 <- ipwcde(
   M = "ever_unemp_age3539",
   Y = "std_cesd_age40",
   m = 1,
-  formula_D_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3",
-  formula_M_string = "ever_unemp_age3539~att22+female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3"
+  formula_D_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+
+  famsize+afqt3",
+  formula_M_string = "ever_unemp_age3539~att22+female+black+hispan+paredu+
+  parprof+parinc_prank+famsize+afqt3"
 )
 head(out1,1)
 
@@ -184,8 +186,10 @@ out2 <- ipwcde(
   M = "ever_unemp_age3539",
   Y = "std_cesd_age40",
   m = 1,
-  formula_D_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3",
-  formula_M_string = "ever_unemp_age3539~att22+female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3",
+  formula_D_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+
+  famsize+afqt3",
+  formula_M_string = "ever_unemp_age3539~att22+female+black+hispan+paredu+
+  parprof+parinc_prank+famsize+afqt3",
   base_weights_name = "weight"
 )
 head(out2,1)
@@ -198,8 +202,10 @@ head(out2,1)
     M = "ever_unemp_age3539",
     Y = "std_cesd_age40",
     m = 1,
-    formula_D_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3",
-    formula_M_string = "ever_unemp_age3539~att22+female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3",
+    formula_D_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+
+    famsize+afqt3",
+    formula_M_string = "ever_unemp_age3539~att22+female+black+hispan+paredu+
+    parprof+parinc_prank+famsize+afqt3",
     boot = TRUE,
     boot_reps = 2000,
     boot_seed = 1234
@@ -212,7 +218,7 @@ head(out2,1)
 }
 
 # Example 4: Parallelize the bootstrap, to attempt to reduce runtime
-# Note that this requires you to have installed the `doParallel`, `doRNG`, 
+# Note that this requires you to have installed the `doParallel`, `doRNG`,
 # and `foreach` packages.
 \dontrun{
   out4 <- ipwcde(
@@ -221,8 +227,10 @@ head(out2,1)
     M = "ever_unemp_age3539",
     Y = "std_cesd_age40",
     m = 1,
-    formula_D_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3",
-    formula_M_string = "ever_unemp_age3539~att22+female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3",
+    formula_D_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+
+    famsize+afqt3",
+    formula_M_string = "ever_unemp_age3539~att22+female+black+hispan+paredu+
+    parprof+parinc_prank+famsize+afqt3",
     boot = TRUE,
     boot_reps = 2000,
     boot_seed = 1234,

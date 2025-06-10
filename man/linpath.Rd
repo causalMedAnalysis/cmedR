@@ -150,10 +150,11 @@ mediators preceding it in causal order. If only one mediator is specified, \code
 conventional natural direct and indirect effects.
 
 To compute path-specific effects with K causally ordered mediators, linpath proceeds as follows:
-For k = 1, 2, . . ., K: (i) it fits a linear model for the kth mediator conditional on the exposure and
-baseline confounders; (ii) it then fits a linear model for the outcome conditional on the exposure,
-baseline confounders, and all the mediators in Mk={M1,...,Mk}; finally, it calculate estimates for
-the path-specific effects using coefficients from the mediator and outcome models.
+For k = 1, 2, . . ., K: (i) it fits a linear model for the kth mediator conditional on the
+exposure and baseline confounders; (ii) it then fits a linear model for the outcome conditional
+on the exposure, baseline confounders, and all the mediators in Mk=\{M1,...,Mk\}; finally,
+it calculate estimates for the path-specific effects using coefficients from the mediator
+and outcome models.
 
 Specifying the \code{M} Argument:
 
@@ -191,7 +192,7 @@ fourth mediator, which causally follows \code{ever_unemp_age3539},
 variable with four levels. If you create numeric dummy variables for three
 levels (omitting a reference level), named \code{level2}, \code{level3}, \code{level4},
 then you can use the following syntax for the \code{M} argument:
-\code{M = list("ever_unemp_age3539", c("log_faminc_adj_age3539", "m3"), c("level2","level3","level4"))}.
+\code{M = list("ever_unemp_age3539", c("log_faminc_adj_age3539", "m3"), c("level2", "level3","level4"))}.
 }
 \examples{
 # Example 1: Two mediators, additive models
@@ -216,15 +217,15 @@ key_variables <- c(
   covariates
 )
 nlsy <- nlsy[complete.cases(nlsy[,key_variables]),]
-nlsy$std_cesd_age40 <- 
-  (nlsy$cesd_age40 - mean(nlsy$cesd_age40)) / 
+nlsy$std_cesd_age40 <-
+  (nlsy$cesd_age40 - mean(nlsy$cesd_age40)) /
   sd(nlsy$cesd_age40)
 ## Estimate path-specific effects
 linpath(
   data = nlsy,
   D = "att22",
   M = c("ever_unemp_age3539", "log_faminc_adj_age3539"),
-  # ^ note that this order encodes our assumption that ever_unemp_age3539 
+  # ^ note that this order encodes our assumption that ever_unemp_age3539
   # causally precedes log_faminc_adj_age3539
   Y = "std_cesd_age40",
   C = c(
@@ -239,7 +240,7 @@ linpath(
   )
 )
 
-# Example 2: With exposure-mediator, exposure-covariate, and 
+# Example 2: With exposure-mediator, exposure-covariate, and
 # mediator-covariate interactions
 linpath(
   data = nlsy,
@@ -261,7 +262,7 @@ linpath(
   interaction_MC = TRUE
 )
 
-# Example 3: If you specify only a single mediator, the function will return 
+# Example 3: If you specify only a single mediator, the function will return
 # the natural effects (NDE and NIE), in addition to the ATE
 linpath(
   data = nlsy,
@@ -323,7 +324,7 @@ linpath(
 }
 
 # Example 6: Parallelize the bootstrap, to attempt to reduce runtime
-# Note that this requires you to have installed the `doParallel`, `doRNG`, 
+# Note that this requires you to have installed the `doParallel`, `doRNG`,
 # and `foreach` packages.
 \dontrun{
   linpath(

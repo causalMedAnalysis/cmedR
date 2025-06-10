@@ -3,10 +3,35 @@ Title: Causal Mediation Analysis
 Version: 0.0.0.9000
 Authors@R: c(
     person("Geoffrey T.", "Wodtke", email = "wodtke@uchicago.edu", role = c("cre", "aut")),
-    person("Xiang", "Zhou", email = "xiang_zhou@fas.harvard.edu", role = "aut"))
+    person("Azim", "Shivji", email = "ashivji@gmail.com", role = "aut"),
+    person("Jesse", "Zhou", email = "jessezhou1@uchicago.edu", role = "aut"),
+    person("Weiqi", "wang", email = "jessezhou1@uchicago.edu", role = "aut"),
+    person("Xiang", "Zhou", email = "weiqiw@uchicago.edu", role = "aut"))
 Description: This package contains R functions for conducting causal mediation analysis
   using the methods described in Wodtke and Zhou "Causal Mediation Analysis."
-License: GPL (>= 3)
+License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
+Imports: 
+    caret,
+    doParallel,
+    doRNG,
+    dplyr,
+    foreach,
+    Hmisc,
+    MASS,
+    methods,
+    nnet,
+    purrr,
+    rlang,
+    parallel,
+    paths,
+    pryr,
+    stats,
+    stringr,
+    SuperLearner,
+    tidyr
+Depends: 
+    R (>= 4.5)
+LazyData: true

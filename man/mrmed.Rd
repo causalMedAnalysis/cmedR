@@ -9,6 +9,7 @@ mrmed(
   D,
   Y,
   M,
+  C,
   D_C_model,
   D_MC_model = NULL,
   Y_DC_model = NULL,
@@ -44,6 +45,11 @@ natural effects (with a single mediator), \code{M} should be a character scalar
 are estimating multivariate natural effects (with multiple mediators), \code{M}
 should be a list identifying all mediators—e.g.,
 \code{M = list("ever_unemp_age3539", "log_faminc_adj_age3539")}.}
+
+\item{C}{A character vector (of one or more elements) identifying the names
+of the covariate variables in \code{data} that you wish to include in both the
+mediator and outcome models. If there are no such covariates you wish to
+include, leave \code{C} as its default null argument.}
 
 \item{D_C_model}{A character scalar specifying the formula to be fitted for a
 logit model of the exposure given baseline covariates (denoted in the book as
@@ -94,12 +100,12 @@ as the control status. If not equal to 0, the function will recode it as 0.}
 estimation should be censored. By default, this value is \code{TRUE}.}
 
 \item{censor_low, censor_high}{A pair of arguments, each a numeric scalar
-denoting a probability in \link{0,1}. If \code{censor} is TRUE, then IPW weights below
+denoting a probability in [0,1]. If \code{censor} is TRUE, then IPW weights below
 the \code{censor_low} quantile will be bottom-coded, and weights above the
 \code{censor_high} quantile will be top-coded. E.g., if the default values
 \code{censor_low = 0.01} and \code{censor_high = 0.99} are used, then IPW weights will
 be censored at their 1st and 99th percentiles. By default, weights are censored
-to the \link{1st, 99th} percentile range.}
+to the [1st, 99th] percentile range.}
 
 \item{boot}{A logical scalar indicating whether the function should perform
 the nonparametric bootstrap and return two-sided confidence intervals and
@@ -107,6 +113,9 @@ p-values.}
 
 \item{boot_reps}{An integer scalar specifying the number of bootstrap replications
 to perform.}
+
+\item{boot_conf_level}{A numeric scalar specifying the confidence level for the
+bootstrap interval.}
 
 \item{boot_seed}{An integer scalar specifying the random-number seed used in
 bootstrap resampling.}
@@ -125,9 +134,6 @@ for the parallelized bootstrap. This argument only affects computation if both
 of two values: (a) one, and (b) the number of available CPU cores minus two.
 If \code{boot_cores} equals one, the bootstrap loop will not be parallelized,
 regardless of the value of \code{boot_parallel}.}
-
-\item{boot_conf_lowevel}{A numeric scalar specifying the confidence level for the
-bootstrap interval.}
 }
 \value{
 Based on the user's specification, \code{mrmed()} returns a list with the
@@ -204,8 +210,8 @@ Type 2 estimator, in which case \code{mrmed()} estimates multivariate natural
 effects operating through the entire set of mediators.
 }
 \examples{
-#----------------------------------------#
- Initial Specification and Clean the Data:
+#-----------------------------------------#
+#  Initial Specification and Clean the Data:
 #----------------------------------------#
 data(nlsy)
 # outcome
@@ -241,25 +247,21 @@ key_vars <- c(
 # Clean the Data:
 df <-
 nlsy[complete.cases(nlsy[,key_vars]),] |>
-mutate(std_cesd_age40 = (cesd_age40 - mean(cesd_age40)) / sd(cesd_age40))
+dplyr::mutate(std_cesd_age40 = (cesd_age40 - mean(cesd_age40)) / sd(cesd_age40))
 
 #-----------------------------------------#
- Specify the models:
+#  Specify the models:
 #----------------------------------------#
 # D Models:
-1. Exposure ~ Baseline Confounders
-  D_C_model <- as.formula(paste(D, " ~ ", paste(C, collapse= "+")))
-2. Exposure ~ Baseline Confounders and Mediator
-  D_MC_model <- as.formula(paste(D, " ~ ", paste(c(C, M[1]), collapse= "+")))
+D_C_model <- as.formula(paste(D, " ~ ", paste(C, collapse= "+")))
+D_MC_model <- as.formula(paste(D, " ~ ", paste(c(C, M[1]), collapse= "+")))
 # Y Models:
-1. Outcome ~ Baseline Confounders and Treatment
-  Y_DC_model <- as.formula(paste(Y, " ~ ", paste(c(C, D), collapse= "+")))
-2. Outcome ~ Baseline Confounders, Treatment and Mediator
-  Y_DMC_model <- as.formula(paste(Y, " ~ ", paste(c(C, D, M[1]), collapse= "+")))
+Y_DC_model <- as.formula(paste(Y, " ~ ", paste(c(C, D), collapse= "+")))
+Y_DMC_model <- as.formula(paste(Y, " ~ ", paste(c(C, D, M[1]), collapse= "+")))
 
-Example 1: Single Mediator:
+# Example 1: Single Mediator:
 #-----------------------------------------#
- Replicate Table 6-2 Col 3:
+# Replicate Table 6-2 Col 3:
 #----------------------------------------#
 \dontrun{
 mrmed_rst1 <-
@@ -267,6 +269,7 @@ mrmed_rst1 <-
     D,
     Y,
     M[[1]],
+    C,
     D_C_model,
     D_MC_model,
     Y_DC_model,

@@ -198,8 +198,8 @@ key_variables1 <- c(
   covariates
 )
 nlsy1 <- nlsy1[complete.cases(nlsy1[,key_variables1]),]
-nlsy1$std_cesd_age40 <- 
-  (nlsy1$cesd_age40 - mean(nlsy1$cesd_age40)) / 
+nlsy1$std_cesd_age40 <-
+  (nlsy1$cesd_age40 - mean(nlsy1$cesd_age40)) /
   sd(nlsy1$cesd_age40)
 ## Estimate natural effects
 linmed(
@@ -219,7 +219,7 @@ linmed(
   )
 )
 
-# Example 2: With exposure-mediator, exposure-covariate, and 
+# Example 2: With exposure-mediator, exposure-covariate, and
 # mediator-covariate interactions
 linmed(
   data = nlsy1,
@@ -241,7 +241,7 @@ linmed(
   interaction_MC = TRUE
 )
 
-# Example 3: Specifying a mediator value for the CDE other than (the default) 
+# Example 3: Specifying a mediator value for the CDE other than (the default)
 # zero
 linmed(
   data = nlsy1,
@@ -288,8 +288,8 @@ key_variables2 <- c(
   "log_faminc_adj_age3539"
 )
 nlsy2 <- nlsy2[complete.cases(nlsy2[,key_variables2]),]
-nlsy2$std_cesd_age40 <- 
-  (nlsy2$cesd_age40 - mean(nlsy2$cesd_age40)) / 
+nlsy2$std_cesd_age40 <-
+  (nlsy2$cesd_age40 - mean(nlsy2$cesd_age40)) /
   sd(nlsy2$cesd_age40)
 ## Estimate natural effects
 linmed(
@@ -352,7 +352,7 @@ linmed(
 }
 
 # Example 8: Parallelize the bootstrap, to attempt to reduce runtime
-# Note that this requires you to have installed the `doParallel`, `doRNG`, 
+# Note that this requires you to have installed the `doParallel`, `doRNG`,
 # and `foreach` packages.
 \dontrun{
   linmed(

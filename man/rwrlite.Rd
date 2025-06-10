@@ -180,13 +180,15 @@ key_variables <- c(
   covariates
 )
 nlsy <- nlsy[complete.cases(nlsy[,key_variables]),]
-nlsy$std_cesd_age40 <- 
-  (nlsy$cesd_age40 - mean(nlsy$cesd_age40)) / 
+nlsy$std_cesd_age40 <-
+  (nlsy$cesd_age40 - mean(nlsy$cesd_age40)) /
   sd(nlsy$cesd_age40)
 ## Define model formulae
-formula_L <- ever_unemp_age3539 ~ att22+female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3
-formula_M <- log_faminc_adj_age3539 ~ att22+female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3
-formula_Y <- std_cesd_age40 ~ att22*log_faminc_adj_age3539 + ever_unemp_age3539 + 
+formula_L <- ever_unemp_age3539 ~ att22+female+black+hispan+paredu+parprof+
+parinc_prank+famsize+afqt3
+formula_M <- log_faminc_adj_age3539 ~ att22+female+black+hispan+paredu+parprof+
+parinc_prank+famsize+afqt3
+formula_Y <- std_cesd_age40 ~ att22*log_faminc_adj_age3539+ever_unemp_age3539+
   female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3
 ## Estimate interventional effects
 out1 <- rwrlite(
@@ -241,7 +243,7 @@ head(out2,4)
 }
 
 # Example 4: Parallelize the bootstrap, to attempt to reduce runtime
-# Note that this requires you to have installed the `doParallel`, `doRNG`, 
+# Note that this requires you to have installed the `doParallel`, `doRNG`,
 # and `foreach` packages.
 \dontrun{
   out4 <- rwrlite(

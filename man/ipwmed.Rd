@@ -63,7 +63,7 @@ be stabilized (multiplied by the marginal probabilities of the exposure).}
 be censored.}
 
 \item{censor_low, censor_high}{A pair of arguments, each a numeric scalar
-denoting a probability with values in \link{0,1}. If the \code{censor} argument is
+denoting a probability with values in \eqn{[0, 1]}. If the \code{censor} argument is
 TRUE, then IPW weights below the \code{censor_low} quantile will be
 bottom-coded, and IPW weights above the \code{censor_high} quantile will be
 top-coded (before multiplying by a rescaled version of the base weights, if
@@ -184,8 +184,8 @@ key_variables1 <- c(
   covariates
 )
 nlsy1 <- nlsy1[complete.cases(nlsy1[,key_variables1]),]
-nlsy1$std_cesd_age40 <- 
-  (nlsy1$cesd_age40 - mean(nlsy1$cesd_age40)) / 
+nlsy1$std_cesd_age40 <-
+  (nlsy1$cesd_age40 - mean(nlsy1$cesd_age40)) /
   sd(nlsy1$cesd_age40)
 ## Estimate natural effects
 out1 <- ipwmed(
@@ -193,8 +193,10 @@ out1 <- ipwmed(
   D = "att22",
   M = "ever_unemp_age3539",
   Y = "std_cesd_age40",
-  formula1_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3",
-  formula2_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3+ever_unemp_age3539"
+  formula1_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+
+  famsize+afqt3",
+  formula2_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+
+  famsize+afqt3+ever_unemp_age3539"
 )
 head(out1,3)
 
@@ -204,8 +206,10 @@ out2 <- ipwmed(
   D = "att22",
   M = "ever_unemp_age3539",
   Y = "std_cesd_age40",
-  formula1_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3",
-  formula2_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3+ever_unemp_age3539",
+  formula1_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+
+  famsize+afqt3",
+  formula2_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+
+  famsize+afqt3+ever_unemp_age3539",
   base_weights_name = "weight"
 )
 head(out2,3)
@@ -218,8 +222,8 @@ key_variables2 <- c(
   "log_faminc_adj_age3539"
 )
 nlsy2 <- nlsy2[complete.cases(nlsy2[,key_variables2]),]
-nlsy2$std_cesd_age40 <- 
-  (nlsy2$cesd_age40 - mean(nlsy2$cesd_age40)) / 
+nlsy2$std_cesd_age40 <-
+  (nlsy2$cesd_age40 - mean(nlsy2$cesd_age40)) /
   sd(nlsy2$cesd_age40)
 ## Estimate natural effects
 out3 <- ipwmed(
@@ -227,8 +231,10 @@ out3 <- ipwmed(
   D = "att22",
   M = c("ever_unemp_age3539", "log_faminc_adj_age3539"),
   Y = "std_cesd_age40",
-  formula1_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3",
-  formula2_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3+ever_unemp_age3539+log_faminc_adj_age3539"
+  formula1_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+
+  famsize+afqt3",
+  formula2_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+
+  famsize+afqt3+ever_unemp_age3539+log_faminc_adj_age3539"
 )
 head(out3,3)
 
@@ -239,8 +245,10 @@ head(out3,3)
     D = "att22",
     M = "ever_unemp_age3539",
     Y = "std_cesd_age40",
-    formula1_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3",
-    formula2_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3+ever_unemp_age3539",
+    formula1_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+
+    famsize+afqt3",
+    formula2_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+
+    famsize+afqt3+ever_unemp_age3539",
     boot = TRUE,
     boot_reps = 2000,
     boot_seed = 1234
@@ -259,7 +267,7 @@ head(out3,3)
 }
 
 # Example 5: Parallelize the bootstrap, to attempt to reduce runtime
-# Note that this requires you to have installed the `doParallel`, `doRNG`, 
+# Note that this requires you to have installed the `doParallel`, `doRNG`,
 # and `foreach` packages.
 \dontrun{
   out5 <- ipwmed(
@@ -267,8 +275,10 @@ head(out3,3)
     D = "att22",
     M = "ever_unemp_age3539",
     Y = "std_cesd_age40",
-    formula1_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3",
-    formula2_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3+ever_unemp_age3539",
+    formula1_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+
+    famsize+afqt3",
+    formula2_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+
+    famsize+afqt3+ever_unemp_age3539",
     boot = TRUE,
     boot_reps = 2000,
     boot_seed = 1234,

@@ -19,6 +19,7 @@ mrmed_inner <- function(
     D,
     Y,
     M,
+    C,
     D_C_model, # D ~ C
     D_MC_model = NULL, # D ~ M,C
     Y_DC_model = NULL, # Y ~ D,C
@@ -187,25 +188,25 @@ mrmed_inner <- function(
 
     stat_df2 <-
       data %>%
-      dplyr::select(
+      select(
         Y,
         D,
-        pi_hat_DC,
-        pi_hat_DCM,
-        mu_hat_DMC_d,
-        mu_hat_DMC_dstar,
-        nu_d_dstar,
-        nu_d_d,
-        nu_dstar_d,
-        nu_dstar_dstar
+        .data$pi_hat_DC,
+        .data$pi_hat_DCM,
+        .data$mu_hat_DMC_d,
+        .data$mu_hat_DMC_dstar,
+        .data$nu_d_dstar,
+        .data$nu_d_d,
+        .data$nu_dstar_d,
+        .data$nu_dstar_dstar
       ) %>%
       rename(
-        pi_hat_d_DCM = pi_hat_DCM,
-        pi_hat_d_DC = pi_hat_DC
+        pi_hat_d_DCM = .data$pi_hat_DCM,
+        pi_hat_d_DC = .data$pi_hat_DC
       ) %>%
       mutate(
-        pi_hat_dstar_DCM = 1 - pi_hat_d_DCM,
-        pi_hat_dstar_DC = 1 - pi_hat_d_DC
+        pi_hat_dstar_DCM = 1 - .data$pi_hat_d_DCM,
+        pi_hat_dstar_DC = 1 - .data$pi_hat_d_DC
       )
 
      val_map <- list("d" = d, "dstar" = dstar)
@@ -260,41 +261,41 @@ mrmed_inner <- function(
                 !!sym(paste0("nu_",d1,"_",d2))
             ) %>%
             mutate(
-              .row_id = dplyr::row_number()
+              .row_id = row_number()
             )
           return(rst_trm_df)
         }
       )
 
     final_df2 <-
-      reduce(
+      purrr::reduce(
         final_calculation2,
         left_join,
         by =
-          reduce(
-            map(
+          purrr::reduce(
+            purrr::map(
               final_calculation2,
               colnames
             ),
             intersect)
       ) %>%
-      dplyr::select(
-        -W2_d.x,
-        -W2_dstar.x
+      select(
+        -.data$W2_d.x,
+        -.data$W2_dstar.x
       ) %>%
       rename(
-        W2_dstar = W2_dstar.y,
-        W2_d = W2_d.y
+        W2_dstar = .data$W2_dstar.y,
+        W2_d = .data$W2_d.y
       ) %>%
       mutate(
-        ATE = S_d_d - S_dstar_dstar,
-        NDE = S_dstar_d - S_dstar_dstar,
-        NIE = S_d_d - S_dstar_d
+        ATE = .data$S_d_d - .data$S_dstar_dstar,
+        NDE = .data$S_dstar_d - .data$S_dstar_dstar,
+        NIE = .data$S_d_d - .data$S_dstar_d
       ) %>%
       summarise(
-        `ATE(0,1)` = wtd.mean(ATE),
-        `NDE(0,1)` = wtd.mean(NDE),
-        `NIE(0,1)` = wtd.mean(NIE)
+        `ATE(1,0)` = wtd.mean(.data$ATE),
+        `NDE(1,0)` = wtd.mean(.data$NDE),
+        `NIE(1,0)` = wtd.mean(.data$NIE)
       )
 
     model2_rst <-
@@ -341,34 +342,34 @@ mrmed_inner <- function(
     #=======================================#
     stat_df1 <-
       data %>%
-      dplyr::select(
+      select(
         Y,
         D,
         M,
-        pi_hat_DC,
+        .data$pi_hat_DC,
         starts_with("M_hat_"),
         starts_with("mu_hat_")
       ) %>%
       rename(
-        pi_hat_d_DC = pi_hat_DC
+        pi_hat_d_DC = .data$pi_hat_DC
       ) %>%
       mutate(
-        M_hat_d_m = M_hat_d,
-        M_hat_dstar_m = M_hat_dstar,
-        pi_hat_dstar_DC = 1 - pi_hat_d_DC,
-        M_hat_d_mstar = 1 - M_hat_d_m,
-        M_hat_dstar_mstar = 1 - M_hat_dstar_m
+        M_hat_d_m = .data$M_hat_d,
+        M_hat_dstar_m = .data$M_hat_dstar,
+        pi_hat_dstar_DC = 1 - .data$pi_hat_d_DC,
+        M_hat_d_mstar = 1 - .data$M_hat_d_m,
+        M_hat_dstar_mstar = 1 - .data$M_hat_dstar_m
       ) %>%
       mutate(
         M_hat_d = ifelse(
           !!sym(M) == 1,
-          M_hat_d_m,
-          1 - M_hat_d_m
+          .data$M_hat_d_m,
+          1 - .data$M_hat_d_m
         ),
         M_hat_dstar = ifelse(
           !!sym(M) == 1,
-          M_hat_dstar_m,
-          1 - M_hat_dstar_m
+          .data$M_hat_dstar_m,
+          1 - .data$M_hat_dstar_m
         )
       )
 
@@ -435,41 +436,41 @@ mrmed_inner <- function(
                 )
             ) %>%
             mutate(
-              .row_id = dplyr::row_number()
+              .row_id = row_number()
             )
           return(rst_trm_df)
         }
       )
 
     final_df1 <-
-      reduce(
+      purrr::reduce(
         final_calculation1,
         left_join,
         by =
-          reduce(
-            map(
+          purrr::reduce(
+            purrr::map(
               final_calculation1,
               colnames
             ),
             intersect)
       ) %>%
-      dplyr::select(
-        -W2_d.x,
-        -W2_dstar.x
+      select(
+        -.data$W2_d.x,
+        -.data$W2_dstar.x
       ) %>%
       rename(
-        W2_dstar = W2_dstar.y,
-        W2_d = W2_d.y
+        W2_dstar = .data$W2_dstar.y,
+        W2_d = .data$W2_d.y
       ) %>%
       mutate(
-        ATE = S_d_d - S_dstar_dstar,
-        NDE = S_dstar_d - S_dstar_dstar,
-        NIE = S_d_d - S_dstar_d
+        ATE = .data$S_d_d - .data$S_dstar_dstar,
+        NDE = .data$S_dstar_d - .data$S_dstar_dstar,
+        NIE = .data$S_d_d - .data$S_dstar_d
       ) %>%
       summarise(
-        `ATE(0,1)` = wtd.mean(ATE),
-        `NDE(0,1)` = wtd.mean(NDE),
-        `NIE(0,1)` = wtd.mean(NIE)
+        `ATE(1,0)` = wtd.mean(.data$ATE),
+        `NDE(1,0)` = wtd.mean(.data$NDE),
+        `NIE(1,0)` = wtd.mean(.data$NIE)
       )
     model1_rst <-
       list(
@@ -563,6 +564,10 @@ mrmed_inner <- function(
 #' @param Y A character scalar identifying the name of the outcome variable in
 #'   `data`. `Y` is a character string, but the outcome variable it identifies
 #'   must be numeric.
+#' @param C A character vector (of one or more elements) identifying the names
+#'   of the covariate variables in `data` that you wish to include in both the
+#'   mediator and outcome models. If there are no such covariates you wish to
+#'   include, leave `C` as its default null argument.
 #' @param D_C_model A character scalar specifying the formula to be fitted for a
 #'   logit model of the exposure given baseline covariates (denoted in the book as
 #'   π(D|C)). This specification is required for both types of formula. E.g.,
@@ -602,18 +607,18 @@ mrmed_inner <- function(
 #' @param censor A logical scalar indicating whether the IPW weights constructed by
 #'   estimation should be censored. By default, this value is `TRUE`.
 #' @param censor_low,censor_high A pair of arguments, each a numeric scalar
-#'   denoting a probability in [0,1]. If `censor` is TRUE, then IPW weights below
+#'   denoting a probability in \[0,1\]. If `censor` is TRUE, then IPW weights below
 #'   the `censor_low` quantile will be bottom-coded, and weights above the
 #'   `censor_high` quantile will be top-coded. E.g., if the default values
 #'   `censor_low = 0.01` and `censor_high = 0.99` are used, then IPW weights will
 #'   be censored at their 1st and 99th percentiles. By default, weights are censored
-#'   to the [1st, 99th] percentile range.
+#'   to the \[1st, 99th\] percentile range.
 #' @param boot A logical scalar indicating whether the function should perform
 #'   the nonparametric bootstrap and return two-sided confidence intervals and
 #'   p-values.
 #' @param boot_reps An integer scalar specifying the number of bootstrap replications
 #'   to perform.
-#' @param boot_conf_lowevel A numeric scalar specifying the confidence level for the
+#' @param boot_conf_level A numeric scalar specifying the confidence level for the
 #'   bootstrap interval.
 #' @param boot_seed An integer scalar specifying the random-number seed used in
 #'   bootstrap resampling.
@@ -630,7 +635,6 @@ mrmed_inner <- function(
 #'   of two values: (a) one, and (b) the number of available CPU cores minus two.
 #'   If `boot_cores` equals one, the bootstrap loop will not be parallelized,
 #'   regardless of the value of `boot_parallel`.
-
 #'
 #' @returns Based on the user's specification, `mrmed()` returns a list with the
 #' following elements:
@@ -683,11 +687,15 @@ mrmed_inner <- function(
 #' \item{boot_NIE}{A numeric vector of length `boot_reps` containing the NIE
 #'   estimates from all bootstrap replicate samples.}
 #'
+#' @import rlang
+#' @importFrom dplyr select mutate bind_rows if_else sample_frac summarise left_join
+#' @importFrom dplyr as_tibble starts_with `%>%` case_when rename row_number n
+#' @importFrom Hmisc wtd.mean
 #' @export
 #'
 #' @examples
-#' #----------------------------------------#
-#'  Initial Specification and Clean the Data:
+#' #-----------------------------------------#
+#' #  Initial Specification and Clean the Data:
 #' #----------------------------------------#
 #' data(nlsy)
 #' # outcome
@@ -701,7 +709,6 @@ mrmed_inner <- function(
 #' "ever_unemp_age3539",
 #' "log_faminc_adj_age3539"
 #' )
-
 #' # baseline confounders:
 #' C <- c(
 #' "female",
@@ -713,7 +720,6 @@ mrmed_inner <- function(
 #' "famsize",
 #' "afqt3"
 #' )
-
 #' # key variables
 #' key_vars <- c(
 #'  "cesd_age40", # unstandardized version of Y
@@ -725,25 +731,21 @@ mrmed_inner <- function(
 #' # Clean the Data:
 #' df <-
 #' nlsy[complete.cases(nlsy[,key_vars]),] |>
-#' mutate(std_cesd_age40 = (cesd_age40 - mean(cesd_age40)) / sd(cesd_age40))
+#' dplyr::mutate(std_cesd_age40 = (cesd_age40 - mean(cesd_age40)) / sd(cesd_age40))
 #'
 #' #-----------------------------------------#
-#'  Specify the models:
+#' #  Specify the models:
 #' #----------------------------------------#
 #' # D Models:
-#' 1. Exposure ~ Baseline Confounders
-#'   D_C_model <- as.formula(paste(D, " ~ ", paste(C, collapse= "+")))
-#' 2. Exposure ~ Baseline Confounders and Mediator
-#'   D_MC_model <- as.formula(paste(D, " ~ ", paste(c(C, M[1]), collapse= "+")))
+#' D_C_model <- as.formula(paste(D, " ~ ", paste(C, collapse= "+")))
+#' D_MC_model <- as.formula(paste(D, " ~ ", paste(c(C, M[1]), collapse= "+")))
 #' # Y Models:
-#' 1. Outcome ~ Baseline Confounders and Treatment
-#'   Y_DC_model <- as.formula(paste(Y, " ~ ", paste(c(C, D), collapse= "+")))
-#' 2. Outcome ~ Baseline Confounders, Treatment and Mediator
-#'   Y_DMC_model <- as.formula(paste(Y, " ~ ", paste(c(C, D, M[1]), collapse= "+")))
+#' Y_DC_model <- as.formula(paste(Y, " ~ ", paste(c(C, D), collapse= "+")))
+#' Y_DMC_model <- as.formula(paste(Y, " ~ ", paste(c(C, D, M[1]), collapse= "+")))
 #'
-#' Example 1: Single Mediator:
+#' # Example 1: Single Mediator:
 #' #-----------------------------------------#
-#'  Replicate Table 6-2 Col 3:
+#' # Replicate Table 6-2 Col 3:
 #' #----------------------------------------#
 #' \dontrun{
 #' mrmed_rst1 <-
@@ -751,6 +753,7 @@ mrmed_inner <- function(
 #'     D,
 #'     Y,
 #'     M[[1]],
+#'     C,
 #'     D_C_model,
 #'     D_MC_model,
 #'     Y_DC_model,
@@ -777,6 +780,7 @@ mrmed <- function(
     D,
     Y,
     M,
+    C,
     D_C_model, # D ~ C
     D_MC_model = NULL, # D ~ M,C
     Y_DC_model = NULL, # Y ~ D,C
@@ -823,6 +827,7 @@ mrmed <- function(
       D,
       Y,
       M,
+      C,
       D_C_model,
       D_MC_model,
       Y_DC_model,
@@ -849,6 +854,7 @@ mrmed <- function(
         D,
         Y,
         M,
+        C,
         D_C_model,
         D_MC_model,
         Y_DC_model,
@@ -889,24 +895,24 @@ mrmed <- function(
     if (boot_parallel_rev) {
       boot_res <- foreach::foreach(
         i = 1:boot_reps,
-        .combine = dplyr::bind_rows,
+        .combine = bind_rows,
         .packages = c("dplyr", "rlang", "tidyr", "purrr", "Hmisc", "tibble")
       ) %dopar% {
         out <- boot_fnc()
         out_filtered <- out[!sapply(out, is.null)]
         purrr::imap_dfr(out_filtered, ~
                           .x %>%
-                          dplyr::mutate(method_type = .y, boot_id = i)
+                          mutate(method_type = .y, boot_id = i)
         )
       }
     } else {
-      boot_res <- dplyr::bind_rows(
+      boot_res <- bind_rows(
         lapply(seq_len(boot_reps), function(i) {
           out <- boot_fnc()
           out_filtered <- out[!sapply(out, is.null)]
           purrr::imap_dfr(out_filtered, ~
                             .x %>%
-                            dplyr::mutate(method_type = .y, boot_id = i)
+                            mutate(method_type = .y, boot_id = i)
           )
         })
       )
@@ -942,19 +948,19 @@ mrmed <- function(
       split(boot_res, boot_res$method_type),
       function(rst){
         list(
-        ci_ATE = boot_ci(rst$`ATE(0,1)`),
-        ci_NDE = boot_ci(rst$`NDE(0,1)`),
-        ci_NIE = boot_ci(rst$`NIE(0,1)`),
-        pvalue_ATE = boot_pval(rst$`ATE(0,1)`),
-        pvalue_NDE = boot_pval(rst$`NDE(0,1)`),
-        pvalue_NIE = boot_pval(rst$`NIE(0,1)`),
-        sd_ATE = sd(rst$`ATE(0,1)`, na.rm = TRUE),
-        sd_NDE = sd(rst$`NDE(0,1)`, na.rm = TRUE),
-        sd_NIE = sd(rst$`NIE(0,1)`, na.rm = TRUE),
+        ci_ATE = boot_ci(rst$`ATE(1,0)`),
+        ci_NDE = boot_ci(rst$`NDE(1,0)`),
+        ci_NIE = boot_ci(rst$`NIE(1,0)`),
+        pvalue_ATE = boot_pval(rst$`ATE(1,0)`),
+        pvalue_NDE = boot_pval(rst$`NDE(1,0)`),
+        pvalue_NIE = boot_pval(rst$`NIE(1,0)`),
+        sd_ATE = sd(rst$`ATE(1,0)`, na.rm = TRUE),
+        sd_NDE = sd(rst$`NDE(1,0)`, na.rm = TRUE),
+        sd_NIE = sd(rst$`NIE(1,0)`, na.rm = TRUE),
         method_type = unique(rst$method_type),
-        boot_ATE = rst$`ATE(0,1)`,
-        boot_NDE = rst$`NDE(0,1)`,
-        boot_NIE = rst$`NIE(0,1)`
+        boot_ATE = rst$`ATE(1,0)`,
+        boot_NDE = rst$`NDE(1,0)`,
+        boot_NIE = rst$`NIE(1,0)`
         )
       }
     )
