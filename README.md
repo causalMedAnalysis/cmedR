@@ -1,5 +1,7 @@
-# causalMedR
-This repository contains R functions for conducting causal mediation analysis using the methods described in Wodtke and Zhou "Causal Mediation Analysis."
+# causalMedR: An R Package for Analyzing Causal Mediation
+
+## About casualMedR 
+`casualMedR` is a R package for implementing the methods described in Wodtke and Zhou (Forthcoming, Cambridge University Press) "Causal Mediation Analysis." This package is currently under active development. Functionality may change without notice, and there may be bugs or incomplete features. Use with caution and at your own risk.
 
 ## Table of Contents
 - [linmed – mediation analysis using linear models](#linmed-mediation-analysis-using-linear-models)
@@ -12,6 +14,7 @@ This repository contains R functions for conducting causal mediation analysis us
 - [ipwpath – analysis of path-specific effects using inverse probability weights](#ipwpath-analysis-of-path-specific-effects-using-inverse-probability-weights)
 - [pathimp – analysis of path-specific effects using regression imputation](#pathimp-analysis-of-path-specific-effects-using-regression-imputation)
 - [mrmed – mediation analysis using multiply robust estimation](#mrmed-mediation-analysis-using-multiply-robust-estimation)
+- [dmlmed – debiased machine learning for mediation analysis](#dmlmed-debiased-machine-learning-for-mediation-analysis)
 - [utils – utility functions](#utils-utility-functions)
 
 
@@ -1299,13 +1302,13 @@ res_wt_boot$summary_df
 
 The `mrmed()` function uses a multiply robust estimation procedure and computes inferential statistics via nonparametric bootstrap. It estimates causal effects using two different approaches, depending on which nuisance models the user supplies:
 
-* **Type 1 Estimator (Wodtke and Zhou, Equation 6.17)**: Requires:
+* **Type 1 Estimator (Wodtke and Zhou, Equation 6.17)** Requires:
 
   * A logit model for P(M|D,C)
   * A logit model for P(D|C)
   * A linear model for E(Y|C,D,M)
 
-* **Type 2 Estimator (Wodtke and Zhou, Equation 6.20)**: Requires:
+* **Type 2 Estimator (Wodtke and Zhou, Equation 6.20)** Requires:
 
   * A logit model for P(D|C)
   * A logit model for P(D|C,M)
@@ -1440,6 +1443,145 @@ mrmed_rst1 <- mrmed(
   boot = TRUE, boot_reps = 2000
   boot_parallel = FALSE
 )
+```
+
+
+## `dmlmed`: debiased machine learning for mediation analysis
+
+The `dmlmed` function estimates total, natural direct, and natural indirect effects using debiased machine learning (DML). It accommodates both univariate and multivariate mediators and allows flexible model specification using Super Learners.
+
+Similar to `mrmed`, `dmlmed` also implements two different multiply robust estimators, depending on which nuisance models the user supplies:
+
+* **Type 1 Estimator (Wodtke and Zhou, Equation 6.17)** Requires:
+  * A super learner for P(M|D,C)
+  * A super learner for P(D|C)
+  * A super learner for E(Y|C,D,M)
+
+* **Type 2 Estimator (Wodtke and Zhou, Equation 6.20)** Requires:
+  * A super learner for P(D|C)
+  * A super learner for P(D|C,M)
+  * A super learner for E(Y|C,M,D)
+  * A super learner for E(E(Y|C,D=d,M)|C,D)
+
+When multiple mediators are analyzed, only the Type 2 Estimator can be used, and the function estimates multivariate natural effects across the set of mediators.
+
+### Function
+
+```r
+dmlmed(
+  D,
+  Y,
+  M,
+  D_C_model,
+  D_MC_model = NULL,
+  Y_DC_model = NULL,
+  Y_DMC_model,
+  M_DC_model = NULL,
+  data,
+  d,
+  dstar,
+  K = 5,
+  V = 5L,
+  seed,
+  SL.library = c("SL.mean", "SL.glmnet"),
+  stratifyCV = TRUE,
+  minimal = FALSE,
+  censor = TRUE,
+  censor_low = 0.01,
+  censor_high = 0.99
+)
+```
+
+### Arguments
+
+| Argument                    | Description                                                                                  |
+| --------------------------- | -------------------------------------------------------------------------------------------- |
+| `D`                         | Name of the binary exposure variable (must be numeric with two unique values).               |
+| `Y`                         | Name of the outcome variable (must be numeric).                                              |
+| `M`                         | Name(s) of mediator variable(s). For multiple mediators, supply as a list of names.          |
+| `D_C_model`                 | Formula for the exposure model: exposure \~ covariates. Required for both Type 1 and Type 2. |
+| `D_MC_model`                | (Optional) Formula for exposure \~ mediator(s) + covariates. Required for Type 2.            |
+| `Y_DMC_model`               | Formula for outcome \~ exposure + mediator(s) + covariates. Required for both types.         |
+| `Y_DC_model`                | (Optional) Formula for predicted outcome model. Required for Type 2.                         |
+| `M_DC_model`                | (Optional) Formula for mediator \~ exposure + covariates. Required for Type 1.               |
+| `data`                      | A data frame containing all variables.                                                       |
+| `d`, `dstar`                | Numeric values specifying the treatment and control conditions (d-dstar defines contrast).   |
+| `K`                         | Number of cross-fitting folds (default: 5).                                                  |
+| `V`                         | Number of Super Learner CV folds (default: 5L).                                              |
+| `seed`                      | Random seed for reproducibility.                                                             |
+| `SL.library`                | Learners to be used in the Super Learner ensemble.                                           |
+| `stratifyCV`                | Whether to use stratified CV folds in Super Learner.                                         |
+| `minimal`                   | If `TRUE`, returns a minimal output set.                                                     |
+| `censor`                    | Whether to censor the inverse probability weights in the estimating equations.               |
+| `censor_low`, `censor_high` | Quantile thresholds for weight truncation (defaults: 0.01, 0.99).                            |
+
+### Returns
+
+A list containing:
+
+* `est1`: Estimates (with SEs and CIs) using Type 1 estimation (if applicable).
+* `est2`: Estimates (with SEs and CIs) using Type 2 estimation (if applicable).
+
+Each includes estimates for:
+
+* `ATE`: Total effect of treatment (`d - dstar`)
+* `NDE`: Natural direct effect
+* `NIE`: Natural indirect effect
+
+### Estimation Types
+
+* **Type 1 Estimator**: Requires `D_C_model`, `Y_DMC_model`, and `M_DC_model`
+* **Type 2 Estimator**: Requires `D_C_model`, `D_MC_model`, `Y_DMC_model`, and `Y_DC_model`
+
+### Examples
+
+#### Type 1 Estimation
+
+```r
+dmlmed(
+  D = "att22",
+  Y = "std_cesd_age40",
+  M = "ever_unemp_age3539",
+  D_C_model = "att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3",
+  Y_DMC_model = "std_cesd_age40 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22 + ever_unemp_age3539",
+  M_DC_model = "ever_unemp_age3539 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22",
+  data = df,
+  d = 1,
+  dstar = 0,
+  seed = 2024,
+  SL.library = c("SL.mean", "SL.glmnet", "SL.ranger"),
+  stratifyCV = TRUE,
+  minimal = TRUE
+)
+```
+
+#### Type 2 Estimation
+
+```r
+dmlmed(
+  D = "att22",
+  Y = "std_cesd_age40",
+  M = "ever_unemp_age3539",
+  D_C_model = "att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3",
+  D_MC_model = "att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + ever_unemp_age3539",
+  Y_DMC_model = "std_cesd_age40 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22 + ever_unemp_age3539",
+  Y_DC_model = "std_cesd_age40 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22",
+  data = df,
+  d = 1,
+  dstar = 0,
+  seed = 2024,
+  SL.library = c("SL.mean", "SL.glmnet", "SL.ranger"),
+  stratifyCV = TRUE,
+  minimal = TRUE
+)
+```
+
+### Dependencies
+
+Ensure the following packages are installed:
+
+```r
+install.packages(c("SuperLearner", "glmnet", "ranger", "dplyr", "tibble"))
 ```
 
 
