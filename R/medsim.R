@@ -647,7 +647,7 @@ medsim <- function(data, num_sim = 2000, cat_list = c("0", "1"), treatment,
     # Initialize a list to store bootstrap results
     `%dorng%` <- doRNG::`%dorng%`
 
-    bootstrap_results <- foreach::foreach(n = 1:boot_reps, .combine = cbind, .packages = c("dplyr")) %dorng% {
+    bootstrap_results <- foreach::foreach(n = 1:boot_reps, .combine = cbind, .packages = c("dplyr", "MASS", "nnet")) %dorng% {
       boot.df <- df[sample(nrow(df), nrow(df), replace = TRUE), ]
       medsim_core(data = boot.df, num_sim = num_sim, cat_list = cat_list, treatment = treatment,
                   intv_med = intv_med, model_spec = model_spec, weights = weights, minimal = TRUE)
