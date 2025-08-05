@@ -14,9 +14,13 @@
 - [ipwpath – analysis of path-specific effects using inverse probability weights](#ipwpath-analysis-of-path-specific-effects-using-inverse-probability-weights)
 - [pathimp – analysis of path-specific effects using regression imputation](#pathimp-analysis-of-path-specific-effects-using-regression-imputation)
 - [mrmed – mediation analysis using multiply robust estimation](#mrmed-mediation-analysis-using-multiply-robust-estimation)
+<<<<<<< HEAD
 - [mrpath – multiply robust estimation of path-specific effects](#mrpath-multiply-robust-estimation-for-path-specific-effects)
 - [dmlmed – debiased machine learning for mediation analysis](#dmlmed-debiased-machine-learning-for-mediation-analysis)
 - [dmlpath – debiased machine learning for path-specific effects](#dmlpath-debiased-machine-learning-for-path-specific-effects)
+=======
+- [dmlmed – debiased machine learning for mediation analysis](#dmlmed-debiased-machine-learning-for-mediation-analysis)
+>>>>>>> 456f8ba90e89ca6e641940102343c46cda09a898
 - [utils – utility functions](#utils-utility-functions)
 
 
@@ -1444,6 +1448,7 @@ mrmed_rst1 <- mrmed(
 ```
 
 
+<<<<<<< HEAD
 ## `mrpath`: multiply robust estimation for path-specific effects
 
 The `mrpath` function estimates path-specific effects using a multiply robust (MR) approach. It recursively constructs natural direct effects (NDEs) using flexible models and supports bootstrap inference and parallelization.
@@ -1606,6 +1611,8 @@ result_bootpar <- mrpath(
 ```
 
 
+=======
+>>>>>>> 456f8ba90e89ca6e641940102343c46cda09a898
 ## `dmlmed`: debiased machine learning for mediation analysis
 
 The `dmlmed` function estimates total, natural direct, and natural indirect effects using debiased machine learning (DML). It accommodates both univariate and multivariate mediators and allows flexible model specification using Super Learners.
@@ -1623,7 +1630,11 @@ Similar to `mrmed`, `dmlmed` also implements two different multiply robust estim
   * A super learner for E(Y|C,M,D)
   * A super learner for E(E(Y|C,D=d,M)|C,D)
 
+<<<<<<< HEAD
 When multiple mediators are analyzed, only the Type 2 Estimator can be used, and the function estimates multivariate natural effects across the set of mediators considered as a whole.
+=======
+When multiple mediators are analyzed, only the Type 2 Estimator can be used, and the function estimates multivariate natural effects across the set of mediators.
+>>>>>>> 456f8ba90e89ca6e641940102343c46cda09a898
 
 ### Function
 
@@ -1632,7 +1643,10 @@ dmlmed(
   D,
   Y,
   M,
+<<<<<<< HEAD
   C,
+=======
+>>>>>>> 456f8ba90e89ca6e641940102343c46cda09a898
   D_C_model,
   D_MC_model = NULL,
   Y_DC_model = NULL,
@@ -1646,7 +1660,11 @@ dmlmed(
   seed,
   SL.library = c("SL.mean", "SL.glmnet"),
   stratifyCV = TRUE,
+<<<<<<< HEAD
   minimal = TRUE,
+=======
+  minimal = FALSE,
+>>>>>>> 456f8ba90e89ca6e641940102343c46cda09a898
   censor = TRUE,
   censor_low = 0.01,
   censor_high = 0.99
@@ -1660,7 +1678,10 @@ dmlmed(
 | `D`                         | Name of the binary exposure variable (must be numeric with two unique values).               |
 | `Y`                         | Name of the outcome variable (must be numeric).                                              |
 | `M`                         | Name(s) of mediator variable(s). For multiple mediators, supply as a list of names.          |
+<<<<<<< HEAD
 | `C`                         | Optional character vector of baseline covariates.                                            |
+=======
+>>>>>>> 456f8ba90e89ca6e641940102343c46cda09a898
 | `D_C_model`                 | Formula for the exposure model: exposure \~ covariates. Required for both Type 1 and Type 2. |
 | `D_MC_model`                | (Optional) Formula for exposure \~ mediator(s) + covariates. Required for Type 2.            |
 | `Y_DMC_model`               | Formula for outcome \~ exposure + mediator(s) + covariates. Required for both types.         |
@@ -1690,11 +1711,14 @@ Each includes estimates for:
 * `NDE`: Natural direct effect
 * `NIE`: Natural indirect effect
 
+<<<<<<< HEAD
 If `minimal` is set to `FALSE`, the function will return the following additional items:
 
 * a summary of missingness for the input data
 * data frames containing the summands for the Type 1 and/or Type 2 Estimators
 
+=======
+>>>>>>> 456f8ba90e89ca6e641940102343c46cda09a898
 ### Estimation Types
 
 * **Type 1 Estimator**: Requires `D_C_model`, `Y_DMC_model`, and `M_DC_model`
@@ -1709,7 +1733,10 @@ dmlmed(
   D = "att22",
   Y = "std_cesd_age40",
   M = "ever_unemp_age3539",
+<<<<<<< HEAD
   C = c("female", "black", "hispan", "paredu", "parprof", "parinc_prank", "famsize", "afqt3"),
+=======
+>>>>>>> 456f8ba90e89ca6e641940102343c46cda09a898
   D_C_model = "att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3",
   Y_DMC_model = "std_cesd_age40 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22 + ever_unemp_age3539",
   M_DC_model = "ever_unemp_age3539 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22",
@@ -1730,7 +1757,10 @@ dmlmed(
   D = "att22",
   Y = "std_cesd_age40",
   M = "ever_unemp_age3539",
+<<<<<<< HEAD
   C = c("female", "black", "hispan", "paredu", "parprof", "parinc_prank", "famsize", "afqt3"),
+=======
+>>>>>>> 456f8ba90e89ca6e641940102343c46cda09a898
   D_C_model = "att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3",
   D_MC_model = "att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + ever_unemp_age3539",
   Y_DMC_model = "std_cesd_age40 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22 + ever_unemp_age3539",
@@ -1754,6 +1784,7 @@ install.packages(c("SuperLearner", "glmnet", "ranger", "dplyr", "tibble"))
 ```
 
 
+<<<<<<< HEAD
 ## `dmlpath`: debiased machine learning for path-specific effects
 
 The `dmlpath` function estimates **path-specific effects** (PSEs) using debiased machine learning (DML). When there are multiple **causally ordered mediators**, the function decomposes the total effect into a direct effect and a series of PSEs, each corresponding to a specific mediator. If only one mediator is specified, `dmlpath` returns conventional natural direct and indirect effects.
@@ -1895,6 +1926,8 @@ install.packages(c("SuperLearner", "caret", "tidyr", "purrr", "dplyr", "tibble")
 ```
 
 
+=======
+>>>>>>> 456f8ba90e89ca6e641940102343c46cda09a898
 ## `utils`: utility functions
 
 This script defines helper functions used internally by many of the other other functions in this repository.
