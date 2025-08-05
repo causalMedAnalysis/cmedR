@@ -164,7 +164,7 @@ baseline confounders as predictors. These models are used to construct a set of 
 weights, which then enable the calculation of direct and path-specific effects that operate through
 each mediator, net of the mediators that precede it causal order.
 
-Specifying the \code{M} Argument:
+Specifying the \code{M} argument:
 
 The \code{M} argument is a list of character vectors identifying the names of the
 mediator variables. This argument is purposely a list of vectors rather than

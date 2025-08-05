@@ -189,7 +189,7 @@ ipwpath_inner <- function(
 #' weights, which then enable the calculation of direct and path-specific effects that operate through
 #' each mediator, net of the mediators that precede it causal order.
 #'
-#' Specifying the `M` Argument:
+#' Specifying the `M` argument:
 #'
 #' The `M` argument is a list of character vectors identifying the names of the
 #' mediator variables. This argument is purposely a list of vectors rather than

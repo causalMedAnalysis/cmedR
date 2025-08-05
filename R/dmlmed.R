@@ -117,8 +117,14 @@
 #' @returns Based on the user's specification, `dmlmed()` returns a list with the
 #' following elements:
 #'
-#' \item{est1, est2}{A tibble containing the point estimates, standard errors and
-#' confidence intervals of \eqn{ATE(1,0)}, \eqn{NDE(1,0)}, and \eqn{NIE(1,0)}.}
+#' \item{est1, est2}{A tibble containing the point estimates, standard errors, and
+#' 95% confidence intervals for \eqn{ATE(1,0)}, \eqn{NDE(1,0)}, and \eqn{NIE(1,0)}}.
+#'
+#' If `minimal` is set to `FALSE`, the function will return the following additional items,
+#' along with a summary of missingness for the input data:
+#'
+#' \item{df1, df2}{Data frames containing the calculated \eqn{S_{d(\ast), d(\ast)}} objects,
+#' using method 1 or method 2.}
 #'
 #' @importFrom purrr reduce
 #' @importFrom purrr map
@@ -129,9 +135,9 @@
 #' @export
 #'
 #' @examples
-#' #-----------------------------------------#
-#' #  Initial Specification and Clean the Data:
-#' #----------------------------------------#
+#' #------------------------------------------#
+#' # Initial Specification and Clean the Data:
+#' #------------------------------------------#
 #' data(nlsy)
 #' # outcome
 #' Y <- "std_cesd_age40"
@@ -156,9 +162,10 @@
 #' "famsize",
 #' "afqt3"
 #' )
+#'
 #' # key variables
 #' key_vars <- c(
-#'  "cesd_age40", # unstandardized version of Y
+#'  "cesd_age40",
 #'   D,
 #'   unlist(M),
 #'   C
@@ -252,7 +259,7 @@ dmlmed <- function(
     seed,
     SL.library = c("SL.mean", "SL.glmnet"),
     stratifyCV = TRUE,
-    minimal = FALSE,
+    minimal = TRUE,
     censor = TRUE,
     censor_low = 0.01,
     censor_high = 0.99
@@ -271,8 +278,9 @@ dmlmed <- function(
            Found values: ",
              paste(unique(data[[D]][!is.na(data[[D]])]), collapse = ", ")))
   }
+
   # 2. Make sure there is no missing value in the data:
-  key_vars <- c(D, M, Y, C)
+  key_vars <- c(D, unlist(M), Y, C)
   if (!minimal) {
     miss_summary <- sapply(
       key_vars,
@@ -289,7 +297,8 @@ dmlmed <- function(
               in the output.")
     }
   }
-  # 3. Make sure the nuisance functions are completely specified:
+
+  # 3. Make sure the nuisance functions are completely listed:
   check_formula <- function(model, expected_var, var_label) {
     model <- as.formula(model)
     actual_var <- as.character(attr(terms(model), "variables"))[2]
@@ -301,12 +310,13 @@ dmlmed <- function(
     }
     return(model)
   }
+
   if (is.null(M_DC_model) && (is.null(D_MC_model) || is.null(Y_DC_model))) {
     warning(
       "Please specify the nuisance function(s):\n",
-      "- Specify P(M|C,D) to implement the estimator in equation (6.17);\n",
-      "- Specify P(D|C,M) and E(Y|D,C) to implement the estimator in equation (6.20);\n",
-      "- Specify all nuisance functions to implement both estimators."
+      "- Specify P(M|C,D) to estimate equation (6.17);\n",
+      "- Specify P(D|C,M) and E(Y|D,C) to estimate equation (6.20);\n",
+      "- Specify both to estimate both equations."
     )
   } else {
     method_type <- c()
@@ -321,6 +331,7 @@ dmlmed <- function(
                  paste(unique(data[[M]][!is.na(data[[M]])]), collapse = ", ")))
       }
     }
+
     if (!is.null(D_MC_model) && !is.null(Y_DC_model)) {
       method_type <- c(method_type, 2)
       # π(D|M,C):
@@ -336,6 +347,7 @@ dmlmed <- function(
       }
     }
   }
+
   # 4. Make sure the formula specification here is right:
   # 4.1 D_C_model: E(D|C)
   D_C_model <- check_formula(D_C_model, D, "exposure")
@@ -346,8 +358,10 @@ dmlmed <- function(
       )
     )
   }
+
   # 4.2 Y_DMC_model: E(Y|D,M,C)
   Y_DMC_model <- check_formula(Y_DMC_model, Y, "outcome")
+
   # Code the mediator and treatment variable to match the specified d and dstar:
   data <-
     data %>%
@@ -356,13 +370,14 @@ dmlmed <- function(
         if_else(!!sym(D) == d, 1, 0)
     )
 
+
   # ------------ Section 2: Initialize DML estimation --------------#
 
   # Generate the design matrices for model fitting and prediction:
-  # For Model Fitting:
+  # For model fitting:
   dm_pi_DC <- model.matrix(D_C_model, data = data)[, -1] %>% as_tibble()
   dm_mu_DMC <- model.matrix(Y_DMC_model, data = data)[, -1] %>% as_tibble()
-  # For Model Prediction:
+  # For prediction:
   # μd(M,C):
   dm_mu_DMC_d <-
     model.matrix(Y_DMC_model, data = mutate(data, !!sym(D) := d))[, -1] %>% as_tibble()
@@ -377,15 +392,15 @@ dmlmed <- function(
     # Set the seed and generate the CV_folds:
     set.seed(seed)
     cf_folds <- caret::createFolds(data[,Y, drop = TRUE], K)
-    # Generate the design matrices for  model fitting and predictions:
-    # For Model Fitting:
+    # Generate the design matrices for model fitting and prediction:
+    # For model fitting:
     # πD(M,C):P(D|C,M):
     dm_pi_DMC <- model.matrix(D_MC_model, data = data)[, -1] %>% as_tibble()
     # πD(C):P(D|C):
     dm_pi_DC <- model.matrix(D_C_model, data = data)[, -1] %>% as_tibble()
     # μD(C): E(Y|D,C):
     dm_mu_DC <- model.matrix(Y_DC_model, data = data)[, -1] %>% as_tibble()
-    # For Model Prediction:
+    # For prediction:
     # μd(C):
     dm_mu_DC_d <-
       model.matrix(Y_DC_model, data = mutate(data, !!sym(D) := d))[, -1] %>% as_tibble()
@@ -397,11 +412,12 @@ dmlmed <- function(
 
     for(k in 1:K){
 
-      cat(" Type 2 DML Estimator: cross-fitting fold ", k, "\n")
+      #cat(" Type 2 DML Estimator: cross-fitting fold ", k, "\n")
 
       predict_fold <- cf_folds[[k]]
       train_k <- data[-predict_fold,]
       pred_k <- data[predict_fold,]
+
       # Fit Treatment Models:
       # Estimate πD(C):
       pi_DC <- SuperLearner(
@@ -433,7 +449,8 @@ dmlmed <- function(
         control    = list(saveFitLibrary = TRUE),
         cvControl  = list(V = V, shuffle = TRUE, validRows = NULL)
       )
-      # Calculate the E(Y|d,M,C) and E(Y|d*,M,C) as the outcome for νD(C):
+
+      # Calculate E(Y|d,M,C) and E(Y|d*,M,C) as the outcome for νD(C):
       # Estimate μd(M,C):
       data$mu_hat_DMC_d <-
         predict.SuperLearner(mu_DMC, newdata = dm_mu_DMC_d)$pred
@@ -472,145 +489,152 @@ dmlmed <- function(
       pred_k <- data[predict_fold,]
       pred_k_lst <- append(pred_k_lst, list(pred_k))
     }
+
     # Generate the final results
-      main_df <- bind_rows(pred_k_lst)
-       stat_df2 <-
-        main_df %>%
-         dplyr::select(
-           dplyr::all_of(Y),
-           dplyr::all_of(D),
-           .data$pi_hat_DC,
-           .data$pi_hat_DCM,
-           .data$mu_hat_DMC_d,
-           .data$mu_hat_DMC_dstar,
-           .data$nu_d_dstar,
-           .data$nu_d_d,
-           .data$nu_dstar_d,
-           .data$nu_dstar_dstar
-         ) %>%
-         rename(
-           pi_hat_d_DCM = .data$pi_hat_DCM,
-           pi_hat_d_DC = .data$pi_hat_DC
-         ) %>%
-         mutate(
-           pi_hat_dstar_DCM = 1 - .data$pi_hat_d_DCM,
-           pi_hat_dstar_DC = 1 - .data$pi_hat_d_DC
-         )
+    main_df <- bind_rows(pred_k_lst)
+    stat_df2 <-
+      main_df %>%
+      dplyr::select(
+        dplyr::all_of(Y),
+        dplyr::all_of(D),
+        .data$pi_hat_DC,
+        .data$pi_hat_DCM,
+        .data$mu_hat_DMC_d,
+        .data$mu_hat_DMC_dstar,
+        .data$nu_d_dstar,
+        .data$nu_d_d,
+        .data$nu_dstar_d,
+        .data$nu_dstar_dstar
+      ) %>%
+      rename(
+        pi_hat_d_DCM = .data$pi_hat_DCM,
+        pi_hat_d_DC = .data$pi_hat_DC
+      ) %>%
+      mutate(
+        pi_hat_dstar_DCM = 1 - .data$pi_hat_d_DCM,
+        pi_hat_dstar_DC = 1 - .data$pi_hat_d_DC
+      )
 
-       val_map <- list("d" = d, "dstar" = dstar)
+    val_map <- list("d" = d, "dstar" = dstar)
 
-       final_calculation2 <-
-         lapply(
-           list(
-             c("dstar", "d"),
-             c("d", "d"),
-             c("d", "dstar"),
-             c("dstar", "dstar")
-           ),
-          function(comb){
-            d1 <- comb[1]
-            d1_val <- val_map[[d1]]
-            d2 <- comb[2]
-            d2_val <- val_map[[d2]]
-            rst_df <-
-              stat_df2 %>%
-              mutate(
-                !!sym(paste0("W1_", d1 ,"_", d2)) :=
-                  ((as.double(.data[[D]] == d2_val))/ !!sym(paste0("pi_hat_",d1,"_DC"))) *
-                  ((!!sym(paste0("pi_hat_",d1,"_DCM")))/ (!!sym(paste0("pi_hat_",d2,"_DCM")))),
-                !!sym(paste0("W2_", d1)) :=
-                  ((as.double(.data[[D]] == d1_val))/ !!sym(paste0("pi_hat_",d1,"_DC")))
-              )
-            if(censor == TRUE){
-              rst_df[[paste0("W1_", d1, "_", d2)]][rst_df[[D]] == d2_val] <-
-                trimQ(
-                  rst_df[[paste0("W1_", d1, "_", d2)]][rst_df[[D]] == d2_val],
-                  low = censor_low,
-                  high = censor_high)
-              rst_df[[paste0("W2_", d1)]][rst_df[[D]] == d1_val] <-
-                trimQ(
-                  rst_df[[paste0("W2_", d1)]][rst_df[[D]] == d1_val],
-                  low = censor_low,
-                  high = censor_high)
-            }
-            rst_trm_df <-
-              rst_df %>%
-              mutate(
-                !!sym(paste0("S_",d1,"_",d2)) :=
-                  # First Line in equation (6.17)
-                  !!sym(paste0("W1_", d1 ,"_", d2)) * (!!sym(Y) - !!sym(paste0("mu_hat_DMC_",d2))) +
-                  !!sym(paste0("W2_", d1)) * (!!sym(paste0("mu_hat_DMC_",d2)) - !!sym(paste0("nu_",d1,"_",d2))) +
-                  !!sym(paste0("nu_",d1,"_",d2))
-              ) %>%
-              mutate(
-                .row_id = dplyr::row_number()
-              )
-            return(rst_trm_df)
+    final_calculation2 <-
+      lapply(
+        list(
+          c("dstar", "d"),
+          c("d", "d"),
+          c("d", "dstar"),
+          c("dstar", "dstar")
+        ),
+        function(comb){
+          d1 <- comb[1]
+          d1_val <- val_map[[d1]]
+          d2 <- comb[2]
+          d2_val <- val_map[[d2]]
+          rst_df <-
+            stat_df2 %>%
+            mutate(
+              !!sym(paste0("W1_", d1 ,"_", d2)) :=
+                ((as.double(.data[[D]] == d2_val))/ !!sym(paste0("pi_hat_",d1,"_DC"))) *
+                ((!!sym(paste0("pi_hat_",d1,"_DCM")))/ (!!sym(paste0("pi_hat_",d2,"_DCM")))),
+              !!sym(paste0("W2_", d1)) :=
+                ((as.double(.data[[D]] == d1_val))/ !!sym(paste0("pi_hat_",d1,"_DC")))
+            )
+
+          if(censor == TRUE){
+            rst_df[[paste0("W1_", d1, "_", d2)]][rst_df[[D]] == d2_val] <-
+              trimQ(
+                rst_df[[paste0("W1_", d1, "_", d2)]][rst_df[[D]] == d2_val],
+                low = censor_low,
+                high = censor_high)
+
+            rst_df[[paste0("W2_", d1)]][rst_df[[D]] == d1_val] <-
+              trimQ(
+                rst_df[[paste0("W2_", d1)]][rst_df[[D]] == d1_val],
+                low = censor_low,
+                high = censor_high)
           }
-        )
 
-      final_df2 <-
-        reduce(
-          final_calculation2,
-          left_join,
-          by =
-            reduce(
-              map(
-                final_calculation2,
-                colnames
-              ),
-              intersect)
-        ) %>%
-        dplyr::select(
-          -.data$W2_d.x,
-          -.data$W2_dstar.x
-        ) %>%
-        rename(
-          W2_dstar = .data$W2_dstar.y,
-          W2_d = .data$W2_d.y
-        ) %>%
-        mutate(
-          ATE = .data$S_d_d - .data$S_dstar_dstar,
-          NDE = .data$S_dstar_d - .data$S_dstar_dstar,
-          NIE = .data$S_d_d - .data$S_dstar_d
-        ) %>%
-        summarise(
-          `ATE(1,0)_Mean` = mean(.data$ATE),
-          `NDE(1,0)_Mean` = mean(.data$NDE),
-          `NIE(1,0)_Mean` = mean(.data$NIE),
-          `ATE(1,0)_SE` = sd(.data$ATE) / sqrt(n()),
-          `NDE(1,0)_SE` = sd(.data$NDE) / sqrt(n()),
-          `NIE(1,0)_SE` = sd(.data$NIE) / sqrt(n())
-        ) %>%
-        pivot_longer(
-          cols = dplyr::everything(),
-          names_to = c("estimand", "stat"),
-          names_sep = "_",
-          values_to = "value"
-        ) %>%
-        pivot_wider(names_from = .data$stat, values_from = .data$value) %>%
-        mutate(
-          lower = round(.data$Mean - 1.96 * .data$SE, 3),
-          upper = round(.data$Mean + 1.96 * .data$SE, 3),
-          out = paste0(
-            round(.data$Mean, 3)," [",
-            .data$lower,", ",
-            .data$upper, "]")
-        ) %>%
-        dplyr::select(
-          .data$estimand,
-          .data$Mean,
-          .data$SE,
-          .data$out
-        )
+          rst_trm_df <-
+            rst_df %>%
+            mutate(
+              !!sym(paste0("S_",d1,"_",d2)) :=
+                !!sym(paste0("W1_", d1 ,"_", d2)) * (!!sym(Y) - !!sym(paste0("mu_hat_DMC_",d2))) +
+                !!sym(paste0("W2_", d1)) * (!!sym(paste0("mu_hat_DMC_",d2)) - !!sym(paste0("nu_",d1,"_",d2))) +
+                !!sym(paste0("nu_",d1,"_",d2))
+            ) %>%
+            mutate(
+              .row_id = dplyr::row_number()
+            )
+          return(rst_trm_df)
+        }
+      )
+
+    final_df2 <-
+      purrr::reduce(
+        final_calculation2,
+        left_join,
+        by =
+          purrr::reduce(
+            purrr::map(
+              final_calculation2,
+              colnames
+            ),
+            intersect)
+      ) %>%
+      dplyr::select(
+        -.data$W2_d.x,
+        -.data$W2_dstar.x
+      ) %>%
+      rename(
+        W2_dstar = .data$W2_dstar.y,
+        W2_d = .data$W2_d.y
+      ) %>%
+      mutate(
+        ATE = .data$S_d_d - .data$S_dstar_dstar,
+        NDE = .data$S_dstar_d - .data$S_dstar_dstar,
+        NIE = .data$S_d_d - .data$S_dstar_d
+      )
+
+    final_stat2 <-
+      final_df2 %>%
+      summarise(
+        `ATE(1,0)_Mean` = mean(.data$ATE),
+        `NDE(1,0)_Mean` = mean(.data$NDE),
+        `NIE(1,0)_Mean` = mean(.data$NIE),
+        `ATE(1,0)_SE` = sd(.data$ATE) / sqrt(n()),
+        `NDE(1,0)_SE` = sd(.data$NDE) / sqrt(n()),
+        `NIE(1,0)_SE` = sd(.data$NIE) / sqrt(n())
+      ) %>%
+      pivot_longer(
+        cols = dplyr::everything(),
+        names_to = c("Estimand", "stat"),
+        names_sep = "_",
+        values_to = "value"
+      ) %>%
+      pivot_wider(names_from = .data$stat, values_from = .data$value) %>%
+      mutate(
+        lower = round(.data$Mean - 1.96 * .data$SE, 3),
+        upper = round(.data$Mean + 1.96 * .data$SE, 3),
+        out = paste0(
+          round(.data$Mean, 3)," [",
+          .data$lower,", ",
+          .data$upper, "]")
+      ) %>%
+      dplyr::select(
+        .data$Estimand,
+        .data$Mean,
+        .data$SE,
+        .data$out
+      )
   }
 
   # Section 3.2: Compute Type 1 DML Estimates (Equation 6.17):
+
   if(any(method_type %in% list(c(1),c(1,2)))){
     # Set the seed and generate the CV_folds:
     set.seed(seed)
     cf_folds <- caret::createFolds(data[,Y,drop = TRUE], K)
-    # Generate the design matrices for  model fitting and predictions:
+    # Generate the design matrices for model fitting and prediction:
     # For Model Fitting:
     # E(M|D,C):
     dm_M <- model.matrix(M_DC_model, data = data)[, -1] %>% as_tibble()
@@ -634,12 +658,12 @@ dmlmed <- function(
 
     for(k in 1:K){
 
-      cat(" Type 1 DML Estimator: cross-fitting fold ", k, "\n")
+      #cat(" Type 1 DML Estimator: cross-fitting fold ", k, "\n")
 
       predict_fold <- cf_folds[[k]]
-
       train_k <- data[-predict_fold,]
       pred_k <- data[predict_fold,]
+
       # Fit Treatment Models:
       # πD(C):
       pi_DC <- SuperLearner(
@@ -776,9 +800,7 @@ dmlmed <- function(
             rst_df %>%
             mutate(
               !!sym(paste0("S_",d1,"_",d2)) :=
-                # First Line in equation (6.14):
                 !!sym(paste0("W1_", d1 ,"_", d2)) * (!!sym(Y) - !!sym(paste0("mu_hat_DMC_",d2))) +
-                # Second Line in equation (6.14):
                 !!sym(paste0("W2_", d1)) * (
                   !!sym(paste0("mu_hat_DMC_",d2)) -
                     (
@@ -786,7 +808,6 @@ dmlmed <- function(
                         !!sym(paste0("mu_hat_DMC_",d2,"_","mstar")) * !!sym(paste0("M_hat_",d1,"_","mstar"))
                     )
                 ) +
-                # Third Line in equation (6.14):
                 (
                   !!sym(paste0("mu_hat_DMC_",d2,"_","m")) * !!sym(paste0("M_hat_",d1,"_","m"))  +
                     !!sym(paste0("mu_hat_DMC_",d2,"_","mstar")) * !!sym(paste0("M_hat_",d1,"_","mstar"))
@@ -800,12 +821,12 @@ dmlmed <- function(
       )
 
     final_df1 <-
-      reduce(
+      purrr::reduce(
         final_calculation1,
         left_join,
         by =
-          reduce(
-            map(
+          purrr::reduce(
+            purrr::map(
               final_calculation1,
               colnames
             ),
@@ -823,7 +844,10 @@ dmlmed <- function(
         ATE = .data$S_d_d - .data$S_dstar_dstar,
         NDE = .data$S_dstar_d - .data$S_dstar_dstar,
         NIE = .data$S_d_d - .data$S_dstar_d
-      ) %>%
+      )
+
+    final_stat1 <-
+      final_df1 %>%
       summarise(
         `ATE(1,0)_Mean` = mean(.data$ATE),
         `NDE(1,0)_Mean` = mean(.data$NDE),
@@ -834,7 +858,7 @@ dmlmed <- function(
       ) %>%
       pivot_longer(
         cols = dplyr::everything(),
-        names_to = c("estimand", "stat"),
+        names_to = c("Estimand", "stat"),
         names_sep = "_",
         values_to = "value"
       ) %>%
@@ -848,7 +872,7 @@ dmlmed <- function(
           .data$upper, "]")
       ) %>%
       dplyr::select(
-        .data$estimand,
+        .data$Estimand,
         .data$Mean,
         .data$SE,
         .data$out
@@ -856,18 +880,19 @@ dmlmed <- function(
   }
 
   if (all(method_type == 2)) {
-    return(if (minimal) final_df2 else list(est2 = final_df2, miss_summary = miss_summary))
+    return(if (minimal) final_stat2 else list(est2 = final_stat2, df2 = final_df2, miss_summary = miss_summary))
   }
 
   if (all(method_type == 1)) {
-    return(if (minimal) final_df1 else list(est1 = final_df1, miss_summary = miss_summary))
+    return(if (minimal) final_stat1 else list(est1 = final_stat1, df1 = final_df1, miss_summary = miss_summary))
   }
 
   if (minimal) {
-    return(list(est2 = final_df2, est1 = final_df1))
+    return(list(est2 = final_stat2, est1 = final_stat1))
   } else {
     return(list(
-      est = list(est2 = final_df2, est1 = final_df1),
+      est = list(est2 = final_stat2, est1 = final_stat1),
+      df = list(df2 = final_df2, df1 = final_df1),
       miss_summary = miss_summary
     ))
   }

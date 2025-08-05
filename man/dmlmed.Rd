@@ -22,7 +22,7 @@ dmlmed(
   seed,
   SL.library = c("SL.mean", "SL.glmnet"),
   stratifyCV = TRUE,
-  minimal = FALSE,
+  minimal = TRUE,
   censor = TRUE,
   censor_low = 0.01,
   censor_high = 0.99
@@ -137,8 +137,14 @@ to the [1st, 99th] percentile range.}
 Based on the user's specification, \code{dmlmed()} returns a list with the
 following elements:
 
-\item{est1, est2}{A tibble containing the point estimates, standard errors and
-confidence intervals of \eqn{ATE(1,0)}, \eqn{NDE(1,0)}, and \eqn{NIE(1,0)}.}
+\item{est1, est2}{A tibble containing the point estimates, standard errors, and
+95\% confidence intervals for \eqn{ATE(1,0)}, \eqn{NDE(1,0)}, and \eqn{NIE(1,0)}}.
+
+If \code{minimal} is set to \code{FALSE}, the function will return the following additional items,
+along with a summary of missingness for the input data:
+
+\item{df1, df2}{Data frames containing the calculated \eqn{S_{d(\ast), d(\ast)}} objects,
+using method 1 or method 2.}
 }
 \description{
 \code{dmlmed()} uses debiased machine learning to estimate the total effect (ATE)
@@ -171,9 +177,9 @@ for analyses of multivariate mediators.
 }
 }
 \examples{
-#-----------------------------------------#
-#  Initial Specification and Clean the Data:
-#----------------------------------------#
+#------------------------------------------#
+# Initial Specification and Clean the Data:
+#------------------------------------------#
 data(nlsy)
 # outcome
 Y <- "std_cesd_age40"
@@ -198,9 +204,10 @@ C <- c(
 "famsize",
 "afqt3"
 )
+
 # key variables
 key_vars <- c(
- "cesd_age40", # unstandardized version of Y
+ "cesd_age40",
   D,
   unlist(M),
   C

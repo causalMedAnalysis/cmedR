@@ -31,6 +31,7 @@ Imports:
     stats,
     stringr,
     SuperLearner,
+    tibble,
     tidyr
 Depends: 
     R (>= 4.5)

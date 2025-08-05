@@ -1,4 +1,4 @@
-utils::globalVariables(c(".data"))
+utils::globalVariables(c(".data", "i"))
 
 demean <- function(x, w = rep(1, length(x))) x - weighted.mean(x, w, na.rm = TRUE)
 

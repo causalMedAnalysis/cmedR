@@ -1,5 +1,7 @@
-# causalMedR
-This repository contains R functions for conducting causal mediation analysis using the methods described in Wodtke and Zhou "Causal Mediation Analysis."
+# causalMedR: An R Package for Analyzing Causal Mediation
+
+## About casualMedR 
+`casualMedR` is a R package for implementing the methods described in Wodtke and Zhou (Forthcoming, Cambridge University Press) "Causal Mediation Analysis." This package is currently under active development. Functionality may change without notice, and there may be bugs or incomplete features. Use with caution and at your own risk.
 
 ## Table of Contents
 - [linmed – mediation analysis using linear models](#linmed-mediation-analysis-using-linear-models)
@@ -12,6 +14,9 @@ This repository contains R functions for conducting causal mediation analysis us
 - [ipwpath – analysis of path-specific effects using inverse probability weights](#ipwpath-analysis-of-path-specific-effects-using-inverse-probability-weights)
 - [pathimp – analysis of path-specific effects using regression imputation](#pathimp-analysis-of-path-specific-effects-using-regression-imputation)
 - [mrmed – mediation analysis using multiply robust estimation](#mrmed-mediation-analysis-using-multiply-robust-estimation)
+- [mrpath – multiply robust estimation of path-specific effects](#mrpath-multiply-robust-estimation-for-path-specific-effects)
+- [dmlmed – debiased machine learning for mediation analysis](#dmlmed-debiased-machine-learning-for-mediation-analysis)
+- [dmlpath – debiased machine learning for path-specific effects](#dmlpath-debiased-machine-learning-for-path-specific-effects)
 - [utils – utility functions](#utils-utility-functions)
 
 
@@ -1197,8 +1202,6 @@ pathimp(
 | `boot_cores`     | Number of CPU cores for parallel bootstrap. Defaults to available cores minus 2. |
 | `round_decimal`  | Digits to round estimates |
 
----
-
 ### Output
 
 Returns a named list containing:
@@ -1211,8 +1214,6 @@ Each row in `summary_df` includes:
 - The estimator type  
 - The causal estimand (ATE or PSE through each mediator)  
 - The point estimate and confidence interval
-
----
 
 ### Examples
 
@@ -1299,13 +1300,13 @@ res_wt_boot$summary_df
 
 The `mrmed()` function uses a multiply robust estimation procedure and computes inferential statistics via nonparametric bootstrap. It estimates causal effects using two different approaches, depending on which nuisance models the user supplies:
 
-* **Type 1 Estimator (Wodtke and Zhou, Equation 6.17)**: Requires:
+* **Type 1 Estimator (Wodtke and Zhou, Equation 6.17)** Requires:
 
   * A logit model for P(M|D,C)
   * A logit model for P(D|C)
   * A linear model for E(Y|C,D,M)
 
-* **Type 2 Estimator (Wodtke and Zhou, Equation 6.20)**: Requires:
+* **Type 2 Estimator (Wodtke and Zhou, Equation 6.20)** Requires:
 
   * A logit model for P(D|C)
   * A logit model for P(D|C,M)
@@ -1314,7 +1315,6 @@ The `mrmed()` function uses a multiply robust estimation procedure and computes 
 
 When multiple mediators are analyzed, only the **Type 2 Estimator** can be used, and the function estimates multivariate natural effects across the set of mediators.
 
-
 ### Function
 
 ```r
@@ -1322,6 +1322,7 @@ mrmed(
     D,
     Y,
     M,
+    C,
     D_C_model,
     D_MC_model = NULL,
     Y_DC_model = NULL,
@@ -1350,6 +1351,7 @@ mrmed(
 | `D`              | A character string for the exposure variable (binary, numeric) |
 | `Y`              | A character string for the outcome variable (numeric) |
 | `M`              | A character vector (or list) of mediator variables (all numeric) |
+| `C`              | Optional character vector of baseline covariates. |
 | `D_C_model`       | Formula for logit model of P(D\C) (required) |
 | `D_MC_model`        | Formula for logit model of P(D\C,M) (required for type 2 estimator) |
 | `Y_DMC_model`        | Formula for linear model of E(Y\C,M,D) (required) |
@@ -1364,7 +1366,6 @@ mrmed(
 | `boot_parallel`  | Parallel backend (`"no"`, `"multicore"`) |
 | `boot_cores`     | Number of CPU cores for parallel bootstrap. Defaults to available cores minus 2. |
 
-
 ### Returns
 
 The function returns a list containing:
@@ -1374,7 +1375,6 @@ The function returns a list containing:
 * `models_M`: Model for the mediator (if specified to implement Type 1 estimator).
 * `models_Y`: List of model objects for the outcome models.
 * Bootstrap results (if `boot = TRUE`):
-
 
 ### Examples
 
@@ -1432,6 +1432,7 @@ mrmed_rst1 <- mrmed(
   D=D,
   Y=Y,
   M=M[[1]],
+  C=C,
   D_C_model=D_C_model,
   D_MC_model=D_MC_model,
   Y_DC_model=Y_DC_model,
@@ -1440,6 +1441,457 @@ mrmed_rst1 <- mrmed(
   boot = TRUE, boot_reps = 2000
   boot_parallel = FALSE
 )
+```
+
+
+## `mrpath`: multiply robust estimation for path-specific effects
+
+The `mrpath` function estimates path-specific effects using a multiply robust (MR) approach. It recursively constructs natural direct effects (NDEs) using flexible models and supports bootstrap inference and parallelization.
+
+### Function
+
+```r
+mrpath(
+  D,
+  Y,
+  M,
+  C,
+  data,
+  d,
+  dstar,
+  censor = TRUE,
+  censor_low = 0.01,
+  censor_high = 0.99,
+  interaction_DM = FALSE,
+  interaction_DC = FALSE,
+  interaction_MC = FALSE,
+  boot = FALSE,
+  boot_reps = 200,
+  boot_conf_level = 0.95,
+  boot_seed = NULL,
+  boot_parallel = FALSE,
+  boot_cores = max(c(parallel::detectCores() - 2, 1))
+)
+```
+
+### Arguments
+
+| Argument                    | Description                                                                                     |
+| --------------------------- | ----------------------------------------------------------------------------------------------- |
+| `data`                      | A data frame.                                                                                   |
+| `D`                         | Name of the binary exposure variable (character). Must be numeric with two values.              |
+| `Y`                         | Name of the numeric outcome variable (character).                                               |
+| `M`                         | List of vectors identifying mediators in hypothesized causal order.                             |
+| `C`                         | Optional character vector of baseline covariates.                                               |
+| `d`, `dstar`                | Numeric values representing treatment and control levels. Re-coded as 1 and 0 if not already.   |
+| `interaction_DM`            | Logical. If `TRUE`, include exposure-mediator interactions in the outcome model.                |
+| `interaction_DC`            | Logical. If `TRUE`, include exposure-covariate interactions in the outcome model.               |
+| `interaction_MC`            | Logical. If `TRUE`, include mediator-covariate interactions in the outcome model.               |
+| `censor`                    | Logical. If `TRUE`, applies censoring to the IPWs.                                              |
+| `censor_low`, `censor_high` | Numeric quantiles used to censors the IPWs (defaults: 0.01, 0.99).                              |
+| `boot`                      | Logical. If `TRUE`, uses nonparametric bootstrap for inference.                                 |
+| `boot_reps`                 | Number of bootstrap replications (default: 200).                                               |
+| `boot_conf_level`           | Confidence level for bootstrap interval (default: 0.95).                                        |
+| `boot_seed`                 | Integer seed for reproducibility.                                                               |
+| `boot_parallel`             | Logical. If `TRUE`, parallelizes the bootstrap (requires `doParallel`, `doRNG`, and `foreach`). |
+| `boot_cores`                | Number of CPU cores for parallel bootstrap. Defaults to available cores minus 2.                |
+
+### Specifying Mediators with `M`
+
+The `M` argument supports both univariate and multivariate mediators and allows for partial causal ordering.
+
+* **Two ordered mediators:**
+
+  ```r
+  M = list("m1", "m2")
+  ```
+
+* **Block of unordered mediators following m1:**
+
+  ```r
+  M = list("m1", c("m2", "m3"))
+  ```
+
+* **Including a dummy-encoded nominal mediator:**
+
+  ```r
+  M = list("m1", c("m2", "m3"), c("level2", "level3", "level4"))
+  ```
+
+Note: Order of items within each vector does not matter. Order of vectors in the list does matter.
+
+### Returns
+
+If `boot = FALSE`, `mrpath` returns:
+
+* `ATE`: Estimated average total effect.
+* `PSE`: Named list of path-specific effects (length = `length(M) + 1`).
+* `model_lst_D`: List of fitted exposure models.
+* `model_lst_Y`: List of sequential outcome models, with mediators added recursively.
+
+If `boot = TRUE`, additional outputs include:
+
+* `ATE`: Bootstrap estimates and confidence intervals for the ATE.
+* `PSE: D -> Mk ~> Y`: Bootstrap estimates for path-specific effect via mediator `Mk`.
+* `PSE: D -> Y`: Bootstrap estimates for the direct effect.
+
+Each bootstrap output contains:
+
+* `stats`: A `tibble` with the confidence interval, p-value, bootstrap SE, and method label.
+* `org_val`: A `tibble` with bootstrap replicate estimates and replicate IDs.
+
+### Examples
+
+#### Estimate PSEs with two ordered mediators
+
+```r
+data(nlsy)
+
+D <- "att22"
+Y <- "std_cesd_age40"
+M <- list("ever_unemp_age3539", "log_faminc_adj_age3539")
+C <- c("female", "black", "hispan", "paredu", "parprof", "parinc_prank", "famsize", "afqt3")
+
+key_vars <- c("cesd_age40", D, unlist(M), C)
+
+df <- nlsy[complete.cases(nlsy[, key_vars]), ] |>
+  dplyr::mutate(std_cesd_age40 = (cesd_age40 - mean(cesd_age40)) / sd(cesd_age40))
+
+result <- mrpath(
+  D = D,
+  Y = Y,
+  M = M,
+  C = C,
+  data = df,
+  d = 1,
+  dstar = 0
+)
+```
+
+#### Bootstrap
+
+```r
+result_boot <- mrpath(
+  D = D,
+  Y = Y,
+  M = M,
+  C = C,
+  data = df,
+  d = 1,
+  dstar = 0,
+  boot = TRUE,
+  boot_reps = 2000,
+  boot_conf_level = 0.95,
+  boot_seed = 1234
+)
+```
+
+#### Parallelized Bootstrap
+
+```r
+result_bootpar <- mrpath(
+  D = D,
+  Y = Y,
+  M = M,
+  C = C,
+  data = df,
+  d = 1,
+  dstar = 0,
+  boot = TRUE,
+  boot_reps = 2000,
+  boot_conf_level = 0.95,
+  boot_seed = 1234,
+  boot_parallel = TRUE
+)
+```
+
+
+## `dmlmed`: debiased machine learning for mediation analysis
+
+The `dmlmed` function estimates total, natural direct, and natural indirect effects using debiased machine learning (DML). It accommodates both univariate and multivariate mediators and allows flexible model specification using Super Learners.
+
+Similar to `mrmed`, `dmlmed` also implements two different multiply robust estimators, depending on which nuisance models the user supplies:
+
+* **Type 1 Estimator (Wodtke and Zhou, Equation 6.17)** Requires:
+  * A super learner for P(M|D,C)
+  * A super learner for P(D|C)
+  * A super learner for E(Y|C,D,M)
+
+* **Type 2 Estimator (Wodtke and Zhou, Equation 6.20)** Requires:
+  * A super learner for P(D|C)
+  * A super learner for P(D|C,M)
+  * A super learner for E(Y|C,M,D)
+  * A super learner for E(E(Y|C,D=d,M)|C,D)
+
+When multiple mediators are analyzed, only the Type 2 Estimator can be used, and the function estimates multivariate natural effects across the set of mediators considered as a whole.
+
+### Function
+
+```r
+dmlmed(
+  D,
+  Y,
+  M,
+  C,
+  D_C_model,
+  D_MC_model = NULL,
+  Y_DC_model = NULL,
+  Y_DMC_model,
+  M_DC_model = NULL,
+  data,
+  d,
+  dstar,
+  K = 5,
+  V = 5L,
+  seed,
+  SL.library = c("SL.mean", "SL.glmnet"),
+  stratifyCV = TRUE,
+  minimal = TRUE,
+  censor = TRUE,
+  censor_low = 0.01,
+  censor_high = 0.99
+)
+```
+
+### Arguments
+
+| Argument                    | Description                                                                                  |
+| --------------------------- | -------------------------------------------------------------------------------------------- |
+| `D`                         | Name of the binary exposure variable (must be numeric with two unique values).               |
+| `Y`                         | Name of the outcome variable (must be numeric).                                              |
+| `M`                         | Name(s) of mediator variable(s). For multiple mediators, supply as a list of names.          |
+| `C`                         | Optional character vector of baseline covariates.                                            |
+| `D_C_model`                 | Formula for the exposure model: exposure \~ covariates. Required for both Type 1 and Type 2. |
+| `D_MC_model`                | (Optional) Formula for exposure \~ mediator(s) + covariates. Required for Type 2.            |
+| `Y_DMC_model`               | Formula for outcome \~ exposure + mediator(s) + covariates. Required for both types.         |
+| `Y_DC_model`                | (Optional) Formula for predicted outcome model. Required for Type 2.                         |
+| `M_DC_model`                | (Optional) Formula for mediator \~ exposure + covariates. Required for Type 1.               |
+| `data`                      | A data frame containing all variables.                                                       |
+| `d`, `dstar`                | Numeric values specifying the treatment and control conditions (d-dstar defines contrast).   |
+| `K`                         | Number of cross-fitting folds (default: 5).                                                  |
+| `V`                         | Number of Super Learner CV folds (default: 5L).                                              |
+| `seed`                      | Random seed for reproducibility.                                                             |
+| `SL.library`                | Learners to be used in the Super Learner ensemble.                                           |
+| `stratifyCV`                | Whether to use stratified CV folds in Super Learner.                                         |
+| `minimal`                   | If `TRUE`, returns a minimal output set.                                                     |
+| `censor`                    | Whether to censor the inverse probability weights in the estimating equations.               |
+| `censor_low`, `censor_high` | Quantile thresholds for weight truncation (defaults: 0.01, 0.99).                            |
+
+### Returns
+
+A list containing:
+
+* `est1`: Estimates (with SEs and CIs) using Type 1 estimation (if applicable).
+* `est2`: Estimates (with SEs and CIs) using Type 2 estimation (if applicable).
+
+Each includes estimates for:
+
+* `ATE`: Total effect of treatment (`d - dstar`)
+* `NDE`: Natural direct effect
+* `NIE`: Natural indirect effect
+
+If `minimal` is set to `FALSE`, the function will return the following additional items:
+
+* a summary of missingness for the input data
+* data frames containing the summands for the Type 1 and/or Type 2 Estimators
+
+### Estimation Types
+
+* **Type 1 Estimator**: Requires `D_C_model`, `Y_DMC_model`, and `M_DC_model`
+* **Type 2 Estimator**: Requires `D_C_model`, `D_MC_model`, `Y_DMC_model`, and `Y_DC_model`
+
+### Examples
+
+#### Type 1 Estimation
+
+```r
+dmlmed(
+  D = "att22",
+  Y = "std_cesd_age40",
+  M = "ever_unemp_age3539",
+  C = c("female", "black", "hispan", "paredu", "parprof", "parinc_prank", "famsize", "afqt3"),
+  D_C_model = "att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3",
+  Y_DMC_model = "std_cesd_age40 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22 + ever_unemp_age3539",
+  M_DC_model = "ever_unemp_age3539 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22",
+  data = df,
+  d = 1,
+  dstar = 0,
+  seed = 2024,
+  SL.library = c("SL.mean", "SL.glmnet", "SL.ranger"),
+  stratifyCV = TRUE,
+  minimal = TRUE
+)
+```
+
+#### Type 2 Estimation
+
+```r
+dmlmed(
+  D = "att22",
+  Y = "std_cesd_age40",
+  M = "ever_unemp_age3539",
+  C = c("female", "black", "hispan", "paredu", "parprof", "parinc_prank", "famsize", "afqt3"),
+  D_C_model = "att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3",
+  D_MC_model = "att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + ever_unemp_age3539",
+  Y_DMC_model = "std_cesd_age40 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22 + ever_unemp_age3539",
+  Y_DC_model = "std_cesd_age40 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22",
+  data = df,
+  d = 1,
+  dstar = 0,
+  seed = 2024,
+  SL.library = c("SL.mean", "SL.glmnet", "SL.ranger"),
+  stratifyCV = TRUE,
+  minimal = TRUE
+)
+```
+
+### Dependencies
+
+Ensure the following packages are installed:
+
+```r
+install.packages(c("SuperLearner", "glmnet", "ranger", "dplyr", "tibble"))
+```
+
+
+## `dmlpath`: debiased machine learning for path-specific effects
+
+The `dmlpath` function estimates **path-specific effects** (PSEs) using debiased machine learning (DML). When there are multiple **causally ordered mediators**, the function decomposes the total effect into a direct effect and a series of PSEs, each corresponding to a specific mediator. If only one mediator is specified, `dmlpath` returns conventional natural direct and indirect effects.
+
+All estimates are based on the **Type 2 Estimator** described in Wodtke and Zhou (Forthcoming), implemented via repeated calls to the `dmlmed()` function.
+
+To estimate path-specific effects with K causally ordered mediators, `dmlpath` recursively estimates a sequence of natural direct effects (NDEs), then computes differences to isolate each path:
+
+* **Direct effect (bypassing all mediators):**
+
+  `PSE_{D → Y}(d, d*) = NDE_{M}(d, d*)`
+  
+* **Path-specific effect through each $M_k$:**
+
+  `PSE_{D → M_k ⇝ Y}(d, d*) = NDE_{M_{k−1}}(d, d*) − NDE_{M_k}(d, d*)`
+  
+* **For the first mediator:**
+
+  `PSE_{D → M_1 ⇝ Y}(d, d*) = NIE_{M_1}(d, d*)`
+  
+### Function
+
+```r
+dmlpath(
+  D,
+  Y,
+  M,
+  C,
+  data,
+  d,
+  dstar,
+  censor = TRUE,
+  censor_low = 0.01,
+  censor_high = 0.99,
+  interaction_DM = FALSE,
+  interaction_DC = FALSE,
+  interaction_MC = FALSE,
+  num_folds = 5,
+  V = 5L,
+  seed,
+  SL.library = c("SL.mean", "SL.glmnet"),
+  stratifyCV = TRUE
+)
+```
+
+### Arguments
+
+| Argument                    | Description                                                                                |
+| --------------------------- | -------------------------------------------------------------------------------------------|
+| `D`                         | Name of the binary exposure variable (must be numeric with two unique values).             |
+| `Y`                         | Name of the outcome variable (must be numeric).                                            |
+| `M`                         | List of mediators. Each list element is a character vector of variable names.              |
+| `C`                         | Character vector of covariate names to include in all models.                              |
+| `data`                      | A data frame containing all variables.                                                     |
+| `d`, `dstar`                | Numeric values specifying the treatment and control levels.                                |
+| `interaction_DM`            | Whether to include exposure × mediator interactions in the outcome model.                  |
+| `interaction_DC`            | Whether to include exposure × covariate interactions in both mediator and outcome models.  |
+| `interaction_MC`            | Whether to include mediator × covariate interactions in the outcome model.                 |
+| `censor`                    | Whether to censor the inverse probability weights.                                         |
+| `censor_low`, `censor_high` | Quantile thresholds for censoring IPW weights (defaults: 0.01, 0.99).                      |
+| `num_folds`                 | Number of folds for cross-fitting (default: 5).                                            |
+| `V`                         | Number of Super Learner CV folds (default: 5L).                                            |
+| `seed`                      | Random seed for reproducibility.                                                           |
+| `SL.library`                | Learners to be used in the Super Learner ensemble.                                         |
+| `stratifyCV`                | Whether to use stratified CV folds for treatment models.                                   |
+
+### Returns
+
+Returns a tibble with the following columns:
+
+* `Estimand`: Description of each effect (e.g., ATE, natural direct, and path-specific effects).
+* `Mean`: Point estimate.
+* `SE`: Standard error.
+* `out`: Estimate with 95% CI in the format `"estimate [lower, upper]"`.
+
+### Specification of the `M` argument
+
+The `M` argument is a **list of character vectors**, allowing flexible specification of both causal ordering and multivariate mediators:
+
+```r
+# Two causally ordered single mediators
+M = list("m1", "m2")
+
+# One single mediator followed by two unordered mediators
+M = list("m1", c("m2a", "m2b"))
+```
+
+If one mediator is a categorical variable, dummy code its levels and treat the dummy variables as a multivariate block:
+
+```r
+M = list("m1", c("m2a", "m2b"), c("m3cat2", "m3cat3", "m3cat4"))
+```
+
+### Examples
+
+```r
+data(nlsy)
+
+Y <- "std_cesd_age40"
+D <- "att22"
+M <- list("ever_unemp_age3539", "log_faminc_adj_age3539")
+C <- c("female", "black", "hispan", "paredu", "parprof", "parinc_prank", "famsize", "afqt3")
+
+key_vars <- c("cesd_age40", D, unlist(M), C)
+
+df <- nlsy[complete.cases(nlsy[, key_vars]), ] |>
+  dplyr::mutate(std_cesd_age40 = (cesd_age40 - mean(cesd_age40)) / sd(cesd_age40))
+
+results <- dmlpath(
+  D = D,
+  Y = Y,
+  M = M,
+  C = C,
+  data = df,
+  d = 1,
+  dstar = 0,
+  censor = TRUE,
+  censor_low = 0.01,
+  censor_high = 0.99,
+  interaction_DM = FALSE,
+  interaction_DC = FALSE,
+  interaction_MC = FALSE,
+  num_folds = 5,
+  V = 5L,
+  seed = 02138,
+  SL.library = c("SL.mean", "SL.glmnet", "SL.ranger"),
+  stratifyCV = TRUE
+)
+
+print(results)
+```
+
+### Dependencies
+
+Ensure the following packages are installed:
+
+```r
+install.packages(c("SuperLearner", "caret", "tidyr", "purrr", "dplyr", "tibble"))
 ```
 
 
