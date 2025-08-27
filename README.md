@@ -14,13 +14,10 @@
 - [ipwpath – analysis of path-specific effects using inverse probability weights](#ipwpath-analysis-of-path-specific-effects-using-inverse-probability-weights)
 - [pathimp – analysis of path-specific effects using regression imputation](#pathimp-analysis-of-path-specific-effects-using-regression-imputation)
 - [mrmed – mediation analysis using multiply robust estimation](#mrmed-mediation-analysis-using-multiply-robust-estimation)
-<<<<<<< HEAD
 - [mrpath – multiply robust estimation of path-specific effects](#mrpath-multiply-robust-estimation-for-path-specific-effects)
 - [dmlmed – debiased machine learning for mediation analysis](#dmlmed-debiased-machine-learning-for-mediation-analysis)
 - [dmlpath – debiased machine learning for path-specific effects](#dmlpath-debiased-machine-learning-for-path-specific-effects)
-=======
 - [dmlmed – debiased machine learning for mediation analysis](#dmlmed-debiased-machine-learning-for-mediation-analysis)
->>>>>>> 456f8ba90e89ca6e641940102343c46cda09a898
 - [utils – utility functions](#utils-utility-functions)
 
 
