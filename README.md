@@ -746,12 +746,6 @@ cde_est_bootpar <- ipwcde(
 
 The `rwrlite` function is a wrapper for two core functions in the [`rwrmed`](https://github.com/xiangzhou09/rwrmed) package. It implements regression-with-residuals (RWR) estimation to compute overall effects, interventional direct and indirect effects, and controlled direct effects.
 
-To use this function, first install the `rwrmed` package using:
-
-```r
-devtools::install_github("xiangzhou09/rwrmed")
-```
-
 ### Function
 
 ```r
@@ -1158,12 +1152,6 @@ pse_bootpar <- ipwpath(
 - an imputation-based weighting estimator (if a propensity model is supplied)
 
 It computes the total effect and the path-specific effects (PSEs) of a binary treatment variable on an outcome through one or more causally ordered mediators. It supports bootstrap confidence intervals and (optionally) parallel computation.
-
-To use `pathimp`, you must first install the `paths` package from GitHub:
-
-```r
-devtools::install_github("xiangzhou09/paths")
-```
 
 ### Function
 
@@ -1748,14 +1736,6 @@ dmlmed(
 )
 ```
 
-### Dependencies
-
-Ensure the following packages are installed:
-
-```r
-install.packages(c("SuperLearner", "glmnet", "ranger", "dplyr", "tibble"))
-```
-
 
 ## `dmlpath`: debiased machine learning for path-specific effects
 
@@ -1887,14 +1867,6 @@ results <- dmlpath(
 )
 
 print(results)
-```
-
-### Dependencies
-
-Ensure the following packages are installed:
-
-```r
-install.packages(c("SuperLearner", "caret", "tidyr", "purrr", "dplyr", "tibble"))
 ```
 
 
