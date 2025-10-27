@@ -10,7 +10,7 @@
 #' @param minimal A logical scalar indicating whether the function should
 #'   return only a minimal set of output. The `ipwpath()` function uses the
 #'   default of FALSE when calling `ipwpath_inner()` to generate the point
-#'   point estimates and sets the argument to TRUE when calling `ipwpath_inner()`
+#'   estimates and sets the argument to TRUE when calling `ipwpath_inner()`
 #'   to perform the bootstrap.
 #'
 #' @noRd
@@ -187,7 +187,7 @@ ipwpath_inner <- function(
 #' and the baseline confounders as predictors; and a model for the exposure with M1, M2, and the
 #' baseline confounders as predictors. These models are used to construct a set of inverse probability
 #' weights, which then enable the calculation of direct and path-specific effects that operate through
-#' each mediator, net of the mediators that precede it causal order.
+#' each mediator, net of the mediators that precede it in causal order.
 #'
 #' Specifying the `M` argument:
 #'
@@ -372,16 +372,7 @@ ipwpath_inner <- function(
 #'   # ^ note that this order encodes our assumption that ever_unemp_age3539
 #'   # causally precedes log_faminc_adj_age3539
 #'   Y = "std_cesd_age40",
-#'   C = c(
-#'     "female",
-#'     "black",
-#'     "hispan",
-#'     "paredu",
-#'     "parprof",
-#'     "parinc_prank",
-#'     "famsize",
-#'     "afqt3"
-#'   )
+#'   C = covariates
 #' )
 #'
 #' # Example 2: If you specify only a single mediator, the function will return
@@ -391,16 +382,7 @@ ipwpath_inner <- function(
 #'   D = "att22",
 #'   M = "ever_unemp_age3539",
 #'   Y = "std_cesd_age40",
-#'   C = c(
-#'     "female",
-#'     "black",
-#'     "hispan",
-#'     "paredu",
-#'     "parprof",
-#'     "parinc_prank",
-#'     "famsize",
-#'     "afqt3"
-#'   )
+#'   C = covariates
 #' )
 #'
 #' # Example 3: Incorporating sampling weights
@@ -409,16 +391,7 @@ ipwpath_inner <- function(
 #'   D = "att22",
 #'   M = c("ever_unemp_age3539", "log_faminc_adj_age3539"),
 #'   Y = "std_cesd_age40",
-#'   C = c(
-#'     "female",
-#'     "black",
-#'     "hispan",
-#'     "paredu",
-#'     "parprof",
-#'     "parinc_prank",
-#'     "famsize",
-#'     "afqt3"
-#'   ),
+#'   C = covariates,
 #'   base_weights_name = "weight"
 #' )
 #'
@@ -429,16 +402,7 @@ ipwpath_inner <- function(
 #'     D = "att22",
 #'     M = c("ever_unemp_age3539", "log_faminc_adj_age3539"),
 #'     Y = "std_cesd_age40",
-#'     C = c(
-#'       "female",
-#'       "black",
-#'       "hispan",
-#'       "paredu",
-#'       "parprof",
-#'       "parinc_prank",
-#'       "famsize",
-#'       "afqt3"
-#'     ),
+#'     C = covariates,
 #'     boot = TRUE,
 #'     boot_reps = 2000,
 #'     boot_seed = 1234
@@ -446,30 +410,44 @@ ipwpath_inner <- function(
 #' }
 #'
 #' # Example 5: Parallelize the bootstrap, to attempt to reduce runtime
-#' # Note that this requires you to have installed the `doParallel`, `doRNG`,
-#' # and `foreach` packages.
 #' \dontrun{
 #'   ipwpath(
 #'     data = nlsy,
 #'     D = "att22",
 #'     M = c("ever_unemp_age3539", "log_faminc_adj_age3539"),
 #'     Y = "std_cesd_age40",
-#'     C = c(
-#'       "female",
-#'       "black",
-#'       "hispan",
-#'       "paredu",
-#'       "parprof",
-#'       "parinc_prank",
-#'       "famsize",
-#'       "afqt3"
-#'     ),
+#'     C = covariates,
 #'     boot = TRUE,
 #'     boot_reps = 2000,
 #'     boot_seed = 1234,
 #'     boot_parallel = TRUE
 #'   )
 #' }
+#'
+#' # Example 6: Three mediators
+#' # Prepare data
+#'
+#' key_variables6 <- c(
+#'   "cesd_age40","cesd_1992","ever_unemp_age3539",
+#'   "log_faminc_adj_age3539","att22", covariates
+#' )
+#'
+#' df_ex6 <- nlsy[complete.cases(nlsy[, key_variables6]), ]
+#' df_ex6$std_cesd_age40 <-
+#'   (df_ex6$cesd_age40 - mean(df_ex6$cesd_age40)) /
+#'   sd(df_ex6$cesd_age40)
+#'
+#' # Estimate path-specific effects
+#' ipwpath(
+#'   data = df_ex6,
+#'   D = "att22",
+#'   M = c("cesd_1992","ever_unemp_age3539","log_faminc_adj_age3539"),
+#'   # order encodes: cesd_1992 -> ever_unemp_age3539 -> log_faminc_adj_age3539
+#'   Y = "std_cesd_age40",
+#'   C = covariates
+#' )
+#'
+
 ipwpath <- function(
     data,
     D,

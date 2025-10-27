@@ -127,13 +127,13 @@ estimates from all replicate samples created in the bootstrap.}
 }
 \description{
 \code{ipwcde()} uses the inverse probability weighting (IPW) estimator to estimate
-the controlled direct effect (CDE). Note that unlike the ipwmed() function,
-ipwcde() requires a single mediator. Multiple mediators are not supported.
+the controlled direct effect (CDE). Note that unlike the \code{ipwmed()} function,
+\code{ipwcde()} requires a single mediator. Multiple mediators are not supported.
 }
 \details{
 \code{ipwcde()} estimates controlled direct effects using inverse probability weights,
-and it computes inferential statistics using the nonparametric bootsrtap. To compute
-the weights, ipwcde fits the following models: (i) a logit model for exposure
+and it computes inferential statistics using the nonparametric bootstrap. To compute
+the weights, \code{ipwcde()} fits the following models: (i) a logit model for exposure
 conditional on baseline covariates, and (ii) a logit model for the mediator
 conditional on both the exposure and baseline covariates, plus any specified
 post-treatment covariates. These models are used to generate inverse probability
@@ -218,8 +218,6 @@ head(out2,1)
 }
 
 # Example 4: Parallelize the bootstrap, to attempt to reduce runtime
-# Note that this requires you to have installed the `doParallel`, `doRNG`,
-# and `foreach` packages.
 \dontrun{
   out4 <- ipwcde(
     data = nlsy1,

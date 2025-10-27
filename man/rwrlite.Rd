@@ -92,7 +92,7 @@ If \code{boot_cores} equals one, then the bootstrap loop will not be
 parallelized (regardless of whether \code{boot_parallel} is TRUE).}
 }
 \value{
-By default, \code{linmed()} returns a list with the following elements:
+By default, \code{rwrlite()} returns a list with the following elements:
 \item{OE}{A numeric scalar with the estimated overall effect for the exposure
 contrast \code{d - dstar}: OE(\code{d},\code{dstar}).}
 \item{IDE}{A numeric scalar with the estimated interventional direct effect
@@ -143,9 +143,7 @@ estimates from all replicate samples created in the bootstrap.}
 implements the regression-with-residuals (RWR) estimator for interventional
 effects, producing estimates of the overall effect (OE), interventional
 direct effect (IDE), interventional indirect effect (IIE), and controlled
-direct effect (CDE). You may install the \code{rwrmed} package from the
-xiangzhou09/rwrmed GitHub repository, using the following code:
-\code{devtools::install_github("xiangzhou09/rwrmed")}
+direct effect (CDE).
 }
 \details{
 \code{rwrlite()} estimates interventional and controlled direct effects as follows: (i) it
@@ -183,6 +181,7 @@ nlsy <- nlsy[complete.cases(nlsy[,key_variables]),]
 nlsy$std_cesd_age40 <-
   (nlsy$cesd_age40 - mean(nlsy$cesd_age40)) /
   sd(nlsy$cesd_age40)
+
 ## Define model formulae
 formula_L <- ever_unemp_age3539 ~ att22+female+black+hispan+paredu+parprof+
 parinc_prank+famsize+afqt3
@@ -190,6 +189,7 @@ formula_M <- log_faminc_adj_age3539 ~ att22+female+black+hispan+paredu+parprof+
 parinc_prank+famsize+afqt3
 formula_Y <- std_cesd_age40 ~ att22*log_faminc_adj_age3539+ever_unemp_age3539+
   female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3
+
 ## Estimate interventional effects
 out1 <- rwrlite(
   data = nlsy,
@@ -243,8 +243,6 @@ head(out2,4)
 }
 
 # Example 4: Parallelize the bootstrap, to attempt to reduce runtime
-# Note that this requires you to have installed the `doParallel`, `doRNG`,
-# and `foreach` packages.
 \dontrun{
   out4 <- rwrlite(
     data = nlsy,
@@ -271,4 +269,52 @@ head(out2,4)
     "pvalue_IIE"
   )]
 }
+
+# Example 5: With two exposure-induced confounders
+# Prepare data
+data(nlsy)
+covariates <- c(
+  "female",
+  "black",
+  "hispan",
+  "paredu",
+  "parprof",
+  "parinc_prank",
+  "famsize",
+  "afqt3"
+)
+key_variables5 <- c(
+  "cesd_age40",
+  "ever_unemp_age3539",
+  "cesd_1992",
+  "log_faminc_adj_age3539",
+  "att22",
+  covariates
+)
+nlsy <- nlsy[complete.cases(nlsy[,key_variables5]),]
+nlsy$std_cesd_age40 <-
+  (nlsy$cesd_age40 - mean(nlsy$cesd_age40)) /
+  sd(nlsy$cesd_age40)
+
+# Define model formulae
+formula_L1 <- ever_unemp_age3539 ~ att22+female+black+hispan+paredu+parprof+
+parinc_prank+famsize+afqt3
+formula_L2 <- cesd_1992 ~ att22+female+black+hispan+paredu+
+parprof+parinc_prank+famsize+afqt3
+formula_M <- log_faminc_adj_age3539 ~ att22+female+black+hispan+paredu+parprof+
+parinc_prank+famsize+afqt3
+formula_Y <- std_cesd_age40 ~ att22*log_faminc_adj_age3539+ever_unemp_age3539+
+  cesd_1992+female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3
+
+# Estimate interventional effects
+out5 <- rwrlite(
+  data = nlsy,
+  D = "att22",
+  C = covariates,
+  m = log(5e4), # evaluates the CDE at log_faminc_adj_age3539 = log(5e4)
+  Y_formula = formula_Y,
+  M_formula = formula_M,
+  L_formula_list = list(formula_L1, formula_L2)
+)
+head(out5,4)
 }

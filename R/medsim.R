@@ -7,6 +7,8 @@
 #' @importFrom nnet multinom
 NULL
 
+# -------------------- print methods --------------------
+
 #' Print method for medsim objects (point.est)
 #'
 #' Displays only the point estimates and suppresses the full model output.
@@ -37,28 +39,25 @@ print.medsim <- function(x, ...) {
 #' @method print medsim_boot
 print.medsim_boot <- function(x, ...) {
   cat("\u2192 medsim (bootstrap) results:\n")
-  # 'results' is a data.frame with columns: point.est, p.value, ll.*, ul.*
   print(x$results, row.names = TRUE)
   invisible(x)
 }
 
-#' Simulate Mediated Effects (Core)
+# -------------------- medsim_core (internal) --------------------
+
+#' Simulation-based estimator for causal mediation effects
 #'
-#' This function simulates mediation effects in a causal inference setting. It handles
-#' various types of models, including GLMs, multinomial and ordered logistic regression, and allows
-#' for the inclusion of survey weights.
-#'
-#' @param data A data frame containing the variables specified in the model specifications.
-#' @param num_sim An integer specifying the number of simulations to run. Default is 2000.
-#' @param cat_list A character vector specifying the categories for the treatment variable.
-#' @param treatment A string specifying the treatment variable in the dataset.
-#' @param intv_med A list specifying the intervention on the mediators. Default is NULL.
-#' @param model_spec A list of lists, where each inner list specifies a model for the mediator
-#'   or outcome. Each model specification must include the `func` (function name), `formula`,
-#'   and `args` (optional arguments).
-#' @param weights Optional. A string specifying the name of the column in the data that contains the
-#'   weights to be used in weighted regression models and for calculating weighted means. If `NULL`,
-#'   weights are not used.
+#' @description
+#' `medsim()` estimates natural direct and indirect effects, interventional direct
+#' and indirect effects, controlled direct effects, and path-specific effects using
+#' a simulation-based estimator. It fits a series of models for each mediator and
+#' the outcome in their assumed causal order, then simulates counterfactual
+#' mediators and outcomes from these fitted models to approximate the expectations
+#' that define each effect. The function supports a wide range of model types,
+#' including linear models, generalized linear models, multinomial logit, and
+#' ordered logit, and can optionally incorporate sampling weights. Confidence
+#' intervals and p-values are computed using the nonparametric bootstrap, which
+#' can be parallelized to reduce runtime.
 #'
 #' @return A list of point estimates for the mediation effects.
 #' @noRd
@@ -86,16 +85,11 @@ medsim_core <- function(data, num_sim = 2000, cat_list = c("0", "1"), treatment,
 
   # Define the modify_formula function for intv_med
   modify_formula <- function(formula, mediators) {
-    # get the character vector of individual terms
     expanded_terms <- attr(terms(formula), "term.labels")
-
-    # keep only those terms whose all.vars() does _not_ include any mediator name
     keep <- vapply(expanded_terms, function(term) {
       vars_in_term <- all.vars(as.formula(paste("~", term)))
       !any(vars_in_term %in% mediators)
     }, logical(1))
-
-    # rebuild
     lhs <- as.character(formula)[2]
     new_rhs <- paste(expanded_terms[keep], collapse = " + ")
     as.formula(paste(lhs, "~", new_rhs))
@@ -105,22 +99,21 @@ medsim_core <- function(data, num_sim = 2000, cat_list = c("0", "1"), treatment,
     intv_med_list <- list()
     for (x in intv_med) {
       if (grepl("=", x)) {
-        parts <- strsplit(sub("=", "=&=", x), "=&=")[[1]] # splitting on the first equal sign
-        intv_med_list[[parts[1]]] <- eval(parse(text=parts[2]))
+        parts <- strsplit(sub("=", "=&=", x), "=&=")[[1]]
+        intv_med_list[[parts[1]]] <- eval(parse(text = parts[2]))
       } else {
         intv_med_list[[x]] <- NA
       }
     }
-    return(intv_med_list)
+    intv_med_list
   }
 
   intv_med_values <- parse_intv_med(intv_med)
 
-  # Function to convert to factor with integer levels and store mapping
+  # Convert to integer factors if needed and store mapping
   convert_to_integer_factor <- function(vec) {
     factor_vec <- as.factor(vec)
     levels_map <- levels(factor_vec)
-
     if (length(levels_map) == 2) {
       if (is.factor(vec) && all(levels_map == c("0", "1"))) {
         levels_map <- NULL
@@ -134,12 +127,10 @@ medsim_core <- function(data, num_sim = 2000, cat_list = c("0", "1"), treatment,
         levels(factor_vec) <- seq_along(levels_map)
       }
     }
-
     integer_factor <- as.integer(as.character(factor_vec))
-    return(list(factor = integer_factor, levels_map = levels_map))
+    list(factor = integer_factor, levels_map = levels_map)
   }
 
-  # Function to map back from integer factor to original levels
   map_back_to_original_levels <- function(integer_factor, levels_map) {
     if (length(levels_map) == 2) {
       factor(integer_factor, levels = c(0, 1), labels = levels_map)
@@ -148,143 +139,98 @@ medsim_core <- function(data, num_sim = 2000, cat_list = c("0", "1"), treatment,
     }
   }
 
-  # Process each mediator model
+  # Fit mediator models / apply interventions
   for (i in 1:num_mediators) {
     mediators[i] <- all.vars(model_spec[[i]]$formula)[1]
-
-    # Check if the family is not NULL and evaluate if it's "binomial"
-    fam_arg_mediator <- model_spec[[i]]$args$family
-
-    # pull out a single family name, whether it's a character or a family object
-    fam_name_mediator <- NULL
-    if (!is.null(fam_arg_mediator)) {
-      if (is.character(fam_arg_mediator)) {
-        fam_name_mediator <- fam_arg_mediator
-      } else if (inherits(fam_arg_mediator, "family")) {
-        fam_name_mediator <- fam_arg_mediator$family
-      }
-    }
-
-    # now test
-    is_binomial <- !is.null(fam_name_mediator) && fam_name_mediator == "binomial"
-
-    # Check if the function is multinom or polr
+    fam_arg <- model_spec[[i]]$args$family
+    fam_name <- if (!is.null(fam_arg)) if (is.character(fam_arg)) fam_arg else if (inherits(fam_arg, "family")) fam_arg$family else NULL
+    is_binomial <- !is.null(fam_name) && fam_name == "binomial"
     is_multinom_or_polr <- model_spec[[i]]$func == "multinom" || model_spec[[i]]$func == "polr"
 
     if (is_binomial || is_multinom_or_polr) {
-      # Convert mediator to factor with integer levels and store mapping
-      mediator_conversion <- convert_to_integer_factor(df[[mediators[i]]])
-      df[[mediators[i]]] <- factor(mediator_conversion$factor)
-      mediator_mappings[[mediators[i]]] <- mediator_conversion$levels_map
+      conv <- convert_to_integer_factor(df[[mediators[i]]])
+      df[[mediators[i]]] <- factor(conv$factor)
+      mediator_mappings[[mediators[i]]] <- conv$levels_map
     }
 
     if (mediators[i] %in% names(intv_med_values)) {
       if (is.na(intv_med_values[[mediators[i]]])) {
-        # Modify formula for intervened mediator
         new_formula <- modify_formula(model_spec[[i]]$formula, mediators)
-        Mmodels[[i]] <- do.call(model_spec[[i]]$func, c(list(formula = new_formula, data = df, weights = if (!is.null(weights)) df[[weights]]), model_spec[[i]]$args))
+        Mmodels[[i]] <- do.call(model_spec[[i]]$func,
+                                c(list(formula = new_formula, data = df,
+                                       weights = if (!is.null(weights)) df[[weights]]),
+                                  model_spec[[i]]$args))
       } else {
-        # Handle controlled value by converting it to the new scale
-
         controlled_value[[i]] <- intv_med_values[[mediators[i]]]
-
         if (!is.null(mediator_mappings[[mediators[i]]])) {
-          # Convert the controlled_value to the new scale using the match function
           new_scale_value <- match(as.character(controlled_value[[i]]), mediator_mappings[[mediators[i]]])
-
-          # Adjust the new_scale_value if there are only two levels (binary case)
-          if (length(mediator_mappings[[mediators[i]]]) == 2) {
-            new_scale_value <- new_scale_value - 1
-          }
-
+          if (length(mediator_mappings[[mediators[i]]]) == 2) new_scale_value <- new_scale_value - 1
           Mmodels[[i]] <- as.factor(new_scale_value)
         } else {
           Mmodels[[i]] <- controlled_value[[i]]
         }
       }
     } else {
-      # Fit the model using the original formula, include weights if specified
-      Mmodels[[i]] <- do.call(model_spec[[i]]$func, c(list(formula = model_spec[[i]]$formula, data = df, weights = if (!is.null(weights)) df[[weights]]), model_spec[[i]]$args))
+      Mmodels[[i]] <- do.call(model_spec[[i]]$func,
+                              c(list(formula = model_spec[[i]]$formula, data = df,
+                                     weights = if (!is.null(weights)) df[[weights]]),
+                                model_spec[[i]]$args))
     }
   }
 
-  # Convert the outcome variable to factor with integer levels if necessary
+  # Outcome model
   outcome <- all.vars(model_spec[[length(model_spec)]]$formula)[1]
-
-  # Check if the family is not NULL and evaluate if it's "binomial"
   fam_arg_outcome <- model_spec[[length(model_spec)]]$args$family
+  fam_name_outcome <- if (!is.null(fam_arg_outcome)) if (is.character(fam_arg_outcome)) fam_arg_outcome else if (inherits(fam_arg_outcome, "family")) fam_arg_outcome$family else NULL
+  is_binomial_outcome <- !is.null(fam_name_outcome) && fam_name_outcome == "binomial"
+  is_multinom_or_polr_outcome <- model_spec[[length(model_spec)]]$func == "multinom" || model_spec[[length(model_spec)]]$func == "polr"
 
-  # pull out a single family name, whether it's a character or a family object
-  fam_name_outcome <- NULL
-  if (!is.null(fam_arg_outcome)) {
-    if (is.character(fam_arg_outcome)) {
-      fam_name_outcome <- fam_arg_outcome
-    } else if (inherits(fam_arg_outcome, "family")) {
-      fam_name_outcome <- fam_arg_outcome$family
-    }
-  }
-
-  # now test
-  is_binomial  <- !is.null(fam_name_outcome) && fam_name_outcome == "binomial"
-
-  # Check if the function is multinom or polr
-  is_multinom_or_polr <- model_spec[[length(model_spec)]]$func == "multinom" || model_spec[[length(model_spec)]]$func == "polr"
-
-  if (is_binomial || is_multinom_or_polr) {
+  if (is_binomial_outcome || is_multinom_or_polr_outcome) {
     outcome_conversion <- convert_to_integer_factor(df[[outcome]])
     df[[outcome]] <- factor(outcome_conversion$factor)
     outcome_mappings <- outcome_conversion$levels_map
   }
 
-  # Fit the outcome model, include weights if specified
-  Ymodel <- do.call(model_spec[[length(model_spec)]]$func, c(list(formula = model_spec[[length(model_spec)]]$formula, data = df, weights = if (!is.null(weights)) df[[weights]]), model_spec[[length(model_spec)]]$args))
+  Ymodel <- do.call(model_spec[[length(model_spec)]]$func,
+                    c(list(formula = model_spec[[length(model_spec)]]$formula, data = df,
+                           weights = if (!is.null(weights)) df[[weights]]),
+                      model_spec[[length(model_spec)]]$args))
 
-  simulate_draw <- function(model, newdata, model_spec) {
-    if (is.numeric(model) || is.factor(model)) {
-      return(rep(model, nrow(newdata)))
-    } else {
-      if (inherits(model, "glm")) {
-        phat <- predict(model, newdata = newdata, type = "response")  # Use type = "response" for glm models
+  simulate_draw <- function(model, newdata, spec_i) {
+    if (is.numeric(model) || is.factor(model)) return(rep(model, nrow(newdata)))
 
-        fam <- family(model)$family
-        if (fam == "binomial") {
-          sim_outcomes <- as.factor(as.character(rbinom(nrow(newdata), size = 1, prob = phat)))
-          if (all.vars(model_spec$formula)[1] == outcome && !is.null(outcome_mappings)) {
-            mapped_outcomes <- map_back_to_original_levels(as.integer(as.character(sim_outcomes)), outcome_mappings)
-            return(mapped_outcomes)
-          } else {
-            return(sim_outcomes)
-          }
-        } else if (fam == "quasibinomial") {
-          trials <- 100
-          return(rbinom(nrow(newdata), size = trials, prob = phat) / trials)
-        } else if (fam == "poisson") {
-          return(rpois(nrow(newdata), lambda = phat))
-        } else if (fam == "gaussian") {
-          return(rnorm(nrow(newdata), mean = phat, sd = sigma(model)))
-        } else {
-          stop("simulate_draw: unsupported glm family '", fam, "'")
+    if (inherits(model, "glm")) {
+      phat <- predict(model, newdata = newdata, type = "response")
+      fam <- family(model)$family
+      if (fam == "binomial") {
+        sim_outcomes <- as.factor(as.character(rbinom(nrow(newdata), size = 1, prob = phat)))
+        if (all.vars(spec_i$formula)[1] == outcome && !is.null(outcome_mappings)) {
+          return(map_back_to_original_levels(as.integer(as.character(sim_outcomes)), outcome_mappings))
         }
-      } else if ("lm" %in% class(model) && !("glm" %in% class(model))) {
-        phat <- predict(model, newdata = newdata, type = "response")
-
+        return(sim_outcomes)
+      } else if (fam == "quasibinomial") {
+        trials <- 100
+        return(rbinom(nrow(newdata), size = trials, prob = phat) / trials)
+      } else if (fam == "poisson") {
+        return(rpois(nrow(newdata), lambda = phat))
+      } else if (fam == "gaussian") {
         return(rnorm(nrow(newdata), mean = phat, sd = sigma(model)))
-      } else if (inherits(model, "multinom") || inherits(model, "polr")) {
-        phat <- predict(model, newdata = newdata, type = "probs")  # Use type = "probs" for multinom and polr model
-
-        sim_outcomes <- apply(phat, 1, function(prob) {
-          rmultinom(n = 1, size = 1, prob = prob)
-        })
-        sim_outcomes <- as.factor(as.character(apply(sim_outcomes, 2, function(x) which(x == 1))))
-        if (all.vars(model_spec$formula)[1] == outcome && !is.null(outcome_mappings)) {
-          mapped_outcomes <- map_back_to_original_levels(as.integer(as.character(sim_outcomes)), outcome_mappings)
-          return(mapped_outcomes)
-        } else {
-          return(sim_outcomes)
-        }
       } else {
-        stop("Unsupported model type")
+        stop("simulate_draw: unsupported glm family '", fam, "'")
       }
+    } else if ("lm" %in% class(model) && !("glm" %in% class(model))) {
+      phat <- predict(model, newdata = newdata, type = "response")
+      return(rnorm(nrow(newdata), mean = phat, sd = sigma(model)))
+    } else if (inherits(model, "multinom") || inherits(model, "polr")) {
+      phat <- predict(model, newdata = newdata, type = "probs")
+      sim_outcomes <- apply(phat, 1, function(prob) rmultinom(n = 1, size = 1, prob = prob))
+      sim_outcomes <- as.factor(as.character(apply(sim_outcomes, 2, function(x) which(x == 1))))
+      if (all.vars(spec_i$formula)[1] == outcome && !is.null(outcome_mappings)) {
+        return(map_back_to_original_levels(as.integer(as.character(sim_outcomes)), outcome_mappings))
+      }
+      return(sim_outcomes)
+    } else {
+      stop("Unsupported model type")
     }
   }
 
@@ -582,72 +528,290 @@ medsim_core <- function(data, num_sim = 2000, cat_list = c("0", "1"), treatment,
 
 #' Simulate Mediated Effects with Bootstrapping
 #'
-#' This function simulates mediated effects and optionally performs bootstrapping to estimate confidence intervals and p-values.
+#' This function simulates mediated effects and optionally performs bootstrapping
+#' to estimate confidence intervals and p-values.
+#'
+#' @details
+#' `medsim()` performs causal mediation analysis using a simulation approach that
+#' generalizes standard parametric estimators to settings with one or more causally
+#' ordered mediators. It can be used to estimate natural effects, interventional
+#' effects, path-specific effects, or controlled direct effects, depending on the
+#' intervention specification supplied by the user.
+#'
+#' The estimator proceeds by fitting models for the mediators and outcome in the
+#' causal order specified by the user. For a treatment contrast defined by values
+#' `cat_list = c(dstar, d)`, the function simulates Monte Carlo draws of the
+#' mediators under each treatment level using the fitted mediator models. These
+#' simulated mediators are then used to generate potential outcomes under different
+#' combinations of `(d, d*)` and the corresponding mediator values, based on the
+#' fitted outcome model. Averaging these simulated outcomes across repeated draws
+#' yields estimates of the marginal expectations that define the effects of
+#' interest. In this way, the simulation-based estimator replaces analytical
+#' evaluation of complex identification formulas with a generative Monte Carlo
+#' approximation.
+#'
+#' When multiple mediators are specified, `medsim()` assumes a causal ordering and
+#' simulates each mediator sequentially, propagating simulated values forward
+#' through the mediator–outcome system. This structure allows the function to
+#' estimate not only multivariate natural direct and indirect effects but also
+#' path-specific effects operating through any subset of mediators. Controlled
+#' direct effects are estimated by fixing one or more mediators at user-specified
+#' values.
 #'
 #' @param data Data frame containing the variables.
 #' @param num_sim Number of simulations to run. Default is `2000`.
 #' @param cat_list Vector of levels for the treatment. Default is `c("0", "1")`.
 #' @param treatment Name of the treatment variable.
-#' @param intv_med Intervened mediator. Default is `NULL`.
-#' @param model_spec List of model specifications, where each model specification includes the `func`, `formula`, and `args`.
-#' @param weights Optional. A string specifying the name of the column in the data that contains the weights to be used in weighted regression models and for calculating weighted means. Default is `NULL`.
+#' @param intv_med Intervened mediator(s). Default is `NULL`.
+#' @param model_spec List of model specifications, where each model specification
+#'   includes the `func`, `formula`, and `args`.
+#' @param weights Optional. A string specifying the name of the column in the data
+#'   that contains the weights to be used in weighted regression models and for
+#'   calculating weighted means. Default is `NULL`.
 #' @param seed Seed for reproducibility. Default is `NULL`.
 #' @param boot Logical indicating whether to perform bootstrapping. Default is `FALSE`.
 #' @param boot_reps Number of bootstrap replications. Default is 100.
 #' @param boot_cores Number of CPU cores for parallel bootstrap. Defaults to available cores minus 2.
 #' @param boot_conf_level Confidence level for bootstrap intervals. Default is `0.95`.
 #'
-#' @return A data frame of point estimates, confidence intervals, and p-values if bootstrapping is performed; otherwise a list of point estimates
+#' @return A data frame of point estimates, confidence intervals, and p-values if
+#'   bootstrapping is performed; otherwise a list of point estimates.
+#'
+#' The function supports a wide range of model types, including:
+#' - `lm` for continuous mediators or outcomes
+#' - `glm` for generalized linear models, such as `family = binomial()` for logit
+#'   or `poisson()` for count data
+#' - `multinom` from the nnet package for nominal outcomes or mediators
+#' - `polr` from the MASS package for ordinal outcomes or mediators
+#'
+#' ## Specifying the model_spec argument
+#' The `model_spec` argument defines the models to be fitted for each mediator and
+#' the outcome. It must be supplied as a list of lists, where each inner list includes:
+#' - `func`: model-fitting function (e.g., `"glm"`, `"lm"`, `"multinom"`, or `"polr"`)
+#' - `formula`: a formula object with the mediator or outcome on the left-hand side
+#' - `args`: (optional) a list of additional arguments passed to the fitting function
+#'   (for example, `list(family = binomial(link = "logit"))` for a binary mediator,
+#'   or `list(method = "logistic")` for ordered logit with `polr`)
+#'
+#' Ordering rules:
+#' (i) List mediators in their assumed causal order, and (ii) put the outcome model last.
+#' This ordering tells `medsim()` how to simulate mediators sequentially and then simulate the outcome.
+#' At least one mediator model and one outcome model must be included.
+#'
+#' Supported model types:
+#' - `lm`: normal linear regression for continuous mediators or outcomes (no `args` required)
+#' - `glm`: generalized linear models; set `args$family` for the distribution and link
+#'   - `binomial(link = "logit")` or `binomial(link = "probit")` for binary variables
+#'   - `poisson(link = "log")` for count data
+#' - `multinom` (from nnet): nominal outcomes or mediators with more than two unordered categories
+#' - `polr` (from MASS): ordinal outcomes or mediators, with `args$method = "logistic"` (ordered logit)
+#'   or `"probit"` (ordered probit)
+#'
+#' Example model specifications:
+#' Binary mediator (logit), continuous mediator (linear), continuous outcome (linear)
+#' model_spec <- list(
+#'   list(
+#'     func    = "glm",
+#'     formula = M1 ~ D + C,
+#'     args    = list(family = binomial(link = "logit"))
+#'   ),
+#'   list(
+#'     func    = "lm",
+#'     formula = M2 ~ M1 + D + C
+#'   ),
+#'   list(
+#'     func    = "lm",
+#'     formula = Y ~ M2 + M1 + D + C
+#'   )
+#' )
+#'
+#' Nominal mediator (multinomial), ordinal outcome (ordered logit)
+#' model_spec2 <- list(
+#'   list(
+#'     func    = "multinom",
+#'     formula = M_nominal ~ D + C
+#'   ),
+#'   list(
+#'     func    = "polr",
+#'     formula = Y_ordinal ~ M_nominal + D + C,
+#'     args    = list(method = "logistic")  # or method = "probit"
+#'   )
+#' )
+#'
+#' Formulas and predictors:
+#' Formulas can include interactions (e.g., `D:C` or `M1:C`), higher-order terms, or transformations.
+#' All predictors referenced in a formula must appear in the data supplied to the `data` argument.
+#'
+#' Treatment contrast:
+#' The argument `cat_list` defines the treatment contrast (e.g., `c(0, 1)`) and must match the coding of
+#' the treatment variable (use character levels if the treatment is a factor).
+#'
+#' Interventions on mediators:
+#' The `intv_med` argument specifies the intervention on the mediators:
+#' - To estimate interventional effects, provide the name(s) of the mediators to be randomized
+#'   (e.g., `intv_med = "M2"`). For such mediators, `medsim()` internally removes upstream mediators
+#'   from their prediction formula to emulate randomization.
+#' - To estimate a controlled direct effect (CDE), fix a mediator at a specific value using the syntax
+#'   `"M=value"` (e.g., `intv_med = "log_faminc_adj_age3539=log(5e4)"`).
+#' - To estimate natural or path-specific effects, set `intv_med = NULL` to use the mediators’
+#'   natural distributions under each treatment condition.
+#'
+#' Weights:
+#' If `weights` is provided, it is applied in model fitting for mediators and outcomes and in the computation
+#' of weighted means.
+#'
+#' Inference and bootstrapping:
+#' If `boot = TRUE`, `medsim()` performs a nonparametric bootstrap to obtain
+#' confidence intervals and p-values. Each bootstrap replication refits the
+#' specified models, re-simulates the mediators and outcome, and recomputes the
+#' estimates of interest. Confidence intervals are constructed using the percentile
+#' method at the level specified by `boot_conf_level`. Parallel computation is
+#' supported through the `doParallel`, `doRNG`, and `foreach` packages, with the
+#' number of cores specified in `boot_cores`. The random seed can be set through
+#' the `seed` argument for reproducibility.
+#'
+#' Returns:
+#' If `boot = FALSE`, the function returns a list containing point estimates for
+#' the effects of interest, along with the fitted mediator and outcome models.
+#' If `boot = TRUE`, it returns a data frame that includes point estimates,
+#' bootstrap confidence intervals, and two-sided p-values, together with the fitted models.
+#'
 #' @export
-medsim <- function(data, num_sim = 2000, cat_list = c("0", "1"), treatment,
-                   intv_med = NULL, model_spec, weights = NULL, seed = NULL,
-                   boot = FALSE, boot_reps = 100, boot_cores = NULL, boot_conf_level = 0.95) {
+#'
+#' @examples
+#' # ----------------------------- #
+#' #     Data and shared setup     #
+#' # ----------------------------- #
+#' data(nlsy)
+#'
+#' # outcome, exposure and mediators
+#' Y <- "std_cesd_age40"
+#' D <- "att22"
+#' M1 <- "ever_unemp_age3539"           # binary
+#' M2 <- "log_faminc_adj_age3539"       # continuous
+#'
+#' covariates <- c(
+#'   "female","black","hispan","paredu","parprof",
+#'   "parinc_prank","famsize","afqt3"
+#' )
+#'
+#' # keep complete cases and standardize the outcome
+#' key_vars <- c("cesd_age40", D, M1, M2, covariates)
+#' df <- nlsy[complete.cases(nlsy[, key_vars]), ]
+#' df$std_cesd_age40 <- (df$cesd_age40 - mean(df$cesd_age40)) / sd(df$cesd_age40)
+#'
+#' # model specifications
+#' # single mediator spec (M1 only)
+#' spec_nat_single <- list(
+#'  list(func = "glm",
+#'       formula = as.formula(paste(M1, "~", paste(c(D, covariates), collapse = " + "))),
+#'       args = list(family = binomial())),
+#'  list(func = "lm",
+#'       formula = as.formula(paste(Y, "~", paste(c(M1, D, covariates), collapse = " + "))))
+#' )
+#' # two mediators spec
+#' # M1: binary, M2: continuous, Y: continuous
+#' spec_nat <- list(
+#'   list(func = "glm", formula = as.formula(paste(M1, "~", paste(c(D, covariates),
+#'    collapse = " + "))), args = list(family = binomial())),
+#'   list(func = "lm",  formula = as.formula(paste(M2, "~", paste(c(M1, D, covariates),
+#'    collapse = " + ")))),
+#'   list(func = "lm",  formula = as.formula(paste(Y,  "~", paste(c(M2, M1, D, covariates),
+#'    collapse = " + "))))
+#' )
+#'
+#' # ------------------------------------------- #
+#' # Example 1: Natural effects (NDE and NIE)    #
+#' # ------------------------------------------- #
+#' out_nat <- medsim(
+#'   data = df,
+#'   num_sim = 1000,
+#'   treatment = D,
+#'   intv_med = NULL,               # no mediator intervention
+#'   model_spec = spec_nat_single,
+#'   seed = 60637
+#' )
+#' print(out_nat)
+#'
+#' # ------------------------------------------------ #
+#' # Example 2: Interventional effects (IDE and IIE)  #
+#' # ------------------------------------------------ #
+#' # Randomize the second mediator (income).
+#' out_ide <- medsim(
+#'   data = df,
+#'   num_sim = 1000,
+#'   treatment = D,
+#'   intv_med = M2,                 # interventional mediator
+#'   model_spec = spec_nat,
+#'   seed = 60637
+#' )
+#' print(out_ide)
+#'
+#' # ------------------------------------------------ #
+#' # Example 3: Controlled direct effect (CDE)        #
+#' # ------------------------------------------------ #
+#' # Fix income at a specific level (e.g., log(50,000)).
+#' out_cde <- medsim(
+#'   data = df,
+#'   num_sim = 1000,
+#'   treatment = D,
+#'   intv_med = paste0(M2, "=log(5e4)"),  # controlled value for mediator
+#'   model_spec = spec_nat,
+#'   seed = 60637
+#' )
+#' print(out_cde)
+#'
+#' # ------------------------------------------------ #
+#' # Example 4: Path-specific effects (PSEs)          #
+#' # ------------------------------------------------ #
+#' # With two mediators in causal order (M1 -> M2), the output includes
+#' # path-specific components and their decomposition of the total effect.
+#' out_pse <- medsim(
+#'   data = df,
+#'   num_sim = 1000,
+#'   treatment = D,
+#'   intv_med = NULL,               # natural propagation (needed for PSEs)
+#'   model_spec = spec_nat,
+#'   seed = 60637
+#' )
+#' print(out_pse)
+medsim <- function(data,
+                   num_sim = 2000,
+                   cat_list = c("0", "1"),
+                   treatment,
+                   intv_med = NULL,
+                   model_spec,
+                   weights = NULL,
+                   seed = NULL,
+                   boot = FALSE,
+                   boot_reps = 100,
+                   boot_cores = NULL,
+                   boot_conf_level = 0.95) {
 
-  # Read the dataset
   df <- data
+  if (!is.null(seed)) set.seed(seed)
 
-  # Set a global seed for reproducibility
-  if (!is.null(seed)) {
-    set.seed(seed)
-  }
-
-  # Check if bootstrapping is requested
   if (boot) {
-    if (!requireNamespace("doParallel", quietly = TRUE)) {
-      stop("Package 'doParallel' needed for this function to work. Please install it.")
-    }
-    if (!requireNamespace("doRNG", quietly = TRUE)) {
-      stop("Package 'doRNG' needed for this function to work. Please install it.")
-    }
-    if (!requireNamespace("foreach", quietly = TRUE)) {
-      stop("Package 'foreach' needed for this function to work. Please install it.")
-    }
+    if (!requireNamespace("doParallel", quietly = TRUE)) stop("Package 'doParallel' needed. Please install it.")
+    if (!requireNamespace("doRNG", quietly = TRUE))      stop("Package 'doRNG' needed. Please install it.")
+    if (!requireNamespace("foreach", quietly = TRUE))    stop("Package 'foreach' needed. Please install it.")
 
-    # Use boot_cores if provided; otherwise, use available cores minus 2.
     available_cores <- parallel::detectCores()
-    if (!is.null(boot_cores)) {
-      if (boot_cores > available_cores) {
-        stop(paste0("Error: boot_cores (", boot_cores,
-                    ") is greater than the available cores (", available_cores, ")."))
-      }
-      no_cores <- boot_cores
+    no_cores <- if (!is.null(boot_cores)) {
+      if (boot_cores > available_cores) stop(paste0("Error: boot_cores (", boot_cores, ") > available cores (", available_cores, ")."))
+      boot_cores
     } else {
-      no_cores <- available_cores - 2
+      available_cores - 2
     }
 
     cl <- parallel::makeCluster(no_cores)
     doParallel::registerDoParallel(cl)
 
-    # Export the medsim_core function and any other necessary objects to each worker
-    parallel::clusterExport(cl, varlist = c("medsim_core"), envir=environment())
-
-    # Use doRNG::registerDoRNG to ensure reproducibility
+    parallel::clusterExport(cl, varlist = c("medsim_core"), envir = environment())
     doRNG::registerDoRNG(seed)
-
-    # Initialize a list to store bootstrap results
     `%dorng%` <- doRNG::`%dorng%`
 
-    bootstrap_results <- foreach::foreach(n = 1:boot_reps, .combine = cbind, .packages = c("dplyr", "MASS", "nnet")) %dorng% {
+    bootstrap_results <- foreach::foreach(n = 1:boot_reps, .combine = cbind, .packages = c("MASS", "nnet")) %dorng% {
       boot.df <- df[sample(nrow(df), nrow(df), replace = TRUE), ]
       medsim_core(data = boot.df, num_sim = num_sim, cat_list = cat_list, treatment = treatment,
                   intv_med = intv_med, model_spec = model_spec, weights = weights, minimal = TRUE)
@@ -655,54 +819,34 @@ medsim <- function(data, num_sim = 2000, cat_list = c("0", "1"), treatment,
 
     parallel::stopCluster(cl)
 
-    # Restructure the results
-    medsim.boot <- matrix(unlist(bootstrap_results), ncol=nrow(bootstrap_results), byrow=TRUE)
+    medsim.boot <- matrix(unlist(bootstrap_results), ncol = nrow(bootstrap_results), byrow = TRUE)
 
-    # Calculate bootstrap confidence intervals based on boot_conf_level
     lower_prob <- (1 - boot_conf_level) / 2
     upper_prob <- 1 - lower_prob
     ci_limits <- apply(medsim.boot, 2, function(x) stats::quantile(x, probs = c(lower_prob, upper_prob)))
 
-    # Calculate p-values
     p_values <- apply(medsim.boot, 2, function(x) {
-      ll <- mean(x > 0)
-      ul <- mean(x < 0)
-      p_val <- 2 * min(ll, ul)
-      return(p_val)
+      ll <- mean(x > 0); ul <- mean(x < 0); 2 * min(ll, ul)
     })
 
-    # Using medsim_core for point estimate
     core_out <- medsim_core(data = df, num_sim = num_sim, cat_list = cat_list, treatment = treatment,
-                                   intv_med = intv_med, model_spec = model_spec, weights = weights)
+                            intv_med = intv_med, model_spec = model_spec, weights = weights)
 
-    # Extract just the numeric estimates
     est_names <- setdiff(names(core_out), c("Mmodels", "Ymodel"))
-    point.est <- unlist(core_out[est_names])
-
-    # Round the estimates, p-values and confidence intervals to 3 digits
-    point.est <- round(point.est, 3)
+    point.est <- round(unlist(core_out[est_names]), 3)
     p_values  <- round(p_values, 3)
     ci_limits <- round(ci_limits, 3)
 
-    # Dynamically create CI labels
     ll_label <- paste0("ll.", boot_conf_level * 100, "ci")
     ul_label <- paste0("ul.", boot_conf_level * 100, "ci")
 
-    results <- data.frame(point.est = point.est,
-                    p.value = p_values)
+    results <- data.frame(point.est = point.est, p.value = p_values)
     results[[ll_label]] <- ci_limits[1, ]
     results[[ul_label]] <- ci_limits[2, ]
-
     row.names(results) <- est_names
 
-    out <- list(
-      results = results,
-      Mmodels = core_out$Mmodels,
-      Ymodel  = core_out$Ymodel
-    )
-
-    class(out) <- c("medsim_boot","list")
-
+    out <- list(results = results, Mmodels = core_out$Mmodels, Ymodel = core_out$Ymodel)
+    class(out) <- c("medsim_boot", "list")
     return(out)
   } else {
     return(medsim_core(data = df, num_sim = num_sim, cat_list = cat_list, treatment = treatment,

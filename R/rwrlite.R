@@ -10,7 +10,7 @@
 #' @param minimal A logical scalar indicating whether the function should
 #'   return only a minimal set of output. The `rwrlite()` function uses the
 #'   default of FALSE when calling `rwrlite_inner()` to generate the point
-#'   point estimates and sets the argument to TRUE when calling `rwrlite_inner()`
+#'   estimates and sets the argument to TRUE when calling `rwrlite_inner()`
 #'   to perform the bootstrap.
 #'
 #' @noRd
@@ -112,9 +112,7 @@ rwrlite_inner <- function(
 #' implements the regression-with-residuals (RWR) estimator for interventional
 #' effects, producing estimates of the overall effect (OE), interventional
 #' direct effect (IDE), interventional indirect effect (IIE), and controlled
-#' direct effect (CDE). You may install the `rwrmed` package from the
-#' xiangzhou09/rwrmed GitHub repository, using the following code:
-#' `devtools::install_github("xiangzhou09/rwrmed")`
+#' direct effect (CDE).
 #'
 #' @details
 #' `rwrlite()` estimates interventional and controlled direct effects as follows: (i) it
@@ -178,7 +176,7 @@ rwrlite_inner <- function(
 #'   If `boot_cores` equals one, then the bootstrap loop will not be
 #'   parallelized (regardless of whether `boot_parallel` is TRUE).
 #'
-#' @returns By default, `linmed()` returns a list with the following elements:
+#' @returns By default, `rwrlite()` returns a list with the following elements:
 #' \item{OE}{A numeric scalar with the estimated overall effect for the exposure
 #'   contrast `d - dstar`: OE(`d`,`dstar`).}
 #' \item{IDE}{A numeric scalar with the estimated interventional direct effect
@@ -251,6 +249,7 @@ rwrlite_inner <- function(
 #' nlsy$std_cesd_age40 <-
 #'   (nlsy$cesd_age40 - mean(nlsy$cesd_age40)) /
 #'   sd(nlsy$cesd_age40)
+#'
 #' ## Define model formulae
 #' formula_L <- ever_unemp_age3539 ~ att22+female+black+hispan+paredu+parprof+
 #' parinc_prank+famsize+afqt3
@@ -258,6 +257,7 @@ rwrlite_inner <- function(
 #' parinc_prank+famsize+afqt3
 #' formula_Y <- std_cesd_age40 ~ att22*log_faminc_adj_age3539+ever_unemp_age3539+
 #'   female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3
+#'
 #' ## Estimate interventional effects
 #' out1 <- rwrlite(
 #'   data = nlsy,
@@ -311,8 +311,6 @@ rwrlite_inner <- function(
 #' }
 #'
 #' # Example 4: Parallelize the bootstrap, to attempt to reduce runtime
-#' # Note that this requires you to have installed the `doParallel`, `doRNG`,
-#' # and `foreach` packages.
 #' \dontrun{
 #'   out4 <- rwrlite(
 #'     data = nlsy,
@@ -339,6 +337,55 @@ rwrlite_inner <- function(
 #'     "pvalue_IIE"
 #'   )]
 #' }
+#'
+#' # Example 5: With two exposure-induced confounders
+#' # Prepare data
+#' data(nlsy)
+#' covariates <- c(
+#'   "female",
+#'   "black",
+#'   "hispan",
+#'   "paredu",
+#'   "parprof",
+#'   "parinc_prank",
+#'   "famsize",
+#'   "afqt3"
+#' )
+#' key_variables5 <- c(
+#'   "cesd_age40",
+#'   "ever_unemp_age3539",
+#'   "cesd_1992",
+#'   "log_faminc_adj_age3539",
+#'   "att22",
+#'   covariates
+#' )
+#' nlsy <- nlsy[complete.cases(nlsy[,key_variables5]),]
+#' nlsy$std_cesd_age40 <-
+#'   (nlsy$cesd_age40 - mean(nlsy$cesd_age40)) /
+#'   sd(nlsy$cesd_age40)
+#'
+#' # Define model formulae
+#' formula_L1 <- ever_unemp_age3539 ~ att22+female+black+hispan+paredu+parprof+
+#' parinc_prank+famsize+afqt3
+#' formula_L2 <- cesd_1992 ~ att22+female+black+hispan+paredu+
+#' parprof+parinc_prank+famsize+afqt3
+#' formula_M <- log_faminc_adj_age3539 ~ att22+female+black+hispan+paredu+parprof+
+#' parinc_prank+famsize+afqt3
+#' formula_Y <- std_cesd_age40 ~ att22*log_faminc_adj_age3539+ever_unemp_age3539+
+#'   cesd_1992+female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3
+#'
+#' # Estimate interventional effects
+#' out5 <- rwrlite(
+#'   data = nlsy,
+#'   D = "att22",
+#'   C = covariates,
+#'   m = log(5e4), # evaluates the CDE at log_faminc_adj_age3539 = log(5e4)
+#'   Y_formula = formula_Y,
+#'   M_formula = formula_M,
+#'   L_formula_list = list(formula_L1, formula_L2)
+#' )
+#' head(out5,4)
+
 rwrlite <- function(
   data,
   D,
@@ -361,10 +408,8 @@ rwrlite <- function(
   # load data
   data_outer <- data
 
-
   # create adjusted boot_parallel logical
   boot_parallel_rev <- ifelse(boot_cores>1, boot_parallel, FALSE)
-
 
   # preliminary error/warning checks
   # if (!requireNamespace("rwrmed", quietly = TRUE)) {
@@ -387,7 +432,6 @@ rwrlite <- function(
       warning(paste(strwrap("Warning: You requested a bootstrap, but your design includes sampling weights. Note that this function does not internally rescale sampling weights for use with the bootstrap, and it does not account for any stratification or clustering in your sample design. Failure to properly adjust the bootstrap sampling to account for a complex sample design that requires weighting could lead to invalid inferential statistics."), collapse = "\n"))
     }
   }
-
 
   # compute point estimates
   est <- rwrlite_inner(
@@ -524,7 +568,6 @@ rwrlite <- function(
     )
   }
 
-
   # final output
   out <- est
   if (boot) {
@@ -532,4 +575,3 @@ rwrlite <- function(
   }
   return(out)
 }
-

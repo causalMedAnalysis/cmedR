@@ -43,8 +43,8 @@ of the mediator variables in \code{data}. If you are estimating univariate
 natural effects (with a single mediator), \code{M} should be a character scalar
 (i.e., a vector with only one element)—e.g., \code{M = "ever_unemp_age3539"}. If you
 are estimating multivariate natural effects (with multiple mediators), \code{M}
-should be a list identifying all mediators—e.g.,
-\code{M = list("ever_unemp_age3539", "log_faminc_adj_age3539")}.}
+should be a character vector listing all mediators—e.g.,
+\code{M = c("ever_unemp_age3539", "log_faminc_adj_age3539")}.}
 
 \item{C}{A character vector (of one or more elements) identifying the names
 of the covariate variables in \code{data} that you wish to include in both the
@@ -210,82 +210,189 @@ Type 2 estimator, in which case \code{mrmed()} estimates multivariate natural
 effects operating through the entire set of mediators.
 }
 \examples{
-#-----------------------------------------#
-#  Initial Specification and Clean the Data:
-#----------------------------------------#
+# ----------------------------- #
+#     Data and shared setup     #
+# ----------------------------- #
 data(nlsy)
-# outcome
-Y <- "std_cesd_age40"
 
-# exposure
+covariates <- c(
+  "female",
+  "black",
+  "hispan",
+  "paredu",
+  "parprof",
+  "parinc_prank",
+  "famsize",
+  "afqt3"
+)
+
+# Define variables and standardize Y
+nlsy1 <- nlsy
+key_vars <- c("cesd_age40", "ever_unemp_age3539", "att22", covariates)
+nlsy1 <- nlsy1[complete.cases(nlsy1[, key_vars]), ]
+nlsy1$std_cesd_age40 <-
+  (nlsy1$cesd_age40 - mean(nlsy1$cesd_age40)) / sd(nlsy1$cesd_age40)
+
+D <- "att22"                     # exposure
+M <- "ever_unemp_age3539"        # mediator (binary)
+Y <- "std_cesd_age40"            # outcome (standardized)
+C <- covariates                  # baseline covariates
+
+#helper to build RHS strings
+rhs <- function(xs) paste(xs, collapse = " + ")
+
+# ------------------------------------------------ #
+#  Example 1: Single mediator, additive models     #
+#  (Type 2 multiply robust estimator)              #
+# ------------------------------------------------ #
+# Models: D|C ; D|M,C ; Y|D,C ; Y|D,M,C
+D_C_model   <- as.formula(paste(D, "~", rhs(C)))
+D_MC_model  <- as.formula(paste(D, "~", rhs(c(M, C))))
+Y_DC_model  <- as.formula(paste(Y, "~", rhs(c(D, C))))
+Y_DMC_model <- as.formula(paste(Y, "~", rhs(c(D, M, C))))
+
+mrmed(
+  D = D,
+  Y = Y,
+  M = M,
+  C = C,
+  D_C_model   = D_C_model,
+  D_MC_model  = D_MC_model,
+  Y_DC_model  = Y_DC_model,
+  Y_DMC_model = Y_DMC_model,
+  M_DC_model  = NULL,      # NULL -> Type 2 estimator
+  data = nlsy1,
+  d = 1, 
+  dstar = 0
+)
+
+# -------------------------------------------------- #
+#   Example 2: Add interactions                      #
+#   (Type 2 estimator with D×C and M×C interactions) #
+# -------------------------------------------------- #
+# Outcome models include D:C and M:C interactions.
+# Treatment model given M,C includes M:C interactions.
+
+# Build interaction terms explicitly to keep intent clear
+DC_int_terms <- paste(sprintf("\%s:\%s", D, C), collapse = " + ")
+MC_int_terms <- paste(sprintf("\%s:\%s", M, C), collapse = " + ")
+
+# Add D:C interactions in the exposure model P(D|C)
+D_C_model_int <- as.formula(
+paste(D, "~", paste(C, collapse = " + "), "+", DC_int_terms)
+)
+
+# D | M, C with M:C interactions
+D_MC_model_int <- as.formula(
+  paste(D, "~",
+        paste(c(M, C), collapse = " + "), "+", MC_int_terms)
+)
+
+# Y | D, C with D:C interactions
+Y_DC_model_int <- as.formula(
+  paste(Y, "~",
+        paste(c(D, C), collapse = " + "), "+", DC_int_terms)
+)
+
+# Y | D, M, C with both D:C and M:C interactions
+Y_DMC_model_int <- as.formula(
+  paste(Y, "~",
+        paste(c(D, M, C), collapse = " + "), "+",
+        DC_int_terms, "+", MC_int_terms)
+)
+
+mrmed(
+  D = D,
+  Y = Y,
+  M = M,
+  C = C,
+  D_C_model   = D_C_model_int,
+  D_MC_model  = D_MC_model_int,
+  Y_DC_model  = Y_DC_model_int,
+  Y_DMC_model = Y_DMC_model_int,
+  M_DC_model  = NULL,      # NULL -> Type 2 estimator
+  data = nlsy1,
+  d = 1, 
+  dstar = 0
+)
+
+# ----------------------------------------------- #
+# Example 3: Single mediator, Type 1 estimator    #
+# (with bootstrap: 200 reps)                      #
+# ----------------------------------------------- #
+# Models (additive)
+D_C_model   <- as.formula(paste(D, "~", rhs(C)))               # P(D|C)
+M_DC_model  <- as.formula(paste(M, "~", rhs(c(D, C))))         # P(M|D,C)
+Y_DMC_model <- as.formula(paste(Y, "~", rhs(c(D, M, C))))      # E(Y|C,D,M)
+
+mrmed(
+  D = D,
+  Y = Y,
+  M = M,
+  C = C,
+  D_C_model   = D_C_model,
+  D_MC_model  = NULL,        # not used in Type 1
+  Y_DC_model  = NULL,        # not used in Type 1
+  Y_DMC_model = Y_DMC_model,
+  M_DC_model  = M_DC_model,  # required for Type 1
+  data = nlsy1,
+  d = 1, dstar = 0,
+  boot = TRUE,
+  boot_reps = 200,
+  boot_conf_level = 0.95,
+  boot_seed = 02138,
+  boot_parallel = FALSE
+)
+
+# ------------------------------------------------- #
+# Example 4: Multiple mediators, Type 2 estimator   #
+# (with bootstrap: 200 reps)                        #
+# ------------------------------------------------- #
+
+#helper function
+rhs <- function(xs) paste(xs, collapse = " + ")
+
+#all variables that appear in the model, including the second mediator
+key_vars <- c("cesd_age40", "att22", "ever_unemp_age3539",
+              "log_faminc_adj_age3539", covariates)
+
+# Keep complete cases for all variables
+nlsy2 <- nlsy[complete.cases(nlsy[, key_vars]), ]
+
+# Standardize outcome
+nlsy2$std_cesd_age40 <- (nlsy2$cesd_age40 - mean(nlsy2$cesd_age40)) /
+                         sd(nlsy2$cesd_age40)
+
+# Variable names
 D <- "att22"
+M <- c("ever_unemp_age3539", "log_faminc_adj_age3539")
+Y <- "std_cesd_age40"
+C <- covariates
 
-# mediators
-M <- list(
-"ever_unemp_age3539",
-"log_faminc_adj_age3539"
+# Models (additive)
+D_C_model   <- as.formula(paste(D, "~", rhs(C)))               # P(D|C)
+D_MC_model  <- as.formula(paste(D, "~", rhs(c(M, C))))         # P(D|C,M1,M2)
+Y_DC_model  <- as.formula(paste(Y, "~", rhs(c(D, C))))         # E(E(Y|C,M,D=d)|C,D)
+Y_DMC_model <- as.formula(paste(Y, "~", rhs(c(D, M, C))))      # E(Y|C,D,M1,M2)
+
+# Estimate multiply robust natural effects
+mrmed(
+  D = D,
+  Y = Y,
+  M = M,
+  C = C,
+  D_C_model   = D_C_model,
+  D_MC_model  = D_MC_model,
+  Y_DC_model  = Y_DC_model,
+  Y_DMC_model = Y_DMC_model,
+  M_DC_model  = NULL,        # NULL -> Type 2 estimator
+  data = nlsy2,
+  d = 1, 
+  dstar = 0,
+  boot = TRUE,
+  boot_reps = 200,
+  boot_conf_level = 0.95,
+  boot_seed = 02138,
+  boot_parallel = FALSE
 )
-# baseline confounders:
-C <- c(
-"female",
-"black",
-"hispan",
-"paredu",
-"parprof",
-"parinc_prank",
-"famsize",
-"afqt3"
-)
-# key variables
-key_vars <- c(
- "cesd_age40", # unstandardized version of Y
-  D,
-  unlist(M),
-  C
-)
-
-# Clean the Data:
-df <-
-nlsy[complete.cases(nlsy[,key_vars]),] |>
-dplyr::mutate(std_cesd_age40 = (cesd_age40 - mean(cesd_age40)) / sd(cesd_age40))
-
-#-----------------------------------------#
-#  Specify the models:
-#----------------------------------------#
-# D Models:
-D_C_model <- as.formula(paste(D, " ~ ", paste(C, collapse= "+")))
-D_MC_model <- as.formula(paste(D, " ~ ", paste(c(C, M[1]), collapse= "+")))
-# Y Models:
-Y_DC_model <- as.formula(paste(Y, " ~ ", paste(c(C, D), collapse= "+")))
-Y_DMC_model <- as.formula(paste(Y, " ~ ", paste(c(C, D, M[1]), collapse= "+")))
-
-# Example 1: Single Mediator:
-#-----------------------------------------#
-# Replicate Table 6-2 Col 3:
-#----------------------------------------#
-\dontrun{
-mrmed_rst1 <-
-  mrmed(
-    D,
-    Y,
-    M[[1]],
-    C,
-    D_C_model,
-    D_MC_model,
-    Y_DC_model,
-    Y_DMC_model,
-    M_DC_model = NULL,
-    data = df,
-    d = 1,
-    dstar = 0,
-    censor = TRUE,
-    censor_low = 0.01,
-    censor_high = 0.99,
-    boot = TRUE,
-    boot_reps = 2000,
-    boot_conf_level = 0.95,
-    boot_seed = 02138,
-    boot_parallel = FALSE,
-  )
- }
 }

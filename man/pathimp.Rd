@@ -82,7 +82,7 @@ Estimator . If \code{FALSE}, only the Pure Imputation Estimator will be
 returned.}
 }
 \value{
-When \code{out_ipw = TRUE}, \code{pathimp()} returns a dataframe with the
+When \code{out_ipw = TRUE}, \code{pathimp()} returns a data frame with the
 following information: \describe{
 \item{Pure Imputation Estimator}{Estimates the direct (ATE) and path-specific
 effects (PSE)  through mediators \eqn{M_1, \ldots, M_K} using the pure
@@ -97,7 +97,7 @@ returned.
 \code{pathimp()} is a wrapper for two functions from the \code{paths} package. It
 implements the pure imputation estimator and the imputation-based weighting
 estimator (when a propensity score model is provided) as detailed in Zhou
-and Yamamoto (2020). You may install the \code{paths} package from CRAN or Github:
+and Yamamoto (2020). You may install the \code{paths} package from CRAN or GitHub:
 \code{devtools::install_github("xiangzhou09/paths")}
 }
 \details{
@@ -122,7 +122,7 @@ If only a single mediator is specified, \code{pathimp()} reverts to estimates of
 direct and indirect effects through a univariate mediator.
 }
 \examples{
-# Example 1: With one exposure-induced confounder
+# Example 1: Pure imputation with two mediators
 ## Prepare data:
 data(nlsy)
 covariates <- c(
@@ -135,6 +135,7 @@ covariates <- c(
 "famsize",
 "afqt3"
 )
+
 key_variables <- c(
 "cesd_age40",
 "ever_unemp_age3539",
@@ -142,78 +143,239 @@ key_variables <- c(
 "att22",
 covariates
 )
+
 df <-
 nlsy[complete.cases(nlsy[,key_variables]),] |>
 dplyr::mutate(
 std_cesd_age40 = (cesd_age40 - mean(cesd_age40)) / sd(cesd_age40)
 )
-## Set up the Y_models:
-  glm_m0 <- glm(
-    std_cesd_age40 ~ female + black + hispan + paredu + parprof +
-     parinc_prank + famsize + afqt3 + att22,
-    data = df
-    )
 
-  glm_m1 <- glm(
-    std_cesd_age40 ~ female + black + hispan + paredu + parprof +
-    parinc_prank + famsize + afqt3 + att22 +  ever_unemp_age3539,
-    data = df
-    )
-
-  glm_m2 <- glm(
-    std_cesd_age40 ~ female + black + hispan + paredu + parprof +
+glm_m0 <- glm(
+  std_cesd_age40 ~ female + black + hispan + paredu + parprof +
+    parinc_prank + famsize + afqt3 + att22,
+  data = df
+)
+glm_m1 <- glm(
+  std_cesd_age40 ~ female + black + hispan + paredu + parprof +
+    parinc_prank + famsize + afqt3 + att22 + ever_unemp_age3539,
+  data = df
+)
+glm_m2 <- glm(
+  std_cesd_age40 ~ female + black + hispan + paredu + parprof +
     parinc_prank + famsize + afqt3 + att22 + ever_unemp_age3539 +
     log_faminc_adj_age3539,
-    data = df
-    )
-
+  data = df
+)
 glm_ymodels <- list(glm_m0, glm_m1, glm_m2)
 
+# Fit the paths model:
+fit_ex1 <- pathimp(
+  D = "att22",
+  Y = "std_cesd_age40",
+  M = list("ever_unemp_age3539","log_faminc_adj_age3539"),
+  Y_models = glm_ymodels,
+  data = df,
+  boot_reps = 250,
+  boot_conf_level = 0.95,
+  boot_seed = 2138,
+  boot_parallel = "multicore", # Parallel the bootstrapping
+  out_ipw = FALSE
+)
+print(fit_ex1)
 
-## Set up the D_model:
+# Example 2: Adding imputation-based weighting
 glm_ps <- glm(
-att22 ~ female + black + hispan + paredu + parprof + parinc_prank +
-famsize + afqt3,
-family = binomial("logit"),
-data = df
+  att22 ~ female + black + hispan + paredu + parprof +
+    parinc_prank + famsize + afqt3,
+  family = binomial("logit"),
+  data = df
+)
+# Fit the paths model:
+fit_ex2 <- pathimp(
+  D = "att22",
+  Y = "std_cesd_age40",
+  M = list("ever_unemp_age3539","log_faminc_adj_age3539"),
+  Y_models = glm_ymodels,
+  D_model = glm_ps,
+  data = df,
+  boot_reps = 250,
+  boot_conf_level = 0.95,
+  boot_seed = 2138,
+  boot_parallel = "multicore", # Parallel the bootstrapping
+  out_ipw = TRUE
+)
+print(fit_ex2)
+
+# Example 3: Pure imputation with three mediators
+
+# Prepare data
+key_variables3 <- c(
+  "cesd_age40","cesd_1992","ever_unemp_age3539","log_faminc_adj_age3539",
+  "att22", covariates
+)
+df3 <- nlsy[complete.cases(nlsy[,key_variables3]),] |>
+  dplyr::mutate(
+    std_cesd_age40 = (cesd_age40 - mean(cesd_age40)) / sd(cesd_age40)
+  )
+
+glm_m0 <- glm(
+  std_cesd_age40 ~ female + black + hispan + paredu + parprof +
+    parinc_prank + famsize + afqt3 + att22,
+  data = df3
+)
+glm_m1 <- glm(
+  std_cesd_age40 ~ female + black + hispan + paredu + parprof +
+    parinc_prank + famsize + afqt3 + att22 + cesd_1992,
+  data = df3
+)
+glm_m2 <- glm(
+  std_cesd_age40 ~ female + black + hispan + paredu + parprof +
+    parinc_prank + famsize + afqt3 + att22 + cesd_1992 +
+    ever_unemp_age3539,
+  data = df3
+)
+glm_m3 <- glm(
+  std_cesd_age40 ~ female + black + hispan + paredu + parprof +
+    parinc_prank + famsize + afqt3 + att22 + cesd_1992 +
+    ever_unemp_age3539 + log_faminc_adj_age3539,
+  data = df3
+)
+glm_ymodels3 <- list(glm_m0, glm_m1, glm_m2, glm_m3)
+
+# Fit the paths model:
+\dontrun{
+fit_ex3 <- pathimp(
+  D = "att22",
+  Y = "std_cesd_age40",
+  M = list("cesd_1992","ever_unemp_age3539","log_faminc_adj_age3539"),
+  Y_models = glm_ymodels3,
+  data = df3,
+  boot_reps = 250,
+  boot_conf_level = 0.95,
+  boot_seed = 2138,
+  boot_parallel = "multicore", # Parallel the bootstrapping
+  out_ipw = FALSE
+)
+print(fit_ex3)
+}
+
+# Example 4: Pure imputation with two mediators including treatment–mediator
+#            interactions
+
+glm_m0 <- glm(
+  std_cesd_age40 ~ female + black + hispan + paredu + parprof +
+    parinc_prank + famsize + afqt3 + att22,
+  data = df
 )
 
-# Example 1: Including Imputation-based Weighting Estimator:
+# Outcome models including treatment-mediator interactions
+glm_m1 <- glm(
+  std_cesd_age40 ~ female + black + hispan + paredu + parprof +
+    parinc_prank + famsize + afqt3 + att22 * ever_unemp_age3539,
+  data = df
+)
+glm_m2 <- glm(
+  std_cesd_age40 ~ female + black + hispan + paredu + parprof +
+    parinc_prank + famsize + afqt3 + att22 *
+    (ever_unemp_age3539 + log_faminc_adj_age3539) ,
+  data = df
+)
+glm_ymodels_intM <- list(glm_m0, glm_m1, glm_m2)
 
-## Fit the paths model:
-glm_paths <-
-pathimp(
-D = "att22",
-Y = "std_cesd_age40",
-M = list("ever_unemp_age3539","log_faminc_adj_age3539"),
-Y_models = glm_ymodels,
-D_model = glm_ps,
-data = df,
-boot_reps = 250,
-boot_conf_level = 0.95,
-boot_seed = 2138,
-boot_parallel = "multicore", # Parallel the bootstrapping
-boot_cores = 5,
-out_ipw = TRUE
- )
-print(glm_paths)
+# Fit the paths model:
+fit_ex4 <- pathimp(
+  D = "att22",
+  Y = "std_cesd_age40",
+  M = list("ever_unemp_age3539","log_faminc_adj_age3539"),
+  Y_models = glm_ymodels_intM,
+  data = df,
+  boot_reps = 250,
+  boot_conf_level = 0.95,
+  boot_seed = 2138,
+  boot_parallel = "multicore", # Parallel the bootstrapping
+  out_ipw = FALSE
+)
+print(fit_ex4)
 
-\dontrun{
-# Example 2: Only Calculate Pure Imputation Estimator:
-glm_paths <-
-pathimp(
-D = "att22",
-Y = "std_cesd_age40",
-M = list("ever_unemp_age3539","log_faminc_adj_age3539"),
-Y_models = glm_ymodels,
-data = df,
-boot_reps = 250,
-boot_conf_level = 0.95,
-boot_seed = 2138,
-boot_parallel = "multicore", # Parallel the bootstrapping
-boot_cores = 5,
-out_ipw = FALSE
- )
-print(glm_paths)
-}
+
+# Example 5: Pure imputation with two mediators including treatment–mediator
+#            and treatment–confounder interactions
+
+glm_m0 <- glm(
+  std_cesd_age40 ~ (female + black + hispan + paredu + parprof +
+    parinc_prank + famsize + afqt3) * att22,
+  data = df
+)
+
+# Outcome models including treatment-mediator and treatment-confounder
+# interactions
+glm_m1 <- glm(
+  std_cesd_age40 ~ (female + black + hispan + paredu + parprof +
+    parinc_prank + famsize + afqt3 + ever_unemp_age3539) * att22,
+  data = df
+)
+glm_m2 <- glm(
+  std_cesd_age40 ~ (female + black + hispan + paredu + parprof +
+    parinc_prank + famsize + afqt3 + ever_unemp_age3539 +
+    log_faminc_adj_age3539) * att22,
+  data = df
+)
+glm_ymodels_intMC <- list(glm_m0, glm_m1, glm_m2)
+
+# Fit the paths model:
+fit_ex5 <- pathimp(
+  D = "att22",
+  Y = "std_cesd_age40",
+  M = list("ever_unemp_age3539","log_faminc_adj_age3539"),
+  Y_models = glm_ymodels_intMC,
+  data = df,
+  boot_reps = 250,
+  boot_conf_level = 0.95,
+  boot_seed = 2138,
+  boot_parallel = "multicore", # Parallel the bootstrapping
+  out_ipw = FALSE
+)
+print(fit_ex5)
+
+# Example 6: Pure imputation with 1 mediator
+
+# Prepare data
+key_variables1 <- c("cesd_age40","ever_unemp_age3539","att22", covariates)
+
+df1 <- nlsy[complete.cases(nlsy[,key_variables1]),] |>
+  dplyr::mutate(
+    std_cesd_age40 = (cesd_age40 - mean(cesd_age40)) / sd(cesd_age40)
+  )
+
+glm_m0 <- glm(
+  std_cesd_age40 ~ female + black + hispan + paredu + parprof +
+    parinc_prank + famsize + afqt3 + att22,
+  data = df1
+)
+glm_m1 <- glm(
+  std_cesd_age40 ~ female + black + hispan + paredu + parprof +
+    parinc_prank + famsize + afqt3 + att22 + ever_unemp_age3539,
+  data = df1
+)
+glm_ymodels1 <- list(glm_m0, glm_m1)
+
+# Fit the paths model:
+fit_ex6 <- pathimp(
+  D = "att22",
+  Y = "std_cesd_age40",
+  M = list("ever_unemp_age3539"),
+  Y_models = glm_ymodels1,
+  data = df1,
+  boot_reps = 250,
+  boot_conf_level = 0.95,
+  boot_seed = 2138,
+  boot_parallel = "multicore", # Parallel the bootstrapping
+  out_ipw = FALSE
+)
+print(fit_ex6)
+
+# Note: With a single mediator, the effect labeled as the path-specific
+# effect (D -> M -> Y) is the natural indirect effect (NIE), and the
+# effect of the direct path (D -> Y) is the natural direct effect (NDE).
+
 }

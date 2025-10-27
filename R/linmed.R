@@ -3,13 +3,13 @@
 #' @description
 #' Internal function used within `linmed()`. See the `linmed()` function
 #' documentation for a description of shared function arguments. Here, we will
-#' only document the one argument that is not shared by `linmed_inner()` and
+#' only document the single argument not shared by `linmed_inner()` and
 #' `linmed()`: the `minimal` argument.
 #'
 #' @param minimal A logical scalar indicating whether the function should
-#'   return only a minimal set of output. The `linmed()` function uses the
+#'   return only a minimal set of outputs. The `linmed()` function uses the
 #'   default of FALSE when calling `linmed_inner()` to generate the point
-#'   point estimates and sets the argument to TRUE when calling `linmed_inner()`
+#'   estimates and sets the argument to TRUE when calling `linmed_inner()`
 #'   to perform the bootstrap.
 #'
 #' @noRd
@@ -59,7 +59,7 @@ linmed_inner <- function(
       t() |>
       as.data.frame()
     if (max(miss_summary$miss)>0) {
-      warning("Warning: There is missing data in at least one of the variables specified for D, M, Y, and C. See the miss_summary data frame in the output.")
+      warning("Warning: There are missing data in at least one of the variables specified for D, M, Y, and C. See the miss_summary data frame in the output.")
     }
   }
 
@@ -195,11 +195,6 @@ linmed_inner <- function(
   return(out)
 }
 
-
-
-
-
-
 #' Linear models estimator for natural effects
 #'
 #' @description
@@ -210,11 +205,12 @@ linmed_inner <- function(
 #'
 #' @details
 #' `linmed()` performs causal mediation analysis using linear models for both the mediator(s)
-#' and outcome, and it computes inferential statistics using the nonparametric bootstrap. When a
-#' single mediator is specified, it estimates total, natural direct, and natural indirect effects
-#' using two linear models: a model for the mediator conditional on treatment and baseline covariates
-#' after centering them around their sample means, and a model for the outcome conditional on treatment,
-#' the mediator, and the baseline covariates after centering them around their sample means.
+#' and outcome, and computes inferential statistics using the nonparametric bootstrap. When a
+#' single mediator is specified, it estimates total, natural direct, natural indirect,
+#' and controlled direct effects using two linear models: a model for the mediator conditional
+#' on treatment and baseline covariates after centering them around their sample means, and
+#' a model for the outcome conditional on treatment, the mediator, and the baseline covariates
+#' after centering them around their sample means.
 #'
 #' When multiple mediators are specified, `linmed()` provides estimates for the total effect and then
 #' for the multivariate natural direct and indirect effects operating through the entire set of
@@ -248,7 +244,7 @@ linmed_inner <- function(
 #'   `d - dstar`.
 #' @param m A numeric vector (of one or more elements) denoting specific values
 #'   to set each of the mediators in `M` to, for estimating the CDE. The length
-#'   of the vector MUST be exactly the same length as that of the vector `M`.
+#'   of the vector MUST be the same as the length of the vector `M`.
 #'   This argument is only used in the estimation of the CDE, not in any of the
 #'   other returned estimands.
 #' @param interaction_DM A logical scalar indicating whether the outcome model
@@ -341,8 +337,8 @@ linmed_inner <- function(
 #' @examples
 #' # Example 1: Single mediator, no interactions
 #' ## Prepare data
-#' ## For convenience with this example, we will use complete cases
 #' data(nlsy)
+#'
 #' covariates <- c(
 #'   "female",
 #'   "black",
@@ -353,6 +349,7 @@ linmed_inner <- function(
 #'   "famsize",
 #'   "afqt3"
 #' )
+#'
 #' nlsy1 <- nlsy
 #' key_variables1 <- c(
 #'   "cesd_age40",
@@ -360,27 +357,20 @@ linmed_inner <- function(
 #'   "att22",
 #'   covariates
 #' )
+#'
 #' nlsy1 <- nlsy1[complete.cases(nlsy1[,key_variables1]),]
 #' nlsy1$std_cesd_age40 <-
 #'   (nlsy1$cesd_age40 - mean(nlsy1$cesd_age40)) /
 #'   sd(nlsy1$cesd_age40)
+#'
 #' ## Estimate natural effects
 #' linmed(
 #'   data = nlsy1,
 #'   D = "att22",
 #'   M = "ever_unemp_age3539",
 #'   Y = "std_cesd_age40",
-#'   C = c(
-#'     "female",
-#'     "black",
-#'     "hispan",
-#'     "paredu",
-#'     "parprof",
-#'     "parinc_prank",
-#'     "famsize",
-#'     "afqt3"
+#'   C = covariates
 #'   )
-#' )
 #'
 #' # Example 2: With exposure-mediator, exposure-covariate, and
 #' # mediator-covariate interactions
@@ -389,16 +379,7 @@ linmed_inner <- function(
 #'   D = "att22",
 #'   M = "ever_unemp_age3539",
 #'   Y = "std_cesd_age40",
-#'   C = c(
-#'     "female",
-#'     "black",
-#'     "hispan",
-#'     "paredu",
-#'     "parprof",
-#'     "parinc_prank",
-#'     "famsize",
-#'     "afqt3"
-#'   ),
+#'   C = covariates,
 #'   interaction_DM = TRUE,
 #'   interaction_DC = TRUE,
 #'   interaction_MC = TRUE
@@ -411,16 +392,7 @@ linmed_inner <- function(
 #'   D = "att22",
 #'   M = "ever_unemp_age3539",
 #'   Y = "std_cesd_age40",
-#'   C = c(
-#'     "female",
-#'     "black",
-#'     "hispan",
-#'     "paredu",
-#'     "parprof",
-#'     "parinc_prank",
-#'     "famsize",
-#'     "afqt3"
-#'   ),
+#'   C = covariates,
 #'   m = 1
 #' )
 #'
@@ -430,16 +402,7 @@ linmed_inner <- function(
 #'   D = "att22",
 #'   M = "ever_unemp_age3539",
 #'   Y = "std_cesd_age40",
-#'   C = c(
-#'     "female",
-#'     "black",
-#'     "hispan",
-#'     "paredu",
-#'     "parprof",
-#'     "parinc_prank",
-#'     "famsize",
-#'     "afqt3"
-#'   ),
+#'   C = covariates,
 #'   weights_name = "weight"
 #' )
 #'
@@ -460,16 +423,7 @@ linmed_inner <- function(
 #'   D = "att22",
 #'   M = c("ever_unemp_age3539", "log_faminc_adj_age3539"),
 #'   Y = "std_cesd_age40",
-#'   C = c(
-#'     "female",
-#'     "black",
-#'     "hispan",
-#'     "paredu",
-#'     "parprof",
-#'     "parinc_prank",
-#'     "famsize",
-#'     "afqt3"
-#'   )
+#'   C = covariates
 #' )
 #'
 #' # Example 6: Specifying mediator values for the CDE, with multiple mediators
@@ -478,16 +432,7 @@ linmed_inner <- function(
 #'   D = "att22",
 #'   M = c("ever_unemp_age3539", "log_faminc_adj_age3539"),
 #'   Y = "std_cesd_age40",
-#'   C = c(
-#'     "female",
-#'     "black",
-#'     "hispan",
-#'     "paredu",
-#'     "parprof",
-#'     "parinc_prank",
-#'     "famsize",
-#'     "afqt3"
-#'   ),
+#'   C = covariates,
 #'   m = c(1, 3.5)
 #' )
 #'
@@ -498,16 +443,7 @@ linmed_inner <- function(
 #'     D = "att22",
 #'     M = "ever_unemp_age3539",
 #'     Y = "std_cesd_age40",
-#'     C = c(
-#'       "female",
-#'       "black",
-#'       "hispan",
-#'       "paredu",
-#'       "parprof",
-#'       "parinc_prank",
-#'       "famsize",
-#'       "afqt3"
-#'     ),
+#'     C = covariates,
 #'     boot = TRUE,
 #'     boot_reps = 2000,
 #'     boot_seed = 1234
@@ -515,24 +451,13 @@ linmed_inner <- function(
 #' }
 #'
 #' # Example 8: Parallelize the bootstrap, to attempt to reduce runtime
-#' # Note that this requires you to have installed the `doParallel`, `doRNG`,
-#' # and `foreach` packages.
 #' \dontrun{
 #'   linmed(
 #'     data = nlsy1,
 #'     D = "att22",
 #'     M = "ever_unemp_age3539",
 #'     Y = "std_cesd_age40",
-#'     C = c(
-#'       "female",
-#'       "black",
-#'       "hispan",
-#'       "paredu",
-#'       "parprof",
-#'       "parinc_prank",
-#'       "famsize",
-#'       "afqt3"
-#'     ),
+#'     C = covariates,
 #'     boot = TRUE,
 #'     boot_reps = 2000,
 #'     boot_seed = 1234,
@@ -562,10 +487,8 @@ linmed <- function(
   # load data
   data_outer <- data
 
-
   # create adjusted boot_parallel logical
   boot_parallel_rev <- ifelse(boot_cores>1, boot_parallel, FALSE)
-
 
   # preliminary error/warning checks
   if (boot) {
@@ -586,7 +509,6 @@ linmed <- function(
     }
   }
 
-
   # compute point estimates
   est <- linmed_inner(
     data = data_outer,
@@ -603,7 +525,6 @@ linmed <- function(
     weights_name = weights_name,
     minimal = FALSE
   )
-
 
   # bootstrap, if requested
   if (boot) {
@@ -724,7 +645,6 @@ linmed <- function(
     )
   }
 
-
   # final output
   out <- est
   if (boot) {
@@ -732,4 +652,3 @@ linmed <- function(
   }
   return(out)
 }
-

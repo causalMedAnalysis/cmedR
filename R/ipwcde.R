@@ -10,7 +10,7 @@
 #' @param minimal A logical scalar indicating whether the function should
 #'   return only a minimal set of output. The `ipwcde()` function uses the
 #'   default of FALSE when calling `ipwcde_inner()` to generate the point
-#'   point estimates and sets the argument to TRUE when calling `ipwcde_inner()`
+#'   estimates and sets the argument to TRUE when calling `ipwcde_inner()`
 #'   to perform the bootstrap.
 #'
 #' @noRd
@@ -136,21 +136,17 @@ ipwcde_inner <- function(
 }
 
 
-
-
-
-
 #' Controlled direct effect inverse probability weighting (IPW) estimator
 #'
 #' @description
 #' `ipwcde()` uses the inverse probability weighting (IPW) estimator to estimate
-#' the controlled direct effect (CDE). Note that unlike the ipwmed() function,
-#' ipwcde() requires a single mediator. Multiple mediators are not supported.
+#' the controlled direct effect (CDE). Note that unlike the `ipwmed()` function,
+#' `ipwcde()` requires a single mediator. Multiple mediators are not supported.
 #'
 #' @details
 #' `ipwcde()` estimates controlled direct effects using inverse probability weights,
-#' and it computes inferential statistics using the nonparametric bootsrtap. To compute
-#' the weights, ipwcde fits the following models: (i) a logit model for exposure
+#' and it computes inferential statistics using the nonparametric bootstrap. To compute
+#' the weights, `ipwcde()` fits the following models: (i) a logit model for exposure
 #' conditional on baseline covariates, and (ii) a logit model for the mediator
 #' conditional on both the exposure and baseline covariates, plus any specified
 #' post-treatment covariates. These models are used to generate inverse probability
@@ -319,8 +315,6 @@ ipwcde_inner <- function(
 #' }
 #'
 #' # Example 4: Parallelize the bootstrap, to attempt to reduce runtime
-#' # Note that this requires you to have installed the `doParallel`, `doRNG`,
-#' # and `foreach` packages.
 #' \dontrun{
 #'   out4 <- ipwcde(
 #'     data = nlsy1,
@@ -366,10 +360,8 @@ ipwcde <- function(
   # load data
   data_outer <- data
 
-
   # create adjusted boot_parallel logical
   boot_parallel_rev <- ifelse(boot_cores>1, boot_parallel, FALSE)
-
 
   # preliminary error/warning checks for the bootstrap
   if (boot) {
@@ -389,7 +381,6 @@ ipwcde <- function(
       warning(paste(strwrap("Warning: You requested a bootstrap, but your design includes base sampling weights. Note that this function does not internally rescale sampling weights for use with the bootstrap, and it does not account for any stratification or clustering in your sample design. Failure to properly adjust the bootstrap sampling to account for a complex sample design that requires weighting could lead to invalid inferential statistics."), collapse = "\n"))
     }
   }
-
 
   # other error/warning checks
   if (length(M)>1) {
@@ -411,13 +402,13 @@ ipwcde <- function(
     stop(paste(strwrap("Error: There is at least one observation with a missing/NA value for the exposure variable (identified by the string argument D in data)."), collapse = "\n"))
   }
   if (any(! data_outer[[D]] %in% c(0,1))) {
-    stop(paste(strwrap("Error: The exposure variable (identified by the string argument D in data) must be a numeric variable consisting only of the values 0 or 1. There is at least one observation in the data that does not meet this criteria."), collapse = "\n"))
+    stop(paste(strwrap("Error: The exposure variable (identified by the string argument D in data) must be a numeric variable consisting only of the values 0 or 1. There is at least one observation in the data that does not meet this criterion."), collapse = "\n"))
   }
   if (any(is.na(data_outer[[M]]))) {
     stop(paste(strwrap("Error: There is at least one observation with a missing/NA value for the mediator variable (identified by the string argument M in data)."), collapse = "\n"))
   }
   if (any(! data_outer[[M]] %in% c(0,1))) {
-    stop(paste(strwrap("Error: Only binary mediator variables are supported. The mediator variable (identified by the string argument M in data) must be a numeric variable consisting only of the values 0 or 1. There is at least one observation in the data that does not meet this criteria."), collapse = "\n"))
+    stop(paste(strwrap("Error: Only binary mediator variables are supported. The mediator variable (identified by the string argument M in data) must be a numeric variable consisting only of the values 0 or 1. There is at least one observation in the data that does not meet this criterion."), collapse = "\n"))
   }
   if (! m %in% c(0,1)) {
     stop(paste(strwrap("Error: Because only binary mediator variables are supported, the selected mediator value for the CDE (in the m argument) must be either 0 or 1."), collapse = "\n"))
@@ -449,7 +440,6 @@ ipwcde <- function(
     censor_high = censor_high,
     minimal = FALSE
   )
-
 
   # bootstrap, if requested
   if (boot) {

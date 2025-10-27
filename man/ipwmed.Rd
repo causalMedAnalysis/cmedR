@@ -156,7 +156,7 @@ multivariate natural effects.
 and it computes inferential statistics using the nonparametric bootstrap. It estimates
 two models to construct the weights: a logit model for the exposure conditional on
 baseline covariates (if specified), and another logit model for the exposure conditional
-on the mediator(s) and the baseline covariates. Using these weights, ipwmed estimates the
+on the mediator(s) and the baseline covariates. Using these weights, \code{ipwmed()} estimates the
 total, natural direct, and natural indirect effects when a single mediator is specified.
 When multiple mediators are specified, it provides estimates for the total effect and
 the multivariate natural direct and indirect effects operating through the entire set of
@@ -267,8 +267,6 @@ head(out3,3)
 }
 
 # Example 5: Parallelize the bootstrap, to attempt to reduce runtime
-# Note that this requires you to have installed the `doParallel`, `doRNG`,
-# and `foreach` packages.
 \dontrun{
   out5 <- ipwmed(
     data = nlsy1,

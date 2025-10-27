@@ -1,12 +1,13 @@
 #' Debiased Machine Learning (DML) Estimation for Path-specific Effects
 #'
 #' @description
-#' `dmlpath()` uses a debiased machine learning approach to estimate path-specific effects.
-#' If there are K causally ordered mediators, dmlpath provides estimates for: a direct effect
-#' of the exposure on the outcome that does not operate through any of the mediators, and then
-#' K path-specific effects, with each of these effects operating through one mediator, net of the
-#' mediators preceding it in causal order. If only one mediator is specified, `dmlpath()` computes
-#' conventional natural direct and indirect effects.
+#' `dmlpath()` uses a debiased machine learning approach to estimate path-specific
+#'  effects.If there are K causally ordered mediators, dmlpath provides estimates
+#'  for: a direct effect of the exposure on the outcome that does not operate through
+#'  any of the mediators, and then K path-specific effects, with each of these
+#'  effects operating through one mediator, net of the mediators preceding it in
+#'  causal order. If only one mediator is specified, `dmlpath()` computes
+#'  conventional natural direct and indirect effects.
 #'
 #' @details
 #' `dmlpath()` estimates path specific effects using debiased machine learning. It will
@@ -160,6 +161,9 @@
 #'
 #' @examples
 #'
+#' # ----------------------------- #
+#' #     Data and shared setup     #
+#' # ----------------------------- #
 #' data(nlsy)
 #'
 #' # outcome
@@ -170,56 +174,96 @@
 #'
 #' # mediators
 #' M <- list(
-#' "ever_unemp_age3539",
-#' "log_faminc_adj_age3539"
+#'   "ever_unemp_age3539",
+#'   "log_faminc_adj_age3539"
 #' )
 #'
-#' # baseline confounders
-#' C <- c(
-#' "female",
-#' "black",
-#' "hispan",
-#' "paredu",
-#' "parprof",
-#' "parinc_prank",
-#' "famsize",
-#' "afqt3"
+#' covariates <- c(
+#'   "female","black","hispan","paredu","parprof",
+#'   "parinc_prank","famsize","afqt3"
 #' )
 #'
-#' # key variables
-#' key_vars <- c(
-#'  "cesd_age40",
-#'   D,
-#'   unlist(M),
-#'   C
+#' key_variables <- c("cesd_age40", unlist(M), D, covariates)
+#' nlsy_ex <- nlsy[complete.cases(nlsy[, key_variables]), ]
+#' nlsy_ex$std_cesd_age40 <-
+#'   (nlsy_ex$cesd_age40 - mean(nlsy_ex$cesd_age40)) / sd(nlsy_ex$cesd_age40)
+#'
+#' # ------------------------------------------ #
+#' # Example 1: Two mediators                   #
+#' # Super Learner: Marginal mean and Lasso     #
+#' # -------------------------------------------#
+#' dmlpath(
+#'   data = nlsy_ex,
+#'   D = D,
+#'   M = M,
+#'   Y = Y,
+#'   C = covariates,
+#'   d = 1, dstar = 0,
+#'   num_folds = 5, V = 5L, seed = 1234,
+#'   SL.library = c("SL.mean","SL.glmnet"),
+#'   stratifyCV = TRUE
 #' )
 #'
-#' df <-
-#' nlsy[complete.cases(nlsy[,key_vars]),] |>
-#' dplyr::mutate(std_cesd_age40 = (cesd_age40 - mean(cesd_age40)) / sd(cesd_age40))
+#' # ------------------------------------------------------ #
+#' # Example 2: Two mediators                               #
+#' # Super Learner: Marginal mean, Lasso and Random forest  #
+#' # ------------------------------------------------------ #
 #' \dontrun{
-#' table6_4_col2 <-
-#'   dmlpath(
-#'     D = D,
-#'     Y = Y,
-#'     M = M,
-#'     C = C,
-#'     data = df,
-#'     d = 1,
-#'     dstar = 0,
-#'     censor = TRUE,
-#'     censor_low = 0.01,
-#'     censor_high = 0.99,
-#'     interaction_DM = FALSE,
-#'     interaction_DC = FALSE,
-#'     interaction_MC = FALSE,
-#'     num_folds = 5,
-#'     V = 5L,
-#'     seed = 02138,
-#'     SL.library = c("SL.mean","SL.glmnet","SL.ranger"),
-#'     stratifyCV = TRUE
-#'   )
-#'   }
+#' dmlpath(
+#'   data = nlsy_ex,
+#'   D = D,
+#'   M = M,
+#'   Y = Y,
+#'   C = covariates,
+#'   d = 1, dstar = 0,
+#'   num_folds = 5, V = 5L, seed = 1234,
+#'   SL.library = c("SL.mean","SL.glmnet","SL.ranger"),
+#'   stratifyCV = TRUE
+#' )
+#' }
+#'
+#' # ------------------------------------------------------ #
+#' # Example 3: Single mediator                             #
+#' # Super Learner: Marginal mean, Lasso and Random forest  #
+#' # ------------------------------------------------------ #
+#' # With a single mediator, the function returns ATE, NDE, and NIE.
+#' \dontrun{
+#' dmlpath(
+#'   data = nlsy_ex,
+#'   D = D,
+#'   M = "ever_unemp_age3539",
+#'   Y = Y,
+#'   C = covariates,
+#'   d = 1, dstar = 0,
+#'   num_folds = 5, V = 5L, seed = 1234,
+#'   SL.library = c("SL.mean","SL.glmnet","SL.ranger"),
+#'   stratifyCV = TRUE
+#' )
+#' }
+#'
+#' # --------------------------------------------------------#
+#' # Example 4: Three mediators                              #
+#' # Super Learner: Marginal mean, Lasso and Random forest   #
+#' # ------------------------------------------------------- #
+#' key_variables4 <- c("cesd_age40","cesd_1992","ever_unemp_age3539",
+#'                     "log_faminc_adj_age3539", D, covariates)
+#' nlsy_ex4 <- nlsy[complete.cases(nlsy[, key_variables4]), ]
+#' nlsy_ex4$std_cesd_age40 <-
+#'   (nlsy_ex4$cesd_age40 - mean(nlsy_ex4$cesd_age40)) / sd(nlsy_ex4$cesd_age40)
+#'
+#' \dontrun{
+#' dmlpath(
+#'   data = nlsy_ex4,
+#'   D = D,
+#'   M = list("cesd_1992","ever_unemp_age3539","log_faminc_adj_age3539"),
+#'   Y = Y,
+#'   C = covariates,
+#'   d = 1, dstar = 0,
+#'   num_folds = 5, V = 5L, seed = 1234,
+#'   SL.library = c("SL.mean","SL.glmnet","SL.ranger"),
+#'   stratifyCV = TRUE
+#' )
+#' }
 
 dmlpath <- function(
     D,

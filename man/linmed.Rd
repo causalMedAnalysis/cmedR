@@ -57,7 +57,7 @@ value of the exposure \code{D}. The exposure contrast of interest is
 
 \item{m}{A numeric vector (of one or more elements) denoting specific values
 to set each of the mediators in \code{M} to, for estimating the CDE. The length
-of the vector MUST be exactly the same length as that of the vector \code{M}.
+of the vector MUST be the same as the length of the vector \code{M}.
 This argument is only used in the estimation of the CDE, not in any of the
 other returned estimands.}
 
@@ -162,11 +162,12 @@ The function supports estimation of both univariate and multivariate natural eff
 }
 \details{
 \code{linmed()} performs causal mediation analysis using linear models for both the mediator(s)
-and outcome, and it computes inferential statistics using the nonparametric bootstrap. When a
-single mediator is specified, it estimates total, natural direct, and natural indirect effects
-using two linear models: a model for the mediator conditional on treatment and baseline covariates
-after centering them around their sample means, and a model for the outcome conditional on treatment,
-the mediator, and the baseline covariates after centering them around their sample means.
+and outcome, and computes inferential statistics using the nonparametric bootstrap. When a
+single mediator is specified, it estimates total, natural direct, natural indirect,
+and controlled direct effects using two linear models: a model for the mediator conditional
+on treatment and baseline covariates after centering them around their sample means, and
+a model for the outcome conditional on treatment, the mediator, and the baseline covariates
+after centering them around their sample means.
 
 When multiple mediators are specified, \code{linmed()} provides estimates for the total effect and then
 for the multivariate natural direct and indirect effects operating through the entire set of
@@ -178,8 +179,8 @@ after centering them around their sample means.
 \examples{
 # Example 1: Single mediator, no interactions
 ## Prepare data
-## For convenience with this example, we will use complete cases
 data(nlsy)
+
 covariates <- c(
   "female",
   "black",
@@ -190,6 +191,7 @@ covariates <- c(
   "famsize",
   "afqt3"
 )
+
 nlsy1 <- nlsy
 key_variables1 <- c(
   "cesd_age40",
@@ -197,27 +199,20 @@ key_variables1 <- c(
   "att22",
   covariates
 )
+
 nlsy1 <- nlsy1[complete.cases(nlsy1[,key_variables1]),]
 nlsy1$std_cesd_age40 <-
   (nlsy1$cesd_age40 - mean(nlsy1$cesd_age40)) /
   sd(nlsy1$cesd_age40)
+
 ## Estimate natural effects
 linmed(
   data = nlsy1,
   D = "att22",
   M = "ever_unemp_age3539",
   Y = "std_cesd_age40",
-  C = c(
-    "female",
-    "black",
-    "hispan",
-    "paredu",
-    "parprof",
-    "parinc_prank",
-    "famsize",
-    "afqt3"
+  C = covariates
   )
-)
 
 # Example 2: With exposure-mediator, exposure-covariate, and
 # mediator-covariate interactions
@@ -226,16 +221,7 @@ linmed(
   D = "att22",
   M = "ever_unemp_age3539",
   Y = "std_cesd_age40",
-  C = c(
-    "female",
-    "black",
-    "hispan",
-    "paredu",
-    "parprof",
-    "parinc_prank",
-    "famsize",
-    "afqt3"
-  ),
+  C = covariates,
   interaction_DM = TRUE,
   interaction_DC = TRUE,
   interaction_MC = TRUE
@@ -248,16 +234,7 @@ linmed(
   D = "att22",
   M = "ever_unemp_age3539",
   Y = "std_cesd_age40",
-  C = c(
-    "female",
-    "black",
-    "hispan",
-    "paredu",
-    "parprof",
-    "parinc_prank",
-    "famsize",
-    "afqt3"
-  ),
+  C = covariates,
   m = 1
 )
 
@@ -267,16 +244,7 @@ linmed(
   D = "att22",
   M = "ever_unemp_age3539",
   Y = "std_cesd_age40",
-  C = c(
-    "female",
-    "black",
-    "hispan",
-    "paredu",
-    "parprof",
-    "parinc_prank",
-    "famsize",
-    "afqt3"
-  ),
+  C = covariates,
   weights_name = "weight"
 )
 
@@ -297,16 +265,7 @@ linmed(
   D = "att22",
   M = c("ever_unemp_age3539", "log_faminc_adj_age3539"),
   Y = "std_cesd_age40",
-  C = c(
-    "female",
-    "black",
-    "hispan",
-    "paredu",
-    "parprof",
-    "parinc_prank",
-    "famsize",
-    "afqt3"
-  )
+  C = covariates
 )
 
 # Example 6: Specifying mediator values for the CDE, with multiple mediators
@@ -315,16 +274,7 @@ linmed(
   D = "att22",
   M = c("ever_unemp_age3539", "log_faminc_adj_age3539"),
   Y = "std_cesd_age40",
-  C = c(
-    "female",
-    "black",
-    "hispan",
-    "paredu",
-    "parprof",
-    "parinc_prank",
-    "famsize",
-    "afqt3"
-  ),
+  C = covariates,
   m = c(1, 3.5)
 )
 
@@ -335,16 +285,7 @@ linmed(
     D = "att22",
     M = "ever_unemp_age3539",
     Y = "std_cesd_age40",
-    C = c(
-      "female",
-      "black",
-      "hispan",
-      "paredu",
-      "parprof",
-      "parinc_prank",
-      "famsize",
-      "afqt3"
-    ),
+    C = covariates,
     boot = TRUE,
     boot_reps = 2000,
     boot_seed = 1234
@@ -352,24 +293,13 @@ linmed(
 }
 
 # Example 8: Parallelize the bootstrap, to attempt to reduce runtime
-# Note that this requires you to have installed the `doParallel`, `doRNG`,
-# and `foreach` packages.
 \dontrun{
   linmed(
     data = nlsy1,
     D = "att22",
     M = "ever_unemp_age3539",
     Y = "std_cesd_age40",
-    C = c(
-      "female",
-      "black",
-      "hispan",
-      "paredu",
-      "parprof",
-      "parinc_prank",
-      "famsize",
-      "afqt3"
-    ),
+    C = covariates,
     boot = TRUE,
     boot_reps = 2000,
     boot_seed = 1234,

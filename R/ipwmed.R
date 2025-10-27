@@ -8,9 +8,9 @@
 #' `ipwmed()`: the `minimal` argument.
 #'
 #' @param minimal A logical scalar indicating whether the function should
-#'   return only a minimal set of output. The `ipwmed()` function uses the
+#'   return only a minimal set of outputs. The `ipwmed()` function uses the
 #'   default of FALSE when calling `ipwmed_inner()` to generate the point
-#'   point estimates and sets the argument to TRUE when calling `ipwmed_inner()`
+#'   estimates and sets the argument to TRUE when calling `ipwmed_inner()`
 #'   to perform the bootstrap.
 #'
 #' @noRd
@@ -146,11 +146,6 @@ ipwmed_inner <- function(
   return(out)
 }
 
-
-
-
-
-
 #' Inverse probability weighting (IPW) estimator for natural effects
 #'
 #' @description
@@ -164,7 +159,7 @@ ipwmed_inner <- function(
 #' and it computes inferential statistics using the nonparametric bootstrap. It estimates
 #' two models to construct the weights: a logit model for the exposure conditional on
 #' baseline covariates (if specified), and another logit model for the exposure conditional
-#' on the mediator(s) and the baseline covariates. Using these weights, ipwmed estimates the
+#' on the mediator(s) and the baseline covariates. Using these weights, `ipwmed()` estimates the
 #' total, natural direct, and natural indirect effects when a single mediator is specified.
 #' When multiple mediators are specified, it provides estimates for the total effect and
 #' the multivariate natural direct and indirect effects operating through the entire set of
@@ -381,8 +376,6 @@ ipwmed_inner <- function(
 #' }
 #'
 #' # Example 5: Parallelize the bootstrap, to attempt to reduce runtime
-#' # Note that this requires you to have installed the `doParallel`, `doRNG`,
-#' # and `foreach` packages.
 #' \dontrun{
 #'   out5 <- ipwmed(
 #'     data = nlsy1,
@@ -410,6 +403,7 @@ ipwmed_inner <- function(
 #'     "pvalue_NIE"
 #'   )]
 #' }
+
 ipwmed <- function(
   data,
   D,
@@ -432,10 +426,8 @@ ipwmed <- function(
   # load data
   data_outer <- data
 
-
   # create adjusted boot_parallel logical
   boot_parallel_rev <- ifelse(boot_cores>1, boot_parallel, FALSE)
-
 
   # preliminary error/warning checks for the bootstrap
   if (boot) {
@@ -456,7 +448,6 @@ ipwmed <- function(
     }
   }
 
-
   # other error/warning checks
   if (!is.numeric(data_outer[[D]])) {
     stop(paste(strwrap("Error: The exposure variable (identified by the string argument D in data) must be numeric."), collapse = "\n"))
@@ -468,7 +459,7 @@ ipwmed <- function(
     stop(paste(strwrap("Error: There is at least one observation with a missing/NA value for the exposure variable (identified by the string argument D in data)."), collapse = "\n"))
   }
   if (any(! data_outer[[D]] %in% c(0,1))) {
-    stop(paste(strwrap("Error: The exposure variable (identified by the string argument D in data) must be a numeric variable consisting only of the values 0 or 1. There is at least one observation in the data that does not meet this criteria."), collapse = "\n"))
+    stop(paste(strwrap("Error: The exposure variable (identified by the string argument D in data) must be a numeric variable consisting only of the values 0 or 1. There is at least one observation in the data that does not meet this criterion."), collapse = "\n"))
   }
   for (M_k in M) {
     if (grepl(pattern = M_k, x = formula1_string, fixed = TRUE)) {
@@ -481,7 +472,6 @@ ipwmed <- function(
   # ^ Note that the grepl-based warning checks are fairly simple, based solely
   # on whether the string is detected. For now, we are not using more complex
   # checks searching for full words in the model formula.
-
 
   # compute point estimates
   est <- ipwmed_inner(
@@ -498,7 +488,6 @@ ipwmed <- function(
     censor_high = censor_high,
     minimal = FALSE
   )
-
 
   # bootstrap, if requested
   if (boot) {
@@ -524,7 +513,7 @@ ipwmed <- function(
       )
     }
 
-    # parallelization prep, if parallelization requested
+    # parallelization prep, if parallelization is requested
     if (boot_parallel_rev) {
       x_cluster <- parallel::makeCluster(boot_cores, type="PSOCK")
       doParallel::registerDoParallel(cl=x_cluster)
@@ -610,7 +599,6 @@ ipwmed <- function(
     )
   }
 
-
   # final output
   out <- est
   if (boot) {
@@ -618,4 +606,3 @@ ipwmed <- function(
   }
   return(out)
 }
-

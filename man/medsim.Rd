@@ -28,11 +28,14 @@ medsim(
 
 \item{treatment}{Name of the treatment variable.}
 
-\item{intv_med}{Intervened mediator. Default is \code{NULL}.}
+\item{intv_med}{Intervened mediator(s). Default is \code{NULL}.}
 
-\item{model_spec}{List of model specifications, where each model specification includes the \code{func}, \code{formula}, and \code{args}.}
+\item{model_spec}{List of model specifications, where each model specification
+includes the \code{func}, \code{formula}, and \code{args}.}
 
-\item{weights}{Optional. A string specifying the name of the column in the data that contains the weights to be used in weighted regression models and for calculating weighted means. Default is \code{NULL}.}
+\item{weights}{Optional. A string specifying the name of the column in the data
+that contains the weights to be used in weighted regression models and for
+calculating weighted means. Default is \code{NULL}.}
 
 \item{seed}{Seed for reproducibility. Default is \code{NULL}.}
 
@@ -45,8 +48,245 @@ medsim(
 \item{boot_conf_level}{Confidence level for bootstrap intervals. Default is \code{0.95}.}
 }
 \value{
-A data frame of point estimates, confidence intervals, and p-values if bootstrapping is performed; otherwise a list of point estimates
+A data frame of point estimates, confidence intervals, and p-values if
+bootstrapping is performed; otherwise a list of point estimates.
+
+The function supports a wide range of model types, including:
+\itemize{
+\item \code{lm} for continuous mediators or outcomes
+\item \code{glm} for generalized linear models, such as \code{family = binomial()} for logit
+or \code{poisson()} for count data
+\item \code{multinom} from the nnet package for nominal outcomes or mediators
+\item \code{polr} from the MASS package for ordinal outcomes or mediators
+}
+\subsection{Specifying the model_spec argument}{
+
+The \code{model_spec} argument defines the models to be fitted for each mediator and
+the outcome. It must be supplied as a list of lists, where each inner list includes:
+\itemize{
+\item \code{func}: model-fitting function (e.g., \code{"glm"}, \code{"lm"}, \code{"multinom"}, or \code{"polr"})
+\item \code{formula}: a formula object with the mediator or outcome on the left-hand side
+\item \code{args}: (optional) a list of additional arguments passed to the fitting function
+(for example, \code{list(family = binomial(link = "logit"))} for a binary mediator,
+or \code{list(method = "logistic")} for ordered logit with \code{polr})
+}
+
+Ordering rules:
+(i) List mediators in their assumed causal order, and (ii) put the outcome model last.
+This ordering tells \code{medsim()} how to simulate mediators sequentially and then simulate the outcome.
+At least one mediator model and one outcome model must be included.
+
+Supported model types:
+\itemize{
+\item \code{lm}: normal linear regression for continuous mediators or outcomes (no \code{args} required)
+\item \code{glm}: generalized linear models; set \code{args$family} for the distribution and link
+\itemize{
+\item \code{binomial(link = "logit")} or \code{binomial(link = "probit")} for binary variables
+\item \code{poisson(link = "log")} for count data
+}
+\item \code{multinom} (from nnet): nominal outcomes or mediators with more than two unordered categories
+\item \code{polr} (from MASS): ordinal outcomes or mediators, with \code{args$method = "logistic"} (ordered logit)
+or \code{"probit"} (ordered probit)
+}
+
+Example model specifications:
+Binary mediator (logit), continuous mediator (linear), continuous outcome (linear)
+model_spec <- list(
+list(
+func    = "glm",
+formula = M1 ~ D + C,
+args    = list(family = binomial(link = "logit"))
+),
+list(
+func    = "lm",
+formula = M2 ~ M1 + D + C
+),
+list(
+func    = "lm",
+formula = Y ~ M2 + M1 + D + C
+)
+)
+
+Nominal mediator (multinomial), ordinal outcome (ordered logit)
+model_spec2 <- list(
+list(
+func    = "multinom",
+formula = M_nominal ~ D + C
+),
+list(
+func    = "polr",
+formula = Y_ordinal ~ M_nominal + D + C,
+args    = list(method = "logistic")  # or method = "probit"
+)
+)
+
+Formulas and predictors:
+Formulas can include interactions (e.g., \code{D:C} or \code{M1:C}), higher-order terms, or transformations.
+All predictors referenced in a formula must appear in the data supplied to the \code{data} argument.
+
+Treatment contrast:
+The argument \code{cat_list} defines the treatment contrast (e.g., \code{c(0, 1)}) and must match the coding of
+the treatment variable (use character levels if the treatment is a factor).
+
+Interventions on mediators:
+The \code{intv_med} argument specifies the intervention on the mediators:
+\itemize{
+\item To estimate interventional effects, provide the name(s) of the mediators to be randomized
+(e.g., \code{intv_med = "M2"}). For such mediators, \code{medsim()} internally removes upstream mediators
+from their prediction formula to emulate randomization.
+\item To estimate a controlled direct effect (CDE), fix a mediator at a specific value using the syntax
+\code{"M=value"} (e.g., \code{intv_med = "log_faminc_adj_age3539=log(5e4)"}).
+\item To estimate natural or path-specific effects, set \code{intv_med = NULL} to use the mediators’
+natural distributions under each treatment condition.
+}
+
+Weights:
+If \code{weights} is provided, it is applied in model fitting for mediators and outcomes and in the computation
+of weighted means.
+
+Inference and bootstrapping:
+If \code{boot = TRUE}, \code{medsim()} performs a nonparametric bootstrap to obtain
+confidence intervals and p-values. Each bootstrap replication refits the
+specified models, re-simulates the mediators and outcome, and recomputes the
+estimates of interest. Confidence intervals are constructed using the percentile
+method at the level specified by \code{boot_conf_level}. Parallel computation is
+supported through the \code{doParallel}, \code{doRNG}, and \code{foreach} packages, with the
+number of cores specified in \code{boot_cores}. The random seed can be set through
+the \code{seed} argument for reproducibility.
+
+Returns:
+If \code{boot = FALSE}, the function returns a list containing point estimates for
+the effects of interest, along with the fitted mediator and outcome models.
+If \code{boot = TRUE}, it returns a data frame that includes point estimates,
+bootstrap confidence intervals, and two-sided p-values, together with the fitted models.
+}
 }
 \description{
-This function simulates mediated effects and optionally performs bootstrapping to estimate confidence intervals and p-values.
+This function simulates mediated effects and optionally performs bootstrapping
+to estimate confidence intervals and p-values.
+}
+\details{
+\code{medsim()} performs causal mediation analysis using a simulation approach that
+generalizes standard parametric estimators to settings with one or more causally
+ordered mediators. It can be used to estimate natural effects, interventional
+effects, path-specific effects, or controlled direct effects, depending on the
+intervention specification supplied by the user.
+
+The estimator proceeds by fitting models for the mediators and outcome in the
+causal order specified by the user. For a treatment contrast defined by values
+\code{cat_list = c(dstar, d)}, the function simulates Monte Carlo draws of the
+mediators under each treatment level using the fitted mediator models. These
+simulated mediators are then used to generate potential outcomes under different
+combinations of \verb{(d, d*)} and the corresponding mediator values, based on the
+fitted outcome model. Averaging these simulated outcomes across repeated draws
+yields estimates of the marginal expectations that define the effects of
+interest. In this way, the simulation-based estimator replaces analytical
+evaluation of complex identification formulas with a generative Monte Carlo
+approximation.
+
+When multiple mediators are specified, \code{medsim()} assumes a causal ordering and
+simulates each mediator sequentially, propagating simulated values forward
+through the mediator–outcome system. This structure allows the function to
+estimate not only multivariate natural direct and indirect effects but also
+path-specific effects operating through any subset of mediators. Controlled
+direct effects are estimated by fixing one or more mediators at user-specified
+values.
+}
+\examples{
+# ----------------------------- #
+#     Data and shared setup     #
+# ----------------------------- #
+data(nlsy)
+
+# outcome, exposure and mediators
+Y <- "std_cesd_age40"
+D <- "att22"
+M1 <- "ever_unemp_age3539"           # binary
+M2 <- "log_faminc_adj_age3539"       # continuous
+
+covariates <- c(
+  "female","black","hispan","paredu","parprof",
+  "parinc_prank","famsize","afqt3"
+)
+
+# keep complete cases and standardize the outcome
+key_vars <- c("cesd_age40", D, M1, M2, covariates)
+df <- nlsy[complete.cases(nlsy[, key_vars]), ]
+df$std_cesd_age40 <- (df$cesd_age40 - mean(df$cesd_age40)) / sd(df$cesd_age40)
+
+# model specifications
+# single mediator spec (M1 only)
+spec_nat_single <- list(
+ list(func = "glm",
+      formula = as.formula(paste(M1, "~", paste(c(D, covariates), collapse = " + "))),
+      args = list(family = binomial())),
+ list(func = "lm",
+      formula = as.formula(paste(Y, "~", paste(c(M1, D, covariates), collapse = " + "))))
+)
+# two mediators spec
+# M1: binary, M2: continuous, Y: continuous
+spec_nat <- list(
+  list(func = "glm", formula = as.formula(paste(M1, "~", paste(c(D, covariates),
+   collapse = " + "))), args = list(family = binomial())),
+  list(func = "lm",  formula = as.formula(paste(M2, "~", paste(c(M1, D, covariates),
+   collapse = " + ")))),
+  list(func = "lm",  formula = as.formula(paste(Y,  "~", paste(c(M2, M1, D, covariates),
+   collapse = " + "))))
+)
+
+# ------------------------------------------- #
+# Example 1: Natural effects (NDE and NIE)    #
+# ------------------------------------------- #
+out_nat <- medsim(
+  data = df,
+  num_sim = 1000,
+  treatment = D,
+  intv_med = NULL,               # no mediator intervention
+  model_spec = spec_nat_single,
+  seed = 60637
+)
+print(out_nat)
+
+# ------------------------------------------------ #
+# Example 2: Interventional effects (IDE and IIE)  #
+# ------------------------------------------------ #
+# Randomize the second mediator (income).
+out_ide <- medsim(
+  data = df,
+  num_sim = 1000,
+  treatment = D,
+  intv_med = M2,                 # interventional mediator
+  model_spec = spec_nat,
+  seed = 60637
+)
+print(out_ide)
+
+# ------------------------------------------------ #
+# Example 3: Controlled direct effect (CDE)        #
+# ------------------------------------------------ #
+# Fix income at a specific level (e.g., log(50,000)).
+out_cde <- medsim(
+  data = df,
+  num_sim = 1000,
+  treatment = D,
+  intv_med = paste0(M2, "=log(5e4)"),  # controlled value for mediator
+  model_spec = spec_nat,
+  seed = 60637
+)
+print(out_cde)
+
+# ------------------------------------------------ #
+# Example 4: Path-specific effects (PSEs)          #
+# ------------------------------------------------ #
+# With two mediators in causal order (M1 -> M2), the output includes
+# path-specific components and their decomposition of the total effect.
+out_pse <- medsim(
+  data = df,
+  num_sim = 1000,
+  treatment = D,
+  intv_med = NULL,               # natural propagation (needed for PSEs)
+  model_spec = spec_nat,
+  seed = 60637
+)
+print(out_pse)
 }

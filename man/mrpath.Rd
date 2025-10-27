@@ -221,60 +221,118 @@ then you can use the following syntax for the \code{M} argument:
 \code{M = list("ever_unemp_age3539", c("log_faminc_adj_age3539", "m3"), c("level2","level3","level4"))}.
 }
 \examples{
-#-----------------------------------------#
-# Initial specification and clean the data:
-#-----------------------------------------#
+# ----------------------------- #
+#     Data and shared setup     #
+# ----------------------------- #
 data(nlsy)
-# outcome
-Y <- "std_cesd_age40"
 
-# exposure
-D <- "att22"
-
-# mediators
-M <- list(
-"ever_unemp_age3539",
-"log_faminc_adj_age3539"
-)
-# baseline confounders
-C <- c(
-"female",
-"black",
-"hispan",
-"paredu",
-"parprof",
-"parinc_prank",
-"famsize",
-"afqt3"
-)
-# key variables
-key_vars <- c(
- "cesd_age40",
-  D,
-  unlist(M),
-  C
+covariates <- c(
+  "female",
+  "black",
+  "hispan",
+  "paredu",
+  "parprof",
+  "parinc_prank",
+  "famsize",
+  "afqt3"
 )
 
-# Clean the Data:
-df <-
-nlsy[complete.cases(nlsy[,key_vars]),] |>
-dplyr::mutate(std_cesd_age40 = (cesd_age40 - mean(cesd_age40)) / sd(cesd_age40))
-\dontrun{
-parametric_rst <-
-  D = D,
-  Y = Y,
-  M = M,
-  C = C,
-  data = df,
+key_variables <- c(
+  "cesd_age40",
+  "ever_unemp_age3539",
+  "log_faminc_adj_age3539",
+  "att22",
+  covariates
+)
+
+# For convenience in examples, use complete cases
+nlsy_ex <- nlsy[complete.cases(nlsy[, key_variables]), ]
+nlsy_ex$std_cesd_age40 <-
+  (nlsy_ex$cesd_age40 - mean(nlsy_ex$cesd_age40)) /
+  sd(nlsy_ex$cesd_age40)
+
+# ----------------------------------------- #
+# Example 1: Two mediators, additive models #
+# ----------------------------------------- #
+mrpath(
+  data = nlsy_ex,
+  D = "att22",
+  M = list("ever_unemp_age3539", "log_faminc_adj_age3539"),
+  Y = "std_cesd_age40",
+  C = covariates,
   d = 1,
   dstar = 0,
-  censor = TRUE,
-  censor_low = 0.01,
-  censor_high = 0.99,
-  boot = TRUE,
-  boot_reps = 2000,
-  boot_conf_level = 0.95,
-  boot_seed = 02138,
+  boot = FALSE
 )
-}
+
+# -------------------------------------------------- #
+# Example 2: Two mediators, models with interactions #
+# -------------------------------------------------- #
+mrpath(
+  data = nlsy_ex,
+  D = "att22",
+  M = list("ever_unemp_age3539", "log_faminc_adj_age3539"),
+  Y = "std_cesd_age40",
+  C = covariates,
+  d = 1,
+  dstar = 0,
+  interaction_DM = TRUE,
+  interaction_DC = TRUE,
+  interaction_MC = TRUE
+)
+
+# --------------------------- #
+# Example 3: Single mediator  #
+# Returns ATE, NDE, and NIE   #
+# --------------------------- #
+mrpath(
+  data = nlsy_ex,
+  D = "att22",
+  M = "ever_unemp_age3539",
+  Y = "std_cesd_age40",
+  C = covariates,
+  d = 1,
+  dstar = 0
+)
+
+# ----------------------------------------- #
+# Example 4: Bootstrap with parallelization #
+# ----------------------------------------- #
+mrpath(
+  data = nlsy_ex,
+  D = "att22",
+  M = list("ever_unemp_age3539", "log_faminc_adj_age3539"),
+  Y = "std_cesd_age40",
+  C = covariates,
+  d = 1,
+  dstar = 0,
+  boot = TRUE,
+  boot_reps = 200,
+  boot_seed = 1234,
+  boot_parallel = FALSE
+)
+
+# ------------------------------------------- #
+# Example 5: Three mediators, additive models #
+# ------------------------------------------- #
+
+key_variables5 <- c(
+  "cesd_age40","cesd_1992","ever_unemp_age3539",
+  "log_faminc_adj_age3539","att22", covariates
+)
+nlsy_ex5 <- nlsy[complete.cases(nlsy[, key_variables5]), ]
+nlsy_ex5$std_cesd_age40 <-
+  (nlsy_ex5$cesd_age40 - mean(nlsy_ex5$cesd_age40)) /
+  sd(nlsy_ex5$cesd_age40)
+
+mrpath(
+  data = nlsy_ex5,
+  D = "att22",
+  M = list("cesd_1992","ever_unemp_age3539","log_faminc_adj_age3539"),
+  Y = "std_cesd_age40",
+  C = covariates,
+  d = 1,
+  dstar = 0
+)
+
 }

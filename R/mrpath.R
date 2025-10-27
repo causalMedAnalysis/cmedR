@@ -9,7 +9,7 @@
 #' @param minimal A logical scalar indicating whether the function should
 #'   return only a minimal set of output. The `mrpath()` function uses the
 #'   default of FALSE when calling `mrpath_inner()` to generate the point
-#'   point estimates and sets the argument to TRUE when calling `mrpath_inner()`
+#'   estimates and sets the argument to TRUE when calling `mrpath_inner()`
 #'   to perform the bootstrap.
 #'
 #' @noRd
@@ -376,66 +376,120 @@ mrpath_inner <- function(
 #' @export
 #'
 #' @examples
-#' #-----------------------------------------#
-#' # Initial specification and clean the data:
-#' #-----------------------------------------#
+#' # ----------------------------- #
+#' #     Data and shared setup     #
+#' # ----------------------------- #
 #' data(nlsy)
-#' # outcome
-#' Y <- "std_cesd_age40"
 #'
-#' # exposure
-#' D <- "att22"
-#'
-#' # mediators
-#' M <- list(
-#' "ever_unemp_age3539",
-#' "log_faminc_adj_age3539"
-#' )
-
-#' # baseline confounders
-#' C <- c(
-#' "female",
-#' "black",
-#' "hispan",
-#' "paredu",
-#' "parprof",
-#' "parinc_prank",
-#' "famsize",
-#' "afqt3"
-#' )
-
-#' # key variables
-#' key_vars <- c(
-#'  "cesd_age40",
-#'   D,
-#'   unlist(M),
-#'   C
+#' covariates <- c(
+#'   "female",
+#'   "black",
+#'   "hispan",
+#'   "paredu",
+#'   "parprof",
+#'   "parinc_prank",
+#'   "famsize",
+#'   "afqt3"
 #' )
 #'
-#' # Clean the Data:
-#' df <-
-#' nlsy[complete.cases(nlsy[,key_vars]),] |>
-#' dplyr::mutate(std_cesd_age40 = (cesd_age40 - mean(cesd_age40)) / sd(cesd_age40))
-#' \dontrun{
-#' parametric_rst <-
-#  mrpath(
-#'   D = D,
-#'   Y = Y,
-#'   M = M,
-#'   C = C,
-#'   data = df,
+#' key_variables <- c(
+#'   "cesd_age40",
+#'   "ever_unemp_age3539",
+#'   "log_faminc_adj_age3539",
+#'   "att22",
+#'   covariates
+#' )
+#'
+#' # For convenience in examples, use complete cases
+#' nlsy_ex <- nlsy[complete.cases(nlsy[, key_variables]), ]
+#' nlsy_ex$std_cesd_age40 <-
+#'   (nlsy_ex$cesd_age40 - mean(nlsy_ex$cesd_age40)) /
+#'   sd(nlsy_ex$cesd_age40)
+#'
+#' # ----------------------------------------- #
+#' # Example 1: Two mediators, additive models #
+#' # ----------------------------------------- #
+#' mrpath(
+#'   data = nlsy_ex,
+#'   D = "att22",
+#'   M = list("ever_unemp_age3539", "log_faminc_adj_age3539"),
+#'   Y = "std_cesd_age40",
+#'   C = covariates,
 #'   d = 1,
 #'   dstar = 0,
-#'   censor = TRUE,
-#'   censor_low = 0.01,
-#'   censor_high = 0.99,
-#'   boot = TRUE,
-#'   boot_reps = 2000,
-#'   boot_conf_level = 0.95,
-#'   boot_seed = 02138,
+#'   boot = FALSE
 #' )
-#' }
-
+#'
+#' # -------------------------------------------------- #
+#' # Example 2: Two mediators, models with interactions #
+#' # -------------------------------------------------- #
+#' mrpath(
+#'   data = nlsy_ex,
+#'   D = "att22",
+#'   M = list("ever_unemp_age3539", "log_faminc_adj_age3539"),
+#'   Y = "std_cesd_age40",
+#'   C = covariates,
+#'   d = 1,
+#'   dstar = 0,
+#'   interaction_DM = TRUE,
+#'   interaction_DC = TRUE,
+#'   interaction_MC = TRUE
+#' )
+#'
+#' # --------------------------- #
+#' # Example 3: Single mediator  #
+#' # Returns ATE, NDE, and NIE   #
+#' # --------------------------- #
+#' mrpath(
+#'   data = nlsy_ex,
+#'   D = "att22",
+#'   M = "ever_unemp_age3539",
+#'   Y = "std_cesd_age40",
+#'   C = covariates,
+#'   d = 1,
+#'   dstar = 0
+#' )
+#'
+#' # ----------------------------------------- #
+#' # Example 4: Bootstrap with parallelization #
+#' # ----------------------------------------- #
+#' mrpath(
+#'   data = nlsy_ex,
+#'   D = "att22",
+#'   M = list("ever_unemp_age3539", "log_faminc_adj_age3539"),
+#'   Y = "std_cesd_age40",
+#'   C = covariates,
+#'   d = 1,
+#'   dstar = 0,
+#'   boot = TRUE,
+#'   boot_reps = 200,
+#'   boot_seed = 1234,
+#'   boot_parallel = FALSE
+#' )
+#'
+#' # ------------------------------------------- #
+#' # Example 5: Three mediators, additive models #
+#' # ------------------------------------------- #
+#'
+#' key_variables5 <- c(
+#'   "cesd_age40","cesd_1992","ever_unemp_age3539",
+#'   "log_faminc_adj_age3539","att22", covariates
+#' )
+#' nlsy_ex5 <- nlsy[complete.cases(nlsy[, key_variables5]), ]
+#' nlsy_ex5$std_cesd_age40 <-
+#'   (nlsy_ex5$cesd_age40 - mean(nlsy_ex5$cesd_age40)) /
+#'   sd(nlsy_ex5$cesd_age40)
+#'
+#' mrpath(
+#'   data = nlsy_ex5,
+#'   D = "att22",
+#'   M = list("cesd_1992","ever_unemp_age3539","log_faminc_adj_age3539"),
+#'   Y = "std_cesd_age40",
+#'   C = covariates,
+#'   d = 1,
+#'   dstar = 0
+#' )
+#'
 mrpath <- function(
     D,
     Y,
@@ -498,6 +552,10 @@ mrpath <- function(
       censor_high = censor_high
     )
 
+  # predeclare boot_res
+  boot_res <- NULL
+  boot_res_lst <- NULL
+
   # bootstrap, if requested
   if (boot) {
     boot_fnc <- function() {
@@ -528,7 +586,7 @@ mrpath <- function(
       doParallel::registerDoParallel(cl = x_cluster)
       parallel::clusterExport(
         cl = x_cluster,
-        varlist = c("mrpath_inner", "censor", "boot_fnc"),
+        varlist = c("mrpath_inner", "mrmed_inner", "trimQ", "censor", "boot_fnc"),
         envir = environment()
       )
       `%dopar%` <- foreach::`%dopar%`
@@ -583,7 +641,6 @@ mrpath <- function(
       parallel::stopCluster(x_cluster)
       rm(x_cluster)
     }
-  }
   # compute bootstrap confidence intervals
   # from percentiles of the bootstrap distributions
   boot_alpha <- 1 - boot_conf_level
@@ -625,25 +682,12 @@ mrpath <- function(
         )
       }
     )
-  out <- est
+  }
+
   if (boot) {
-    out <- list(
-     point_rst = out,
-     boot_rst = boot_res_lst)
+    out <- list(point_rst = est, boot_rst = boot_res_lst)
+  } else {
+    out <- est
   }
   return(out)
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-

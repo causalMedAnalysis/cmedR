@@ -152,8 +152,8 @@ conventional natural direct and indirect effects.
 To compute path-specific effects with K causally ordered mediators, linpath proceeds as follows:
 For k = 1, 2, . . ., K: (i) it fits a linear model for the kth mediator conditional on the
 exposure and baseline confounders; (ii) it then fits a linear model for the outcome conditional
-on the exposure, baseline confounders, and all the mediators in Mk=\{M1,...,Mk\}; finally,
-it calculate estimates for the path-specific effects using coefficients from the mediator
+on the exposure, baseline confounders, and all the mediators in Mk=\{M1,...,Mk\}; and (iii),
+it calculates the path-specific effects using coefficients from the mediator
 and outcome models.
 
 Specifying the \code{M} Argument:
@@ -228,16 +228,7 @@ linpath(
   # ^ note that this order encodes our assumption that ever_unemp_age3539
   # causally precedes log_faminc_adj_age3539
   Y = "std_cesd_age40",
-  C = c(
-    "female",
-    "black",
-    "hispan",
-    "paredu",
-    "parprof",
-    "parinc_prank",
-    "famsize",
-    "afqt3"
-  )
+  C = covariates
 )
 
 # Example 2: With exposure-mediator, exposure-covariate, and
@@ -247,16 +238,7 @@ linpath(
   D = "att22",
   M = c("ever_unemp_age3539", "log_faminc_adj_age3539"),
   Y = "std_cesd_age40",
-  C = c(
-    "female",
-    "black",
-    "hispan",
-    "paredu",
-    "parprof",
-    "parinc_prank",
-    "famsize",
-    "afqt3"
-  ),
+  C = covariates,
   interaction_DM = TRUE,
   interaction_DC = TRUE,
   interaction_MC = TRUE
@@ -269,16 +251,7 @@ linpath(
   D = "att22",
   M = "ever_unemp_age3539",
   Y = "std_cesd_age40",
-  C = c(
-    "female",
-    "black",
-    "hispan",
-    "paredu",
-    "parprof",
-    "parinc_prank",
-    "famsize",
-    "afqt3"
-  )
+  C = covariates
 )
 
 # Example 4: Incorporating sampling weights
@@ -287,16 +260,7 @@ linpath(
   D = "att22",
   M = c("ever_unemp_age3539", "log_faminc_adj_age3539"),
   Y = "std_cesd_age40",
-  C = c(
-    "female",
-    "black",
-    "hispan",
-    "paredu",
-    "parprof",
-    "parinc_prank",
-    "famsize",
-    "afqt3"
-  ),
+  C = covariates,
   weights_name = "weight"
 )
 
@@ -307,16 +271,7 @@ linpath(
     D = "att22",
     M = c("ever_unemp_age3539", "log_faminc_adj_age3539"),
     Y = "std_cesd_age40",
-    C = c(
-      "female",
-      "black",
-      "hispan",
-      "paredu",
-      "parprof",
-      "parinc_prank",
-      "famsize",
-      "afqt3"
-    ),
+    C = covariates,
     boot = TRUE,
     boot_reps = 2000,
     boot_seed = 1234
@@ -324,28 +279,38 @@ linpath(
 }
 
 # Example 6: Parallelize the bootstrap, to attempt to reduce runtime
-# Note that this requires you to have installed the `doParallel`, `doRNG`,
-# and `foreach` packages.
 \dontrun{
   linpath(
     data = nlsy,
     D = "att22",
     M = c("ever_unemp_age3539", "log_faminc_adj_age3539"),
     Y = "std_cesd_age40",
-    C = c(
-      "female",
-      "black",
-      "hispan",
-      "paredu",
-      "parprof",
-      "parinc_prank",
-      "famsize",
-      "afqt3"
-    ),
+    C = covariates,
     boot = TRUE,
     boot_reps = 2000,
     boot_seed = 1234,
     boot_parallel = TRUE
   )
 }
+
+# Example 7: Three mediators, additive models
+# Prepare data
+key_variables7 <- c(
+  "cesd_age40","cesd_1992","ever_unemp_age3539",
+  "log_faminc_adj_age3539","att22", covariates
+)
+df_ex7 <- nlsy[complete.cases(nlsy[, key_variables7]), ]
+df_ex7$std_cesd_age40 <-
+  (df_ex7$cesd_age40 - mean(df_ex7$cesd_age40)) /
+  sd(df_ex7$cesd_age40)
+
+# Estimate path-specific effects
+linpath(
+  data = df_ex7,
+  D = "att22",
+  M = c("cesd_1992","ever_unemp_age3539","log_faminc_adj_age3539"),
+  Y = "std_cesd_age40",
+  C = covariates
+)
+
 }

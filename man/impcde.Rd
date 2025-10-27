@@ -121,12 +121,12 @@ key_variables <- c(
   covariates
 )
 nlsy <- nlsy[complete.cases(nlsy[,key_variables]),]
-nlsy$std_cesd_age40 <- 
-  (nlsy$cesd_age40 - mean(nlsy$cesd_age40)) / 
+nlsy$std_cesd_age40 <-
+  (nlsy$cesd_age40 - mean(nlsy$cesd_age40)) /
   sd(nlsy$cesd_age40)
 ## Fit model
 mod1 <- lm(
-  std_cesd_age40 ~ ever_unemp_age3539 + att22 + 
+  std_cesd_age40 ~ ever_unemp_age3539 + att22 +
     female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3,
   data = nlsy
 )
@@ -142,7 +142,7 @@ impcde(
 # Example 2: Incorporating sampling weights
 ## Re-fit model with sampling weights
 mod2 <- lm(
-  std_cesd_age40 ~ ever_unemp_age3539 + att22 + 
+  std_cesd_age40 ~ ever_unemp_age3539 + att22 +
     female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3,
   data = nlsy,
   weights = nlsy$weight
@@ -172,8 +172,6 @@ impcde(
 }
 
 # Example 4: Parallelize the bootstrap, to attempt to reduce runtime
-# Note that this requires you to have installed the `doParallel`, `doRNG`, 
-# and `foreach` packages.
 \dontrun{
   impcde(
     data = nlsy,

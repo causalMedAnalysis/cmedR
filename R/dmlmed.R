@@ -131,6 +131,8 @@
 #' @importFrom tidyr pivot_longer
 #' @importFrom tidyr pivot_wider
 #' @import SuperLearner
+#' @import ranger
+#' @import glmnet
 #' @importFrom caret createFolds
 #' @export
 #'
@@ -187,59 +189,109 @@
 #' Y_DC_model <- as.formula(paste(Y, " ~ ", paste(c(C, D), collapse= "+")))
 #' Y_DMC_model <- as.formula(paste(Y, " ~ ", paste(c(C, D, M[1]), collapse= "+")))
 #'
-#' # Example 1: Type 1 Estimation
-#' \dontrun{
-#'  dmlmed1_rst <-
-#'  dmlmed(
+#' # ---------------------------------------------- #
+#' # Example 1: Single mediator — Type 2 estimator  #
+#' # Super Learner: Marginal mean and Lasso         #
+#' # ---------------------------------------------- #
+#' dmlmed(
 #'   D,
 #'   Y,
 #'   M[[1]],
 #'   C,
-#'   D_C_model, # D ~ C
-#'   D_MC_model = NULL, # D ~ M,C
-#'   Y_DC_model = NULL, # Y ~ D,C
-#'   Y_DMC_model, # Y ~ D,M,C
-#'   M_DC_model, # M ~ D,C
+#'   D_C_model,              # π(D|C)
+#'   D_MC_model,             # π(D|C,M)
+#'   Y_DC_model,             # ν_D(C)
+#'   Y_DMC_model,            # μ(Y|C,M,D)
+#'   M_DC_model = NULL,      # NULL → Type 2
 #'   data = df,
-#'   d = 1,
-#'   dstar = 0,
-#'   K = 5,
-#'   seed = 1238,
-#'   SL.library = c("SL.mean", "SL.glmnet","SL.ranger"),
+#'   d = 1, dstar = 0,
+#'   K = 5, V = 5L, seed = 1234,
+#'   SL.library = c("SL.mean", "SL.glmnet"),
 #'   stratifyCV = TRUE,
 #'   minimal = TRUE,
-#'   censor = TRUE,
-#'   censor_low = 0.01,
-#'   censor_high = 0.99
+#'   censor = TRUE, censor_low = 0.01, censor_high = 0.99
 #' )
-#' }
 #'
-#' # Example 2: Type 2 Estimation
+#' # ------------------------------------------------------------ #
+#' # Example 2: Single mediator — Type 2 estimator                #
+#' # Super Learner: Marginal mean, Lasso and Random forest        #
+#' # ------------------------------------------------------------ #
 #' \dontrun{
-#'  dmlmed2_rst <-
-#'  dmlmed(
+#' dmlmed(
 #'   D,
 #'   Y,
 #'   M[[1]],
 #'   C,
-#'   D_C_model, # D ~ C
-#'   D_MC_model, # D ~ M,C
-#'   Y_DC_model, # Y ~ D,C
-#'   Y_DMC_model, # Y ~ D,M,C
-#'   M_DC_model = NULL, # M ~ D,C
+#'   D_C_model,              # π(D|C)
+#'   D_MC_model,             # π(D|C,M)
+#'   Y_DC_model,             # ν_D(C)
+#'   Y_DMC_model,            # μ(Y|C,M,D)
+#'   M_DC_model = NULL,      # NULL → Type 2
 #'   data = df,
-#'   d = 1,
-#'   dstar = 0,
-#'   K = 5,
-#'   seed = 1238,
+#'   d = 1, dstar = 0,
+#'   K = 5, V = 5L, seed = 1234,
 #'   SL.library = c("SL.mean", "SL.glmnet", "SL.ranger"),
 #'   stratifyCV = TRUE,
 #'   minimal = TRUE,
-#'   censor = TRUE,
-#'   censor_low = 0.01,
-#'   censor_high = 0.99
+#'   censor = TRUE, censor_low = 0.01, censor_high = 0.99
 #' )
 #' }
+#'
+#' # ------------------------------------------------------- #
+#' # Example 3: Single mediator — Type 1 estimator           #
+#' # Super Learner: Marginal mean, Lasso and Random forest   #
+#' # ------------------------------------------------------- #
+#' # (Switch to Type 1 by supplying P(M|D,C) and dropping
+#' #  π(D|C,M) and ν_D(C).)
+#' \dontrun{
+#' dmlmed(
+#'   D,
+#'   Y,
+#'   M[[1]],
+#'   C,
+#'   D_C_model,               # π(D|C)
+#'   D_MC_model = NULL,       # not used in Type 1
+#'   Y_DC_model = NULL,       # not used in Type 1
+#'   Y_DMC_model,             # μ(Y|C,M,D)
+#'   M_DC_model,              # P(M|D,C) → Type 1
+#'   data = df,
+#'   d = 1, dstar = 0,
+#'   K = 5, V = 5L, seed = 1234,
+#'   SL.library = c("SL.mean", "SL.glmnet", "SL.ranger"),
+#'   stratifyCV = TRUE,
+#'   minimal = TRUE,
+#'   censor = TRUE, censor_low = 0.01, censor_high = 0.99
+#' )
+#' }
+#'
+#' # -------------------------------------------------------- #
+#' # Example 4: Multiple mediators — Type 2 estimator         #
+#' # Super Learner: Marginal mean, Lasso and Random forest    #
+#' # -------------------------------------------------------- #
+#' # Update π(D|C,M) and μ(Y|C,M,D) to include all mediators
+#' D_MC_model_multi  <- as.formula(paste(D, " ~ ", paste(c(C, unlist(M)), collapse = "+")))
+#' Y_DMC_model_multi <- as.formula(paste(Y, " ~ ", paste(c(C, D, unlist(M)), collapse = "+")))
+#' \dontrun{
+#' dmlmed(
+#'   D,
+#'   Y,
+#'   M,                        #full mediator list
+#'   C,
+#'   D_C_model,                # π(D|C)
+#'   D_MC_model_multi,         # π(D|C,M1,M2,…)
+#'   Y_DC_model,               # ν_D(C)
+#'   Y_DMC_model_multi,        # μ(Y|C,M1,M2,…,D)
+#'   M_DC_model = NULL,        # NULL → Type 2
+#'   data = df,
+#'   d = 1, dstar = 0,
+#'   K = 5, V = 5L, seed = 1234,
+#'   SL.library = c("SL.mean", "SL.glmnet", "SL.ranger"),
+#'   stratifyCV = TRUE,
+#'   minimal = TRUE,
+#'   censor = TRUE, censor_low = 0.01, censor_high = 0.99
+#' )
+#' }
+#'
 
 dmlmed <- function(
     D,

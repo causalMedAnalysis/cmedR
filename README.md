@@ -14,13 +14,10 @@
 - [ipwpath – analysis of path-specific effects using inverse probability weights](#ipwpath-analysis-of-path-specific-effects-using-inverse-probability-weights)
 - [pathimp – analysis of path-specific effects using regression imputation](#pathimp-analysis-of-path-specific-effects-using-regression-imputation)
 - [mrmed – mediation analysis using multiply robust estimation](#mrmed-mediation-analysis-using-multiply-robust-estimation)
-<<<<<<< HEAD
 - [mrpath – multiply robust estimation of path-specific effects](#mrpath-multiply-robust-estimation-for-path-specific-effects)
 - [dmlmed – debiased machine learning for mediation analysis](#dmlmed-debiased-machine-learning-for-mediation-analysis)
 - [dmlpath – debiased machine learning for path-specific effects](#dmlpath-debiased-machine-learning-for-path-specific-effects)
-=======
 - [dmlmed – debiased machine learning for mediation analysis](#dmlmed-debiased-machine-learning-for-mediation-analysis)
->>>>>>> 456f8ba90e89ca6e641940102343c46cda09a898
 - [utils – utility functions](#utils-utility-functions)
 
 
@@ -39,7 +36,7 @@ linmed(
   C = NULL,
   d,
   dstar,
-  m = NULL,
+  m = rep(0, length(M)),
   interaction_DM = FALSE,
   interaction_DC = FALSE,
   interaction_MC = FALSE,
@@ -246,7 +243,6 @@ The `model_spec` argument accomodates many different types of models through its
 Here is an example of how to specify the the `model_spec` argument with two causally ordered mediators modeled using ordinal logit and poisson models, respectively, and an outcome modeled using normal linear regression:
 
 ```r
-
 # Specify models for M1 (ordinal logit), M2 (poisson) and Y (normal linear)
 formula_M1 <- paste(M1, "~", paste(c(D, C), collapse = " + "))
 formula_M2 <- paste(M2, "~", paste(c(M1, D, C), collapse = " + "))
@@ -576,7 +572,7 @@ impcde(
 
 ```r
 mod1 <- lm(
-  std_cesd_age40 ~ att22 * (ever_unemp_age3539 +  + female + black + hispan + paredu +
+  std_cesd_age40 ~ att22 * (ever_unemp_age3539 + female + black + hispan + paredu +
     parprof + parinc_prank + famsize + afqt3),
   data = nlsy
 )
@@ -749,12 +745,6 @@ cde_est_bootpar <- ipwcde(
 
 The `rwrlite` function is a wrapper for two core functions in the [`rwrmed`](https://github.com/xiangzhou09/rwrmed) package. It implements regression-with-residuals (RWR) estimation to compute overall effects, interventional direct and indirect effects, and controlled direct effects.
 
-To use this function, first install the `rwrmed` package using:
-
-```r
-devtools::install_github("xiangzhou09/rwrmed")
-```
-
 ### Function
 
 ```r
@@ -790,7 +780,7 @@ rwrlite(
 | `m` | Numeric value at which to fix the mediator when estimating the CDE. |
 | `Y_formula` | Formula object for the outcome model. |
 | `M_formula` | Formula object for the mediator model. |
-| `M_family` | Family for the mediator model passed to `glm` (e.g., `"gaussian"` or `binomial()`). |
+| `M_family` | Family for the mediator model passed to `glm` (e.g., `"gaussian()"` or `binomial()`). |
 | `L_formula_list` | A list of formulas for the exposure-induced confounder models. |
 | `weights` | Optional numeric vector of weights used across models. |
 | `boot` | Logical. If `TRUE`, performs a nonparametric bootstrap. |
@@ -879,7 +869,7 @@ rwr_est_bootpar <- rwrlite(
 
 ## `linpath`: analysis of path-specific effects using linear models
 
-The `linpath` function estimates path-specific effects using a linear models for each mediator and the outcome.
+The `linpath` function estimates path-specific effects using linear models for each mediator and the outcome.
 
 ### Function
 
@@ -911,7 +901,7 @@ linpath(
 |------------------|-------------|
 | `data`           | A data frame. |
 | `D`              | Name of the exposure variable (character). |
-| `M`              | A character vector or list of vectors identifying mediators, in hypothesized causal order. See below for examples. |
+| `M`              | A list of character vector identifying mediators, in hypothesized causal order. See below for examples. |
 | `Y`              | Name of the outcome variable (character). |
 | `C`              | Optional character vector of baseline covariates to include in both the mediator and outcome models. |
 | `d`, `dstar`     | Numeric values defining the exposure contrast of interest (`d - dstar`). |
@@ -1049,7 +1039,7 @@ ipwpath(
 |----------------------|-------------|
 | `data`               | A data frame. |
 | `D`                  | Name of the exposure variable (character). |
-| `M`                  | A character vector or list of vectors identifying mediators, in hypothesized causal order. |
+| `M`                  | A list of character vector identifying mediators, in hypothesized causal order. |
 | `Y`                  | Name of the outcome variable (character). |
 | `C`                  | Optional vector of baseline covariates for the exposure models. |
 | `base_weights_name`  | Optional name of a sampling weights variable. |
@@ -1162,12 +1152,6 @@ pse_bootpar <- ipwpath(
 
 It computes the total effect and the path-specific effects (PSEs) of a binary treatment variable on an outcome through one or more causally ordered mediators. It supports bootstrap confidence intervals and (optionally) parallel computation.
 
-To use `pathimp`, you must first install the `paths` package from GitHub:
-
-```r
-devtools::install_github("xiangzhou09/paths")
-```
-
 ### Function
 
 ```r
@@ -1183,7 +1167,7 @@ pathimp(
   boot_conf_level = 0.95,
   boot_seed = NULL,
   boot_parallel = "no",
-  boot_cores = max(c(parallel::detectCores() - 2, 1))
+  boot_cores = max(c(parallel::detectCores() - 2, 1)),
   round_decimal = 3,
 )
 ```
@@ -1196,7 +1180,7 @@ pathimp(
 | `D`              | Name of binary treatment variable (numeric) |
 | `Y`              | Name of outcome variable (numeric) |
 | `M`              | List of mediator variables, ordered causally (all numeric) |
-| `Y_models`       | List outcome models |
+| `Y_models`       | List of outcome models |
 | `D_model`        | Optional treatment model (`glm`, `gbm`, `ps`, `pbart`) |
 | `out_ipw`        | Logical: compute imputation-based weighting estimator? |
 | `boot_reps`      | Number of bootstrap samples |
@@ -1356,13 +1340,13 @@ mrmed(
 | `Y`              | A character string for the outcome variable (numeric) |
 | `M`              | A character vector (or list) of mediator variables (all numeric) |
 | `C`              | Optional character vector of baseline covariates. |
-| `D_C_model`       | Formula for logit model of P(D\C) (required) |
-| `D_MC_model`        | Formula for logit model of P(D\C,M) (required for type 2 estimator) |
-| `Y_DMC_model`        | Formula for linear model of E(Y\C,M,D) (required) |
-| `Y_DC_model`        | Formula for linear model of E(E(Y\C,D=d,M)\C,D) (required for type 2 estimator) |
-| `M_DC_model`        | Formula for logit model of P(M\C,D) (required for type 1 estimator) |
-| `d`, `dstar` | Numeric values specifying the exposure contrast of interest (`d - dstar`) |
-| `censor`  | Logical indicating whether IPW weights should be censored (default: `TRUE`) |
+| `D_C_model`      | Formula for logit model of P(D\C) (required) |
+| `D_MC_model`     | Formula for logit model of P(D\C,M) (required for type 2 estimator) |
+| `Y_DMC_model`    | Formula for linear model of E(Y\C,M,D) (required) |
+| `Y_DC_model`     | Formula for linear model of E(E(Y\C,D=d,M)\C,D) (required for type 2 estimator) |
+| `M_DC_model`     | Formula for logit model of P(M\C,D) (required for type 1 estimator) |
+| `d`, `dstar`     | Numeric values specifying the exposure contrast of interest (`d - dstar`) |
+| `censor`         | Logical indicating whether IPW weights should be censored (default: `TRUE`) |
 | `censor_low`, `censor_high` | Quantiles for censoring IPW weights |
 | `boot_reps`      | Number of bootstrap samples |
 | `boot_conf_level`| Confidence level for bootstrap intervals |
@@ -1486,14 +1470,14 @@ mrpath(
 | `data`                      | A data frame.                                                                                   |
 | `D`                         | Name of the binary exposure variable (character). Must be numeric with two values.              |
 | `Y`                         | Name of the numeric outcome variable (character).                                               |
-| `M`                         | List of vectors identifying mediators in hypothesized causal order.                             |
+| `M`                         | A list of character vectors identifying mediators in hypothesized causal order.                             |
 | `C`                         | Optional character vector of baseline covariates.                                               |
 | `d`, `dstar`                | Numeric values representing treatment and control levels. Re-coded as 1 and 0 if not already.   |
 | `interaction_DM`            | Logical. If `TRUE`, include exposure-mediator interactions in the outcome model.                |
 | `interaction_DC`            | Logical. If `TRUE`, include exposure-covariate interactions in the outcome model.               |
 | `interaction_MC`            | Logical. If `TRUE`, include mediator-covariate interactions in the outcome model.               |
 | `censor`                    | Logical. If `TRUE`, applies censoring to the IPWs.                                              |
-| `censor_low`, `censor_high` | Numeric quantiles used to censors the IPWs (defaults: 0.01, 0.99).                              |
+| `censor_low`, `censor_high` | Numeric quantiles used to censor the IPWs (defaults: 0.01, 0.99).                              |
 | `boot`                      | Logical. If `TRUE`, uses nonparametric bootstrap for inference.                                 |
 | `boot_reps`                 | Number of bootstrap replications (default: 200).                                               |
 | `boot_conf_level`           | Confidence level for bootstrap interval (default: 0.95).                                        |
@@ -1611,8 +1595,6 @@ result_bootpar <- mrpath(
 ```
 
 
-=======
->>>>>>> 456f8ba90e89ca6e641940102343c46cda09a898
 ## `dmlmed`: debiased machine learning for mediation analysis
 
 The `dmlmed` function estimates total, natural direct, and natural indirect effects using debiased machine learning (DML). It accommodates both univariate and multivariate mediators and allows flexible model specification using Super Learners.
@@ -1630,11 +1612,7 @@ Similar to `mrmed`, `dmlmed` also implements two different multiply robust estim
   * A super learner for E(Y|C,M,D)
   * A super learner for E(E(Y|C,D=d,M)|C,D)
 
-<<<<<<< HEAD
 When multiple mediators are analyzed, only the Type 2 Estimator can be used, and the function estimates multivariate natural effects across the set of mediators considered as a whole.
-=======
-When multiple mediators are analyzed, only the Type 2 Estimator can be used, and the function estimates multivariate natural effects across the set of mediators.
->>>>>>> 456f8ba90e89ca6e641940102343c46cda09a898
 
 ### Function
 
@@ -1643,10 +1621,7 @@ dmlmed(
   D,
   Y,
   M,
-<<<<<<< HEAD
   C,
-=======
->>>>>>> 456f8ba90e89ca6e641940102343c46cda09a898
   D_C_model,
   D_MC_model = NULL,
   Y_DC_model = NULL,
@@ -1660,11 +1635,7 @@ dmlmed(
   seed,
   SL.library = c("SL.mean", "SL.glmnet"),
   stratifyCV = TRUE,
-<<<<<<< HEAD
   minimal = TRUE,
-=======
-  minimal = FALSE,
->>>>>>> 456f8ba90e89ca6e641940102343c46cda09a898
   censor = TRUE,
   censor_low = 0.01,
   censor_high = 0.99
@@ -1678,10 +1649,7 @@ dmlmed(
 | `D`                         | Name of the binary exposure variable (must be numeric with two unique values).               |
 | `Y`                         | Name of the outcome variable (must be numeric).                                              |
 | `M`                         | Name(s) of mediator variable(s). For multiple mediators, supply as a list of names.          |
-<<<<<<< HEAD
 | `C`                         | Optional character vector of baseline covariates.                                            |
-=======
->>>>>>> 456f8ba90e89ca6e641940102343c46cda09a898
 | `D_C_model`                 | Formula for the exposure model: exposure \~ covariates. Required for both Type 1 and Type 2. |
 | `D_MC_model`                | (Optional) Formula for exposure \~ mediator(s) + covariates. Required for Type 2.            |
 | `Y_DMC_model`               | Formula for outcome \~ exposure + mediator(s) + covariates. Required for both types.         |
@@ -1711,14 +1679,11 @@ Each includes estimates for:
 * `NDE`: Natural direct effect
 * `NIE`: Natural indirect effect
 
-<<<<<<< HEAD
 If `minimal` is set to `FALSE`, the function will return the following additional items:
 
 * a summary of missingness for the input data
 * data frames containing the summands for the Type 1 and/or Type 2 Estimators
 
-=======
->>>>>>> 456f8ba90e89ca6e641940102343c46cda09a898
 ### Estimation Types
 
 * **Type 1 Estimator**: Requires `D_C_model`, `Y_DMC_model`, and `M_DC_model`
@@ -1733,10 +1698,7 @@ dmlmed(
   D = "att22",
   Y = "std_cesd_age40",
   M = "ever_unemp_age3539",
-<<<<<<< HEAD
   C = c("female", "black", "hispan", "paredu", "parprof", "parinc_prank", "famsize", "afqt3"),
-=======
->>>>>>> 456f8ba90e89ca6e641940102343c46cda09a898
   D_C_model = "att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3",
   Y_DMC_model = "std_cesd_age40 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22 + ever_unemp_age3539",
   M_DC_model = "ever_unemp_age3539 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22",
@@ -1757,10 +1719,7 @@ dmlmed(
   D = "att22",
   Y = "std_cesd_age40",
   M = "ever_unemp_age3539",
-<<<<<<< HEAD
   C = c("female", "black", "hispan", "paredu", "parprof", "parinc_prank", "famsize", "afqt3"),
-=======
->>>>>>> 456f8ba90e89ca6e641940102343c46cda09a898
   D_C_model = "att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3",
   D_MC_model = "att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + ever_unemp_age3539",
   Y_DMC_model = "std_cesd_age40 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22 + ever_unemp_age3539",
@@ -1775,16 +1734,7 @@ dmlmed(
 )
 ```
 
-### Dependencies
 
-Ensure the following packages are installed:
-
-```r
-install.packages(c("SuperLearner", "glmnet", "ranger", "dplyr", "tibble"))
-```
-
-
-<<<<<<< HEAD
 ## `dmlpath`: debiased machine learning for path-specific effects
 
 The `dmlpath` function estimates **path-specific effects** (PSEs) using debiased machine learning (DML). When there are multiple **causally ordered mediators**, the function decomposes the total effect into a direct effect and a series of PSEs, each corresponding to a specific mediator. If only one mediator is specified, `dmlpath` returns conventional natural direct and indirect effects.
@@ -1836,7 +1786,7 @@ dmlpath(
 | --------------------------- | -------------------------------------------------------------------------------------------|
 | `D`                         | Name of the binary exposure variable (must be numeric with two unique values).             |
 | `Y`                         | Name of the outcome variable (must be numeric).                                            |
-| `M`                         | List of mediators. Each list element is a character vector of variable names.              |
+| `M`                         | A character list identifying the names of the mediator variables.                          |   
 | `C`                         | Character vector of covariate names to include in all models.                              |
 | `data`                      | A data frame containing all variables.                                                     |
 | `d`, `dstar`                | Numeric values specifying the treatment and control levels.                                |
@@ -1917,17 +1867,7 @@ results <- dmlpath(
 print(results)
 ```
 
-### Dependencies
 
-Ensure the following packages are installed:
-
-```r
-install.packages(c("SuperLearner", "caret", "tidyr", "purrr", "dplyr", "tibble"))
-```
-
-
-=======
->>>>>>> 456f8ba90e89ca6e641940102343c46cda09a898
 ## `utils`: utility functions
 
 This script defines helper functions used internally by many of the other other functions in this repository.
