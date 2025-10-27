@@ -1432,7 +1432,6 @@ mrmed_rst1 <- mrmed(
 ```
 
 
-<<<<<<< HEAD
 ## `mrpath`: multiply robust estimation for path-specific effects
 
 The `mrpath` function estimates path-specific effects using a multiply robust (MR) approach. It recursively constructs natural direct effects (NDEs) using flexible models and supports bootstrap inference and parallelization.
