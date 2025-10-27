@@ -1,7 +1,7 @@
 # cmedR: An R Package for Analyzing Causal Mediation
 
 ## About cmedR 
-`cmedR` is a R package for implementing the methods described in Wodtke and Zhou (Forthcoming, Cambridge University Press) "Causal Mediation Analysis." This package is currently under active development. Functionality may change, and there may be bugs or incomplete features.
+`cmedR` is a R package for implementing the methods described in Wodtke and Zhou (Forthcoming, Cambridge University Press) "Causal Mediation Analysis." This package is currently under active development. Functionality may change, and there may be bugs or incomplete features. Feel free to request new features or report bugs to causalmed@gmail.com.
 
 ## Table of Contents
 - [linmed – mediation analysis using linear models](#linmed-mediation-analysis-using-linear-models)
