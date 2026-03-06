@@ -230,7 +230,7 @@ medsim(
 
 ### Specifying the `model_spec` argument
 
-The `model_spec` argument requires a list of lists detailing the model specifications for each mediator and the outcome. The the models for each mediator should be listed in their assumed causal order, with the outcome model last, as the function automatically uses the last model specified as the outcome model and derives the causal order of the mediators from the order of the models supplied to this argument. At least one mediator model must be included, along with an outcome model.
+The `model_spec` argument requires a list of lists detailing the model specifications for each mediator and the outcome. The models for each mediator should be listed in their assumed causal order, with the outcome model last, as the function automatically uses the last model specified as the outcome model and derives the causal order of the mediators from the order of the models supplied to this argument. At least one mediator model must be included, along with an outcome model.
 
 The `model_spec` argument accomodates many different types of models through its `func` and `args` options:
 
