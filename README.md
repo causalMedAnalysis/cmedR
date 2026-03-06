@@ -239,7 +239,7 @@ The `model_spec` argument accomodates many different types of models through its
 - **`lm`**: for normal linear regression, where no `args` are required.
 - **`glm`**: for generalized linear models, where the `args` can include `family` to specify different distributions and link functions. Current options include `"binomial"` (for logit or probit regressions) and `"poisson"` (for count data).
 
-Here is an example of how to specify the the `model_spec` argument with two causally ordered mediators modeled using ordinal logit and poisson models, respectively, and an outcome modeled using normal linear regression:
+Here is an example of how to specify the `model_spec` argument with two causally ordered mediators modeled using ordinal logit and poisson models, respectively, and an outcome modeled using normal linear regression:
 
 ```r
 # Specify models for M1 (ordinal logit), M2 (poisson) and Y (normal linear)
