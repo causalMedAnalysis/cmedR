@@ -189,7 +189,7 @@ linmed(
 
 ## `medsim`: mediation analysis using a simulation approach
 
-The `medsim` function estimates natural direct and indirect effects, interventional direct and indirect effects, controlled direct effects, and path-specific effects using a simulation approach. It supports a wide variety of models (including the entire family of GLMs, multinomial logit, and ordered logistic), and includes optional support for bootstrapping with parallel processing.
+The `medsim` function estimates natural direct and indirect effects, interventional direct and indirect effects, controlled direct effects, and path-specific effects using a simulation approach. It supports a wide variety of models (including the entire family of GLMs, multinomial logit, and ordered logit), and includes optional support for bootstrapping with parallel processing.
 
 ### Function
 
@@ -274,7 +274,7 @@ See below for additional examples.
   Fitted models for each mediator and the outcome
 
 - If `boot = TRUE`:
-  Fitted models for each mediator and the outcome
+  Fitted models for each mediator and the outcome.
   A data frame containing:
   - Point estimates for the mediation effects of interest  
   - bootstrap confidence intervals  
