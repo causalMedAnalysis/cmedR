@@ -30,7 +30,6 @@ Imports:
     ranger,
     parallel,
     paths,
-    pryr,
     stats,
     stringr,
     SuperLearner,
