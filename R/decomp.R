@@ -19,7 +19,7 @@
 #'  \item{twocomp}{Two component decomposition of the rATE into rNDE and rNIE.}
 #'  \item{fourcomp}{Four component decomposition of the rATE into CDE, rINTREF, rPIE, and rINTMED.}
 #' @import stats
-#' @importFrom pryr partial
+#' @importFrom purrr partial
 #' @export
 #' @seealso \code{\link{rwrmed}} for implementing the regression-with-residuals (RWR)
 #'   approach to causal mediation.
