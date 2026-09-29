@@ -7,14 +7,16 @@
 - [linmed – mediation analysis using linear models](#linmed-mediation-analysis-using-linear-models)
 - [medsim – mediation analysis using a simulation approach](#medsim-mediation-analysis-using-a-simulation-approach)
 - [ipwmed – mediation analysis using inverse probability weights](#ipwmed-mediation-analysis-using-inverse-probability-weights)
+- [impmed – a regression imputation estimator for natural direct and indirect effects](#impmed-a-regression-imputation-estimator-for-natural-direct-and-indirect-effects)
 - [impcde – a regression imputation estimator for controlled direct effects](#impcde-a-regression-imputation-estimator-for-controlled-direct-effects)
 - [ipwcde – an inverse probability weighting estimator for controlled direct effects](#ipwcde-an-inverse-probability-weighting-estimator-for-controlled-direct-effects)
+- [ipwvent – an inverse probability weighting estimator for interventional effects](#ipwvent-an-inverse-probability-weighting-estimator-for-interventional-effects)
 - [rwrlite – regression-with-residuals estimation for interventional effects](#rwrlite-regression-with-residuals-estimation-for-interventional-effects)
 - [linpath – analysis of path-specific effects using linear models](#linpath-analysis-of-path-specific-effects-using-linear-models)
 - [ipwpath – analysis of path-specific effects using inverse probability weights](#ipwpath-analysis-of-path-specific-effects-using-inverse-probability-weights)
 - [pathimp – analysis of path-specific effects using regression imputation](#pathimp-analysis-of-path-specific-effects-using-regression-imputation)
 - [mrmed – mediation analysis using multiply robust estimation](#mrmed-mediation-analysis-using-multiply-robust-estimation)
-- [mrpath – multiply robust estimation of path-specific effects](#mrpath-multiply-robust-estimation-for-path-specific-effects)
+- [mrpath – multiply robust estimation of path-specific effects](#mrpath-multiply-robust-estimation-of-path-specific-effects)
 - [dmlmed – debiased machine learning for mediation analysis](#dmlmed-debiased-machine-learning-for-mediation-analysis)
 - [dmlpath – debiased machine learning for path-specific effects](#dmlpath-debiased-machine-learning-for-path-specific-effects)
 - [utils – utility functions](#utils-utility-functions)
@@ -512,6 +514,141 @@ ipw_nat_bootpar <- ipwmed(
 ```
 
 
+## `impmed`: a regression imputation estimator for natural direct and indirect effects
+
+The `impmed` function estimates natural direct and indirect effects using regression imputation. The user supplies two pre-fitted outcome models — a reduced model excluding the mediator(s) and a full model including them — and the function imputes potential outcomes to compute the total effect (ATE), natural direct effect (NDE), and natural indirect effect (NIE). When multiple mediators are supplied, they are treated as a joint block and the function reports multivariate effects (MNDE and MNIE). Bootstrap confidence intervals and parallelized computation are supported.
+
+### Function
+
+```r
+impmed(
+  D,
+  Y,
+  M,
+  Y_models,
+  data,
+  d = 1,
+  dstar = 0,
+  boot = FALSE,
+  boot_reps = 200,
+  boot_conf_level = 0.95,
+  boot_seed = NULL,
+  boot_parallel = FALSE,
+  round_decimal = 3,
+  boot_cores = max(c(parallel::detectCores() - 2, 1))
+)
+```
+
+### Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `D` | Name of the exposure variable (character scalar; must identify a numeric variable). |
+| `Y` | Name of the outcome variable (character scalar; must identify a numeric variable). |
+| `M` | Name(s) of the mediator variable(s). Can be a character vector or a list of character vectors; all mediators are treated jointly as a single block. |
+| `Y_models` | A list of exactly two pre-fitted outcome models. The first must be the reduced model (excluding all mediators in `M`); the second must be the full model (including all mediators in `M`). Both must be `lm` or `glm` objects of the same class; for `glm`, both must share the same family and link (`gaussian(identity)` or `binomial(logit)`). |
+| `data` | A data frame; must be the same data frame passed to both `lm()`/`glm()` calls. |
+| `d`, `dstar` | Numeric values specifying the exposure contrast of interest (`d - dstar`). |
+| `boot` | Logical. If `TRUE`, performs a nonparametric bootstrap (default: `FALSE`). |
+| `boot_reps` | Number of bootstrap replications (default: `200`). |
+| `boot_conf_level` | Confidence level for bootstrap intervals (default: `0.95`). |
+| `boot_seed` | Integer seed for reproducibility. |
+| `boot_parallel` | Logical. If `TRUE`, parallelizes the bootstrap. |
+| `round_decimal` | Number of decimal places in the printed summary table (default: `3`). |
+| `boot_cores` | Number of CPU cores for parallel bootstrap. Defaults to available cores minus 2. |
+
+### Returns
+
+A list with two elements:
+
+- `summary_df`: A data frame with formatted estimates for the ATE, NDE (or MNDE for multiple mediators), and NIE (or MNIE). When `boot = TRUE`, it also includes percentile bootstrap confidence intervals and two-sided p-values.
+- `org_obj`: A list with numeric estimates, implied potential-outcome means, and intervention values. When `boot = TRUE`, it additionally contains confidence intervals, p-values, bootstrap draws, and bootstrap settings.
+
+### Examples
+
+#### Single Mediator
+
+```r
+data(brader_clean)
+
+Y <- "std_immigr"
+D <- "tone_eth"
+M <- "p_harm"
+C <- c("ppage", "female", "hs", "sc", "ba", "ppincimp")
+
+key_vars <- c("immigr", D, M, C)
+Brader1 <- brader_clean[complete.cases(brader_clean[, key_vars]), ]
+Brader1$std_immigr <- (Brader1$immigr - mean(Brader1$immigr)) / sd(Brader1$immigr)
+
+glm_reduced <- glm(
+  as.formula(paste(Y, "~", D, "+", paste(C, collapse = " + "))),
+  data = Brader1
+)
+glm_full <- glm(
+  as.formula(paste(Y, "~", D, "+", M, "+", paste(C, collapse = " + "))),
+  data = Brader1
+)
+
+impmed(
+  D = D,
+  Y = Y,
+  M = M,
+  Y_models = list(glm_reduced, glm_full),
+  data = Brader1,
+  d = 1,
+  dstar = 0
+)$summary_df
+```
+
+#### Bootstrap
+
+```r
+impmed(
+  D = D,
+  Y = Y,
+  M = M,
+  Y_models = list(glm_reduced, glm_full),
+  data = Brader1,
+  d = 1,
+  dstar = 0,
+  boot = TRUE,
+  boot_reps = 2000,
+  boot_seed = 1234
+)$summary_df
+```
+
+#### Two Mediators (Multivariate)
+
+```r
+M2 <- c("p_harm", "emo")
+key_vars2 <- c("immigr", D, M2, C)
+Brader2 <- brader_clean[complete.cases(brader_clean[, key_vars2]), ]
+Brader2$std_immigr <- (Brader2$immigr - mean(Brader2$immigr)) / sd(Brader2$immigr)
+
+glm_reduced2 <- glm(
+  as.formula(paste(Y, "~", D, "+", paste(C, collapse = " + "))),
+  data = Brader2
+)
+glm_full2 <- glm(
+  as.formula(paste(Y, "~", D, "+", paste(M2, collapse = " + "), "+", paste(C, collapse = " + "))),
+  data = Brader2
+)
+
+impmed(
+  D = D,
+  Y = Y,
+  M = M2,
+  Y_models = list(glm_reduced2, glm_full2),
+  data = Brader2,
+  d = 1,
+  dstar = 0,
+  boot = TRUE,
+  boot_reps = 2000,
+  boot_seed = 1234
+)$summary_df
+```
+
+
 ## `impcde`: a regression imputation estimator for controlled direct effects
 
 The `impcde` function estimates controlled direct effects using a regression imputation approach. It requires a fitted outcome model and computes the CDE by comparing predicted outcomes under different exposure levels, while holding the mediator fixed at a specified value. This function supports optional sampling weights and the nonparametric bootstrap for computing confidence intervals and p-values. Parallelized bootstrap computation is also supported.
@@ -742,6 +879,133 @@ cde_est_bootpar <- ipwcde(
   boot_seed = 1234,
   boot_parallel = TRUE
 )
+```
+
+
+## `ipwvent`: an inverse probability weighting estimator for interventional effects
+
+The `ipwvent` function estimates the total effect (ATE), interventional direct effect (IDE), and interventional indirect effect (IIE) using inverse probability weighting, in settings with a discrete exposure-induced confounder `L` of the mediator-outcome relationship. The user supplies pre-fitted models for the exposure, the confounder, and the mediator. Both binary and ordered categorical variables are supported for `L` and `M`. Bootstrap confidence intervals and parallelized computation are supported.
+
+### Function
+
+```r
+ipwvent(
+  data,
+  D,
+  M,
+  L,
+  Y,
+  D_model,
+  L_model,
+  M_model,
+  base_weights_name = NULL,
+  censor = TRUE,
+  censor_low = 0.01,
+  censor_high = 0.99,
+  boot = FALSE,
+  boot_reps = 200,
+  boot_conf_level = 0.95,
+  boot_seed = NULL,
+  boot_parallel = FALSE,
+  boot_cores = max(c(parallel::detectCores() - 2, 1))
+)
+```
+
+### Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `data` | A data frame. |
+| `D` | Name of the exposure variable (character scalar). Must be numeric, binary, and coded 0/1. |
+| `M` | Name of the mediator variable (character scalar). Must be discrete: binary (coded 0/1) or ordered categorical (integer values with 3–20 levels). |
+| `L` | Name of the exposure-induced confounder variable (character scalar). Must be discrete (binary or ordered categorical). |
+| `Y` | Name of the outcome variable (character scalar; must be numeric). |
+| `D_model` | A fitted `glm()` object for the exposure given baseline covariates (binomial or quasibinomial family). |
+| `L_model` | A fitted `glm()` (binomial or quasibinomial family) or `MASS::polr()` object for the exposure-induced confounder given exposure and baseline covariates. |
+| `M_model` | A fitted `glm()` (binomial or quasibinomial family) or `MASS::polr()` object for the mediator given exposure, confounder, and baseline covariates. |
+| `base_weights_name` | (Optional) Name of the base weights variable in `data`. |
+| `censor` | Logical. If `TRUE`, applies censoring to the IPW weights (default: `TRUE`). |
+| `censor_low`, `censor_high` | Quantile bounds for weight censoring (default: 0.01 and 0.99). |
+| `boot` | Logical. If `TRUE`, performs a nonparametric bootstrap (default: `FALSE`). |
+| `boot_reps` | Number of bootstrap replications (default: `200`). |
+| `boot_conf_level` | Confidence level for bootstrap intervals (default: `0.95`). |
+| `boot_seed` | Integer seed for reproducibility. |
+| `boot_parallel` | Logical. If `TRUE`, parallelizes the bootstrap (requires `doParallel`, `doRNG`, and `foreach`). |
+| `boot_cores` | Number of CPU cores for parallel bootstrap. Defaults to available cores minus 2. |
+
+### Returns
+
+- If `boot = FALSE`:
+  A list with `ATE`, `IDE`, `IIE`, `weights1`, `weights2`, `weights3` (the three sets of IPWs), and `model_d`, `model_l`, `model_m` (fitted nuisance models).
+
+- If `boot = TRUE`, the list also includes:
+  - `ci_ATE`, `ci_IDE`, `ci_IIE`: Bootstrap confidence intervals.
+  - `pvalue_ATE`, `pvalue_IDE`, `pvalue_IIE`: Two-sided p-values.
+  - `boot_ATE`, `boot_IDE`, `boot_IIE`: Vectors of bootstrap replicate estimates.
+
+### Examples
+
+#### Point Estimates
+
+```r
+data(brader_clean)
+
+D <- "tone_eth"
+M <- "emo_ord"
+L <- "p_harm_ord"
+Y <- "std_immigr"
+C <- c("ppage", "female", "hs", "sc", "ba", "ppincimp")
+
+key_vars <- c("immigr", "emo", "p_harm", D, C)
+Brader1 <- brader_clean[complete.cases(brader_clean[, key_vars]), ]
+Brader1$std_immigr <- (Brader1$immigr - mean(Brader1$immigr)) / sd(Brader1$immigr)
+Brader1$p_harm_ord <- ordered(Brader1$p_harm)
+Brader1$emo_ord    <- ordered(Brader1$emo)
+
+D_model <- glm(
+  as.formula(paste(D, "~", paste(C, collapse = " + "))),
+  data = Brader1, family = binomial()
+)
+L_model <- MASS::polr(
+  as.formula(paste(L, "~", paste(c(D, C), collapse = " + "))),
+  data = Brader1, Hess = TRUE
+)
+M_model <- MASS::polr(
+  as.formula(paste(M, "~", paste(c(D, L, C), collapse = " + "))),
+  data = Brader1, Hess = TRUE
+)
+
+out <- ipwvent(
+  data    = Brader1,
+  D       = D,
+  M       = M,
+  L       = L,
+  Y       = Y,
+  D_model = D_model,
+  L_model = L_model,
+  M_model = M_model
+)
+out[c("ATE", "IDE", "IIE")]
+```
+
+#### Bootstrap
+
+```r
+out_boot <- ipwvent(
+  data      = Brader1,
+  D         = D,
+  M         = M,
+  L         = L,
+  Y         = Y,
+  D_model   = D_model,
+  L_model   = L_model,
+  M_model   = M_model,
+  boot      = TRUE,
+  boot_reps = 2000,
+  boot_seed = 1234
+)
+out_boot[c("ATE", "IDE", "IIE", "ci_ATE", "ci_IDE", "ci_IIE",
+           "pvalue_ATE", "pvalue_IDE", "pvalue_IIE")]
 ```
 
 
