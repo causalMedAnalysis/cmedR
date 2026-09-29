@@ -2,9 +2,9 @@
 #'
 #' @description
 #' `dmlpath()` uses a debiased machine learning approach to estimate path-specific
-#'  effects.If there are K causally ordered mediators, dmlpath provides estimates
+#'  effects. If there are n causally ordered mediators, dmlpath provides estimates
 #'  for: a direct effect of the exposure on the outcome that does not operate through
-#'  any of the mediators, and then K path-specific effects, with each of these
+#'  any of the mediators, and then n path-specific effects, with each of these
 #'  effects operating through one mediator, net of the mediators preceding it in
 #'  causal order. If only one mediator is specified, `dmlpath()` computes
 #'  conventional natural direct and indirect effects.
@@ -20,7 +20,7 @@
 #' the SuperLearner algorithm, allowing users to specify multiple machine learning algorithms
 #' and to estimate the above models non-parametrically.
 
-#' #' To compute path-specific effects with K causally ordered mediators, `dmlpath()`
+#' #' To compute path-specific effects with n causally ordered mediators, `dmlpath()`
 #' recursively estimates a series of natural direct effects (NDEs).
 #' Specifically:
 #'
@@ -117,7 +117,7 @@
 #'   `censor_low = 0.01` and `censor_high = 0.99` are used, then IPW weights will
 #'   be censored at their 1st and 99th percentiles. By default, weights are censored
 #'   to the \[1st, 99th\] percentile range.
-#' @param num_folds Integer. The number of folds (partitions) used for repeated cross-fitting.
+#' @param K Integer. The number of folds (partitions) used for repeated cross-fitting.
 #'   The data is randomly divided into \code{K} approximately equal-sized subsets.
 #'   Models are trained on \code{K - 1} folds and evaluated on the held-out fold.
 #'   The procedure is repeated across all partitions. Typical values range from 4 to 10.
@@ -127,7 +127,7 @@
 #'   integer (e.g., \code{5L}) to ensure proper handling by certain functions.
 #'   The default number is \code{5L}.
 #' @param seed Seed value for reproducibility. Controls the randomization in cross-validation
-#'   and other stochastic components of the estimation procedure.
+#'   and other stochastic components of the estimation procedure. Defaults to NULL.
 #' @param SL.library Character vector. Specifies the set of candidate algorithms to be
 #'   used in the Super Learner ensemble. Each element should be the name of a valid learner
 #'   (e.g., \code{"SL.mean"}, \code{"SL.glmnet"}, \code{"SL.ranger"}). Learners can
@@ -141,7 +141,7 @@
 #'
 #' \item{Estimand}{A character vector describing each estimand, including the total effect (ATE)
 #' and the path-specific effects (PSEs) for each mediator path. Notation follows the format used
-#' in Wodtke and Zhou, e.g., \eqn{ATE(1,0)} or \eqn{PSE: D → M1 → Y(1,0)}.}
+#' in Wodtke and Zhou, e.g., \eqn{ATE(1,0)} or \eqn{PSE: D \rightarrow M1 \rightarrow Y(1,0)}.}
 #'
 #' \item{Mean}{A numeric vector of point estimates for each estimand.}
 #'
@@ -160,6 +160,9 @@
 #' @export
 #'
 #' @examples
+#' \donttest{
+#' if (requireNamespace("glmnet", quietly = TRUE) &&
+#'     requireNamespace("ranger", quietly = TRUE)) {
 #'
 #' # ----------------------------- #
 #' #     Data and shared setup     #
@@ -199,7 +202,7 @@
 #'   Y = Y,
 #'   C = covariates,
 #'   d = 1, dstar = 0,
-#'   num_folds = 5, V = 5L, seed = 1234,
+#'   K = 5, V = 5L, seed = 1234,
 #'   SL.library = c("SL.mean","SL.glmnet"),
 #'   stratifyCV = TRUE
 #' )
@@ -208,7 +211,6 @@
 #' # Example 2: Two mediators                               #
 #' # Super Learner: Marginal mean, Lasso and Random forest  #
 #' # ------------------------------------------------------ #
-#' \dontrun{
 #' dmlpath(
 #'   data = nlsy_ex,
 #'   D = D,
@@ -216,18 +218,16 @@
 #'   Y = Y,
 #'   C = covariates,
 #'   d = 1, dstar = 0,
-#'   num_folds = 5, V = 5L, seed = 1234,
+#'   K = 5, V = 5L, seed = 1234,
 #'   SL.library = c("SL.mean","SL.glmnet","SL.ranger"),
 #'   stratifyCV = TRUE
 #' )
-#' }
 #'
 #' # ------------------------------------------------------ #
 #' # Example 3: Single mediator                             #
 #' # Super Learner: Marginal mean, Lasso and Random forest  #
 #' # ------------------------------------------------------ #
 #' # With a single mediator, the function returns ATE, NDE, and NIE.
-#' \dontrun{
 #' dmlpath(
 #'   data = nlsy_ex,
 #'   D = D,
@@ -235,11 +235,10 @@
 #'   Y = Y,
 #'   C = covariates,
 #'   d = 1, dstar = 0,
-#'   num_folds = 5, V = 5L, seed = 1234,
+#'   K = 5, V = 5L, seed = 1234,
 #'   SL.library = c("SL.mean","SL.glmnet","SL.ranger"),
 #'   stratifyCV = TRUE
 #' )
-#' }
 #'
 #' # --------------------------------------------------------#
 #' # Example 4: Three mediators                              #
@@ -251,7 +250,6 @@
 #' nlsy_ex4$std_cesd_age40 <-
 #'   (nlsy_ex4$cesd_age40 - mean(nlsy_ex4$cesd_age40)) / sd(nlsy_ex4$cesd_age40)
 #'
-#' \dontrun{
 #' dmlpath(
 #'   data = nlsy_ex4,
 #'   D = D,
@@ -259,10 +257,11 @@
 #'   Y = Y,
 #'   C = covariates,
 #'   d = 1, dstar = 0,
-#'   num_folds = 5, V = 5L, seed = 1234,
+#'   K = 5, V = 5L, seed = 1234,
 #'   SL.library = c("SL.mean","SL.glmnet","SL.ranger"),
 #'   stratifyCV = TRUE
 #' )
+#' } # end requireNamespace check
 #' }
 
 dmlpath <- function(
@@ -271,37 +270,37 @@ dmlpath <- function(
     M,
     C,
     data,
-    d,
-    dstar,
+    d = 1,
+    dstar = 0,
     censor = TRUE,
     censor_low = 0.01,
     censor_high = 0.99,
     interaction_DM = FALSE,
     interaction_DC = FALSE,
     interaction_MC = FALSE,
-    num_folds = 5,
+    K = 5,
     V = 5L,
-    seed,
+    seed = NULL,
     SL.library = c("SL.mean", "SL.glmnet"),
     stratifyCV = TRUE
 ){
 
   # Step 1: Get dimensions
-  K <- length(M)
-  PSE <- vector("list", length = K + 1)
-  SE <- vector("list", length = K + 1)
+  n_med <- length(M)
+  PSE <- vector("list", length = n_med + 1)
+  SE <- vector("list", length = n_med + 1)
 
   # Step 2: Calculate the NDE and NIE for each k
-  for(k in rev(seq_len(K))){
+  for(k in rev(seq_len(n_med))){
 
     # Step 2.1: Construct the estimation models
     # D Models
     D_C_model <- as.formula(paste(D, " ~ ", paste(C, collapse= "+")))
 
     if(interaction_MC == FALSE){
-      D_MC_model <- as.formula(paste(D, " ~ ", paste(c(C, unlist(M[1:k])), collapse= "+")))
+      D_CM_model <- as.formula(paste(D, " ~ ", paste(c(C, unlist(M[1:k])), collapse= "+")))
     } else {
-      D_MC_model <- as.formula(
+      D_CM_model <- as.formula(
         paste(
           D,
           " ~ ",
@@ -314,9 +313,9 @@ dmlpath <- function(
 
     # Y Models
     if(interaction_DC == FALSE){
-      Y_DC_model <- as.formula(paste(Y, " ~ ", paste(c(C, D), collapse= "+")))
+      Y_CD_model <- as.formula(paste(Y, " ~ ", paste(c(C, D), collapse= "+")))
     } else {
-      Y_DC_model <- as.formula(
+      Y_CD_model <- as.formula(
         paste(
           Y,
           " ~ ",
@@ -327,26 +326,26 @@ dmlpath <- function(
     }
 
     if(!any(interaction_DC, interaction_DM, interaction_MC)){
-      Y_DMC_model <- as.formula(paste(Y, " ~ ", paste(c(C, D, unlist(M[1:k])), collapse= "+")))
+      Y_CDM_model <- as.formula(paste(Y, " ~ ", paste(c(C, D, unlist(M[1:k])), collapse= "+")))
     } else {
-      Y_DMC_model <- paste(Y, " ~ ", paste(c(C, D, unlist(M[1:k])), collapse= "+"))
+      Y_CDM_model <- paste(Y, " ~ ", paste(c(C, D, unlist(M[1:k])), collapse= "+"))
       if (interaction_DM) {
-        Y_DMC_model <- paste(
-          Y_DMC_model,
+        Y_CDM_model <- paste(
+          Y_CDM_model,
           "+",
           paste(D, unlist(M[1:k]), sep = ":", collapse = " + ")
         )
       }
       if (interaction_DC) {
-        Y_DMC_model <- paste(
-          Y_DMC_model,
+        Y_CDM_model <- paste(
+          Y_CDM_model,
           "+",
           paste(D, C, sep = ":", collapse = " + ")
         )
       }
       if (interaction_MC) {
-        Y_DMC_model <- paste(
-          Y_DMC_model,
+        Y_CDM_model <- paste(
+          Y_CDM_model,
           "+",
           paste(outer(unlist(M[1:k]), C, FUN = "paste", sep = ":"), collapse = " + ")
         )
@@ -361,14 +360,14 @@ dmlpath <- function(
         M = unlist(M[1:k]),
         C = C,
         D_C_model = D_C_model,
-        D_MC_model = D_MC_model,
-        Y_DC_model = Y_DC_model,
-        Y_DMC_model = Y_DMC_model,
-        M_DC_model = NULL,
+        D_CM_model = D_CM_model,
+        Y_CD_model = Y_CD_model,
+        Y_CDM_model = Y_CDM_model,
+        M_CD_model = NULL,
         data = data,
         d = d,
         dstar = dstar,
-        K = num_folds,
+        K = K,
         V = V,
         seed = seed,
         SL.library = SL.library,
@@ -380,49 +379,49 @@ dmlpath <- function(
       )
 
     # Step 2.3: Calculate PSEs
-    if(K == 1) {
-      PSE[[K]] <- est[["est2"]] %>% dplyr::filter(.data$Estimand == "NDE(1,0)") %>% dplyr::pull(.data$Mean)
-      PSE[[K + 1]] <- est[["est2"]] %>% dplyr::filter(.data$Estimand == "NIE(1,0)") %>% dplyr::pull(.data$Mean)
-      SE[[K]] <- est[["est2"]] %>% dplyr::filter(.data$Estimand == "NDE(1,0)") %>% dplyr::pull(SE)
-      SE[[K + 1]] <- est[["est2"]] %>% dplyr::filter(.data$Estimand == "NIE(1,0)") %>% dplyr::pull(SE)
+    if(n_med == 1) {
+      PSE[[n_med]] <- est[["est2"]] %>% dplyr::filter(.data$Estimand == "NDE(1,0)") %>% dplyr::pull(.data$Mean)
+      PSE[[n_med + 1]] <- est[["est2"]] %>% dplyr::filter(.data$Estimand == "NIE(1,0)") %>% dplyr::pull(.data$Mean)
+      SE[[n_med]] <- est[["est2"]] %>% dplyr::filter(.data$Estimand == "NDE(1,0)") %>% dplyr::pull(SE)
+      SE[[n_med + 1]] <- est[["est2"]] %>% dplyr::filter(.data$Estimand == "NIE(1,0)") %>% dplyr::pull(SE)
       ATE <- est[["est2"]] %>% dplyr::filter(.data$Estimand == "ATE(1,0)")
       names(PSE) <- c("D->Y","D->M1->Y")
       names(SE) <- c("D->Y","D->M1->Y")
     }
 
-    else if(k == 1 & K >= 2) {
-      PSE[[K - k + 1]] <- mean(est$df2$NDE) - mean(prev_NDE)
-      PSE[[K + 1]] <- mean(est$df2$NIE)
-      SE[[K - k + 1]] <- sd(est$df2$NDE - prev_NDE) / sqrt(sum(!is.na(est$df2$NDE - prev_NDE)))
-      SE[[K + 1]] <- sd(est$df2$NIE) / sqrt(sum(!is.na(est$df2$NIE)))
+    else if(k == 1 & n_med >= 2) {
+      PSE[[n_med - k + 1]] <- mean(est$df2$NDE) - mean(prev_NDE)
+      PSE[[n_med + 1]] <- mean(est$df2$NIE)
+      SE[[n_med - k + 1]] <- sd(est$df2$NDE - prev_NDE) / sqrt(sum(!is.na(est$df2$NDE - prev_NDE)))
+      SE[[n_med + 1]] <- sd(est$df2$NIE) / sqrt(sum(!is.na(est$df2$NIE)))
       ATE <- est[["est2"]] %>% dplyr::filter(.data$Estimand == "ATE(1,0)")
-      names(PSE)[K + 1] <- "D->M1~>Y"
-      names(SE)[K + 1] <- "D->M1~>Y"
-      if(k + 1 == K){
-        names(PSE)[K - k + 1] <- paste0("D->M",k+1,"->Y")
-        names(SE)[K - k + 1] <- paste0("D->M",k+1,"->Y")
+      names(PSE)[n_med + 1] <- "D->M1~>Y"
+      names(SE)[n_med + 1] <- "D->M1~>Y"
+      if(k + 1 == n_med){
+        names(PSE)[n_med - k + 1] <- paste0("D->M",k+1,"->Y")
+        names(SE)[n_med - k + 1] <- paste0("D->M",k+1,"->Y")
       } else{
-        names(PSE)[K - k + 1] <- paste0("D->M",k+1,"~>Y")
-        names(SE)[K - k + 1] <- paste0("D->M",k+1,"~>Y")
+        names(PSE)[n_med - k + 1] <- paste0("D->M",k+1,"~>Y")
+        names(SE)[n_med - k + 1] <- paste0("D->M",k+1,"~>Y")
       }
     }
-    else if(k == K & K >= 2) {
-      PSE[[K - k + 1]] <- mean(est$df2$NDE)
-      SE[[K - k + 1]] <- sd(est$df2$NDE) / sqrt(sum(!is.na(est$df2$NDE)))
-      names(PSE)[K - k + 1] <- "D->Y"
-      names(SE)[K - k + 1] <- "D->Y"
+    else if(k == n_med & n_med >= 2) {
+      PSE[[n_med - k + 1]] <- mean(est$df2$NDE)
+      SE[[n_med - k + 1]] <- sd(est$df2$NDE) / sqrt(sum(!is.na(est$df2$NDE)))
+      names(PSE)[n_med - k + 1] <- "D->Y"
+      names(SE)[n_med - k + 1] <- "D->Y"
       prev_NDE <- est$df2$NDE
     }
     else {
-      PSE[[K - k + 1]] <- mean(est$df2$NDE) - mean(prev_NDE)
-      SE[[K - k + 1]] <- sd(est$df2$NDE - prev_NDE)/ sqrt(sum(!is.na(est$df2$NDE - prev_NDE)))
+      PSE[[n_med - k + 1]] <- mean(est$df2$NDE) - mean(prev_NDE)
+      SE[[n_med - k + 1]] <- sd(est$df2$NDE - prev_NDE)/ sqrt(sum(!is.na(est$df2$NDE - prev_NDE)))
       prev_NDE <- est$df2$NDE
-      if(k + 1 == K){
-        names(PSE)[[K - k + 1]] <- paste0("D->M",k+1,"->Y")
-        names(SE)[[K - k + 1]] <- paste0("D->M",k+1,"->Y")
+      if(k + 1 == n_med){
+        names(PSE)[[n_med - k + 1]] <- paste0("D->M",k+1,"->Y")
+        names(SE)[[n_med - k + 1]] <- paste0("D->M",k+1,"->Y")
       } else {
-        names(PSE)[[K - k + 1]] <- paste0("D->M",k+1,"~>Y")
-        names(SE)[[K - k + 1]] <- paste0("D->M",k+1,"~>Y")
+        names(PSE)[[n_med - k + 1]] <- paste0("D->M",k+1,"~>Y")
+        names(SE)[[n_med - k + 1]] <- paste0("D->M",k+1,"~>Y")
       }
     }
   }

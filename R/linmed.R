@@ -28,6 +28,7 @@ linmed_inner <- function(
     weights_name = NULL,
     minimal = FALSE
 ) {
+  M <- unlist(M)
   df <- data
 
   # error checks
@@ -52,7 +53,7 @@ linmed_inner <- function(
     miss_summary <- sapply(
       key_vars,
       FUN = function(v) c(
-        nmiss = sum(!is.na(df[[v]])),
+        n_obs = sum(!is.na(df[[v]])),
         miss = sum(is.na(df[[v]]))
       )
     ) |>
@@ -223,15 +224,14 @@ linmed_inner <- function(
 #' @param D A character scalar identifying the name of the exposure variable in
 #'   `data`. `D` is a character string, but the exposure variable it identifies
 #'   must be numeric.
-#' @param M A character vector (of one or more elements) identifying the names
-#'   of the mediator variables in `data`. If you are estimating univariate
+#' @param M A character vector or list (of one or more elements) identifying the
+#'   names of the mediator variables in `data`. If you are estimating univariate
 #'   natural effects (with a single mediator), `M` should be a character scalar
 #'   (a vector with only one element)---e.g., `M = "ever_unemp_age3539"`. If you
 #'   are estimating multivariate natural effects (with multiple mediators), `M`
-#'   should be a character vector identifying all of the mediators---e.g.,
-#'   `M = c("ever_unemp_age3539", "log_faminc_adj_age3539")`. Also note that `M`
-#'   is a character vector, but the mediator variable(s) it identifies must each
-#'   be numeric.
+#'   should be a list identifying all of the mediators---e.g.,
+#'   `M = list("ever_unemp_age3539", "log_faminc_adj_age3539")`. Also note that
+#'   `M` identifies mediator variable(s) that must each be numeric.
 #' @param Y A character scalar identifying the name of the outcome variable in
 #'   `data`. `Y` is a character string, but the outcome variable it identifies
 #'   must be numeric.
@@ -263,7 +263,7 @@ linmed_inner <- function(
 #'   nonparametric bootstrap and return two-sided confidence intervals and
 #'   p-values.
 #' @param boot_reps An integer scalar for the number of bootstrap replications
-#'   to perform.
+#'   to perform. In practice, we recommend a minimum of 1000 replications.
 #' @param boot_conf_level A numeric scalar for the confidence level of the
 #'   bootstrap interval.
 #' @param boot_seed An integer scalar specifying the random-number seed used in
@@ -298,7 +298,7 @@ linmed_inner <- function(
 #' \item{model_m}{A list with the model objects from each of the fitted mediator
 #'   models.}
 #' \item{model_y}{The model object from the fitted outcome model.}
-#' \item{miss_summary}{A data frame with counts of non-missing (`nmiss`) and
+#' \item{miss_summary}{A data frame with counts of non-missing (`n_obs`) and
 #'   missing (`miss`) observations for each of the variables specified for `D`,
 #'   `M`, `Y`, and `C`.}
 #'
@@ -421,7 +421,7 @@ linmed_inner <- function(
 #' linmed(
 #'   data = nlsy2,
 #'   D = "att22",
-#'   M = c("ever_unemp_age3539", "log_faminc_adj_age3539"),
+#'   M = list("ever_unemp_age3539", "log_faminc_adj_age3539"),
 #'   Y = "std_cesd_age40",
 #'   C = covariates
 #' )
@@ -430,7 +430,7 @@ linmed_inner <- function(
 #' linmed(
 #'   data = nlsy2,
 #'   D = "att22",
-#'   M = c("ever_unemp_age3539", "log_faminc_adj_age3539"),
+#'   M = list("ever_unemp_age3539", "log_faminc_adj_age3539"),
 #'   Y = "std_cesd_age40",
 #'   C = covariates,
 #'   m = c(1, 3.5)
@@ -478,7 +478,7 @@ linmed <- function(
     interaction_MC = FALSE,
     weights_name = NULL,
     boot = FALSE,
-    boot_reps = 1000,
+    boot_reps = 200,
     boot_conf_level = 0.95,
     boot_seed = NULL,
     boot_parallel = FALSE,
@@ -486,6 +486,7 @@ linmed <- function(
 ) {
   # load data
   data_outer <- data
+  M <- unlist(M)
 
   # create adjusted boot_parallel logical
   boot_parallel_rev <- ifelse(boot_cores>1, boot_parallel, FALSE)

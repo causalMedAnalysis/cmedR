@@ -16,7 +16,7 @@ ipwpath(
   censor_low = 0.01,
   censor_high = 0.99,
   boot = FALSE,
-  boot_reps = 1000,
+  boot_reps = 200,
   boot_conf_level = 0.95,
   boot_seed = NULL,
   boot_parallel = FALSE,
@@ -30,13 +30,12 @@ ipwpath(
 \code{data}. \code{D} is a character string, but the exposure variable it identifies
 must be numeric.}
 
-\item{M}{A character vector (of one or more elements) identifying the names
-of the mediator variables in \code{data}. The character vector MUST specify the
-mediators in causal order, starting from the first in the hypothesized
-causal sequence to the last. If you only specify a single mediator
-variable, then the function will simply return the natural effects. Also
-note that \code{M} is a character vector, but the mediator variable(s) it
-identifies must each be numeric.}
+\item{M}{A list of character vectors identifying the names of the mediator
+variables in \code{data}. The list MUST specify the mediators in causal order,
+starting from the first in the hypothesized causal sequence to the last.
+If you only specify a single mediator, then the function will simply return
+the natural effects. Also note that \code{M} is a list, but the mediator
+variable(s) it identifies must each be numeric.}
 
 \item{Y}{A character scalar identifying the name of the outcome variable in
 \code{data}. \code{Y} is a character string, but the outcome variable it identifies
@@ -71,7 +70,7 @@ nonparametric bootstrap and return two-sided confidence intervals and
 p-values.}
 
 \item{boot_reps}{An integer scalar for the number of bootstrap replications
-to perform.}
+to perform. In practice, we recommend a minimum of 1000 replications.}
 
 \item{boot_conf_level}{A numeric scalar for the confidence level of the
 bootstrap interval.}
@@ -232,7 +231,7 @@ nlsy$std_cesd_age40 <-
 ipwpath(
   data = nlsy,
   D = "att22",
-  M = c("ever_unemp_age3539", "log_faminc_adj_age3539"),
+  M = list("ever_unemp_age3539", "log_faminc_adj_age3539"),
   # ^ note that this order encodes our assumption that ever_unemp_age3539
   # causally precedes log_faminc_adj_age3539
   Y = "std_cesd_age40",
@@ -253,7 +252,7 @@ ipwpath(
 ipwpath(
   data = nlsy,
   D = "att22",
-  M = c("ever_unemp_age3539", "log_faminc_adj_age3539"),
+  M = list("ever_unemp_age3539", "log_faminc_adj_age3539"),
   Y = "std_cesd_age40",
   C = covariates,
   base_weights_name = "weight"
@@ -264,7 +263,7 @@ ipwpath(
   ipwpath(
     data = nlsy,
     D = "att22",
-    M = c("ever_unemp_age3539", "log_faminc_adj_age3539"),
+    M = list("ever_unemp_age3539", "log_faminc_adj_age3539"),
     Y = "std_cesd_age40",
     C = covariates,
     boot = TRUE,
@@ -278,7 +277,7 @@ ipwpath(
   ipwpath(
     data = nlsy,
     D = "att22",
-    M = c("ever_unemp_age3539", "log_faminc_adj_age3539"),
+    M = list("ever_unemp_age3539", "log_faminc_adj_age3539"),
     Y = "std_cesd_age40",
     C = covariates,
     boot = TRUE,
@@ -305,7 +304,7 @@ df_ex6$std_cesd_age40 <-
 ipwpath(
   data = df_ex6,
   D = "att22",
-  M = c("cesd_1992","ever_unemp_age3539","log_faminc_adj_age3539"),
+  M = list("cesd_1992","ever_unemp_age3539","log_faminc_adj_age3539"),
   # order encodes: cesd_1992 -> ever_unemp_age3539 -> log_faminc_adj_age3539
   Y = "std_cesd_age40",
   C = covariates

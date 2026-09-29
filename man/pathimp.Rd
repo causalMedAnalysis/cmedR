@@ -11,13 +11,14 @@ pathimp(
   Y_models,
   D_model = NULL,
   data,
-  boot_reps,
+  boot = FALSE,
+  boot_reps = 200,
   boot_conf_level = 0.95,
   boot_seed = NULL,
-  boot_parallel = "no",
+  boot_parallel = FALSE,
   round_decimal = 3,
-  boot_cores = max(c(parallel::detectCores() - 2, 1)),
-  out_ipw
+  boot_cores = max(c(parallel::detectCores() - 2L, 1L), na.rm = TRUE),
+  out_ipw = FALSE
 )
 }
 \arguments{
@@ -53,7 +54,12 @@ imputation-based weighting estimator.}
 
 \item{data}{A data frame.}
 
-\item{boot_reps}{An integer scalar for the number of bootstrap replications to perform.}
+\item{boot}{A logical scalar indicating whether the function will perform the
+nonparametric bootstrap and return two-sided confidence intervals and
+p-values. Defaults to FALSE, in which case only point estimates are returned.}
+
+\item{boot_reps}{An integer scalar for the number of bootstrap replications to
+perform. Only consulted when \code{boot = TRUE}.}
 
 \item{boot_conf_level}{A numeric scalar for the confidence level of the
 bootstrap interval.}
@@ -61,25 +67,29 @@ bootstrap interval.}
 \item{boot_seed}{An integer scalar specifying the random-number seed used in
 bootstrap resampling. Defaults to \code{NULL}, indicating that no seed is set.}
 
-\item{boot_parallel}{Type of parallel operation to be used. Follows the same
-specification as the \code{\link[boot]{boot}} package. Defaults to \code{"no"}.}
+\item{boot_parallel}{A logical scalar indicating whether the bootstrap will
+be performed with a parallelized loop, with the goal of reducing runtime.
+Defaults to FALSE. Parallelization uses the \code{"snow"} backend of
+\code{\link[boot]{boot}} (via the \code{paths} package), which works across all
+operating systems.}
 
 \item{round_decimal}{The number of decimal digits to which results are
 rounded and displayed.}
 
 \item{boot_cores}{An integer scalar specifying the number of CPU cores on
-which the parallelized bootstrap will run. This argument only has an effect
-if you requested a parallelized bootstrap (i.e., only if \code{boot_parallel} is
-not \code{no}). By default, \code{boot_cores} is equal to the greater of two values:
-(a) one and (b) the number of available CPU cores minus two. If \code{boot_cores}
-equals one, then the bootstrap loop will not be parallelized (regardless of
-the setting of \code{boot_parallel}).}
+which the parallelized bootstrap will run, passed as \code{ncpus} to the \code{paths}
+bootstrap. This argument only has an effect if you requested a parallelized
+bootstrap (i.e., only if \code{boot} is TRUE and \code{boot_parallel} is TRUE). By
+default, \code{boot_cores} is equal to the greater of two values: (a) one and (b)
+the number of available CPU cores minus two. If \code{boot_cores} equals one, then
+the bootstrap loop will not be parallelized (regardless of the setting of
+\code{boot_parallel}).}
 
 \item{out_ipw}{A logical value indicating whether to report the
 imputation-based weighting estimator. If set to \code{TRUE}, the user must
 specify the propensity score model to calculate the Imputation-based Weighting
 Estimator . If \code{FALSE}, only the Pure Imputation Estimator will be
-returned.}
+returned. Defaults to \code{FALSE}.}
 }
 \value{
 When \code{out_ipw = TRUE}, \code{pathimp()} returns a data frame with the
@@ -175,10 +185,10 @@ fit_ex1 <- pathimp(
   M = list("ever_unemp_age3539","log_faminc_adj_age3539"),
   Y_models = glm_ymodels,
   data = df,
+  boot = TRUE,
   boot_reps = 250,
   boot_conf_level = 0.95,
   boot_seed = 2138,
-  boot_parallel = "multicore", # Parallel the bootstrapping
   out_ipw = FALSE
 )
 print(fit_ex1)
@@ -198,10 +208,10 @@ fit_ex2 <- pathimp(
   Y_models = glm_ymodels,
   D_model = glm_ps,
   data = df,
+  boot = TRUE,
   boot_reps = 250,
   boot_conf_level = 0.95,
   boot_seed = 2138,
-  boot_parallel = "multicore", # Parallel the bootstrapping
   out_ipw = TRUE
 )
 print(fit_ex2)
@@ -250,10 +260,11 @@ fit_ex3 <- pathimp(
   M = list("cesd_1992","ever_unemp_age3539","log_faminc_adj_age3539"),
   Y_models = glm_ymodels3,
   data = df3,
+  boot = TRUE,
   boot_reps = 250,
   boot_conf_level = 0.95,
   boot_seed = 2138,
-  boot_parallel = "multicore", # Parallel the bootstrapping
+  boot_parallel = TRUE, # enable parallel bootstrap if boot = TRUE
   out_ipw = FALSE
 )
 print(fit_ex3)
@@ -289,10 +300,10 @@ fit_ex4 <- pathimp(
   M = list("ever_unemp_age3539","log_faminc_adj_age3539"),
   Y_models = glm_ymodels_intM,
   data = df,
+  boot = TRUE,
   boot_reps = 250,
   boot_conf_level = 0.95,
   boot_seed = 2138,
-  boot_parallel = "multicore", # Parallel the bootstrapping
   out_ipw = FALSE
 )
 print(fit_ex4)
@@ -329,10 +340,10 @@ fit_ex5 <- pathimp(
   M = list("ever_unemp_age3539","log_faminc_adj_age3539"),
   Y_models = glm_ymodels_intMC,
   data = df,
+  boot = TRUE,
   boot_reps = 250,
   boot_conf_level = 0.95,
   boot_seed = 2138,
-  boot_parallel = "multicore", # Parallel the bootstrapping
   out_ipw = FALSE
 )
 print(fit_ex5)
@@ -366,10 +377,10 @@ fit_ex6 <- pathimp(
   M = list("ever_unemp_age3539"),
   Y_models = glm_ymodels1,
   data = df1,
+  boot = TRUE,
   boot_reps = 250,
   boot_conf_level = 0.95,
   boot_seed = 2138,
-  boot_parallel = "multicore", # Parallel the bootstrapping
   out_ipw = FALSE
 )
 print(fit_ex6)

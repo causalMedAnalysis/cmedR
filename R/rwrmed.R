@@ -53,9 +53,9 @@ rwrmed <- function(treatment, pre_cov, zmodels, y_form, m_form,
   if(!is.character(pre_cov)) stop("pre_cov must be a character string vector.")
 
   # check zmodels
-  if(missing(zmodels)) zmodels <- list(NULL)
+  if(missing(zmodels)) zmodels <- list()
   if(!is.list(zmodels)) stop("zmodels must be a list.")
-  if(!all(unlist(lapply(zmodels, inherits, "lm")))){
+  if(length(zmodels) > 0 && !all(unlist(lapply(zmodels, inherits, "lm")))){
     stop("Each element of zmodels must be an object of class `glm` or `lm`")
   }
 
@@ -87,7 +87,7 @@ rwrmed <- function(treatment, pre_cov, zmodels, y_form, m_form,
   # check missing data
   badRow <- is.na(a) | is.infinite(a) | is.na(m) | is.infinite(m) | is.na(y) | is.infinite(y)
   badRow <- badRow | apply(x, 1, function(v) any(is.na(v) | is.infinite(v)))
-  badRow <- badRow | apply(z, 1, function(v) any(is.na(v) | is.infinite(v)))
+  if (ncol(z) > 0) badRow <- badRow | apply(z, 1, function(v) any(is.na(v) | is.infinite(v)))
   if(any(badRow)) stop("data contain observations with missing variables")
 
   # copy data to date_ed

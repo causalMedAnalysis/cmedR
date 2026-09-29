@@ -18,7 +18,7 @@ linmed(
   interaction_MC = FALSE,
   weights_name = NULL,
   boot = FALSE,
-  boot_reps = 1000,
+  boot_reps = 200,
   boot_conf_level = 0.95,
   boot_seed = NULL,
   boot_parallel = FALSE,
@@ -32,15 +32,14 @@ linmed(
 \code{data}. \code{D} is a character string, but the exposure variable it identifies
 must be numeric.}
 
-\item{M}{A character vector (of one or more elements) identifying the names
-of the mediator variables in \code{data}. If you are estimating univariate
+\item{M}{A character vector or list (of one or more elements) identifying the
+names of the mediator variables in \code{data}. If you are estimating univariate
 natural effects (with a single mediator), \code{M} should be a character scalar
 (a vector with only one element)---e.g., \code{M = "ever_unemp_age3539"}. If you
 are estimating multivariate natural effects (with multiple mediators), \code{M}
-should be a character vector identifying all of the mediators---e.g.,
-\code{M = c("ever_unemp_age3539", "log_faminc_adj_age3539")}. Also note that \code{M}
-is a character vector, but the mediator variable(s) it identifies must each
-be numeric.}
+should be a list identifying all of the mediators---e.g.,
+\code{M = list("ever_unemp_age3539", "log_faminc_adj_age3539")}. Also note that
+\code{M} identifies mediator variable(s) that must each be numeric.}
 
 \item{Y}{A character scalar identifying the name of the outcome variable in
 \code{data}. \code{Y} is a character string, but the outcome variable it identifies
@@ -82,7 +81,7 @@ nonparametric bootstrap and return two-sided confidence intervals and
 p-values.}
 
 \item{boot_reps}{An integer scalar for the number of bootstrap replications
-to perform.}
+to perform. In practice, we recommend a minimum of 1000 replications.}
 
 \item{boot_conf_level}{A numeric scalar for the confidence level of the
 bootstrap interval.}
@@ -122,7 +121,7 @@ CDE(\code{d},\code{dstar},\code{m}).}
 \item{model_m}{A list with the model objects from each of the fitted mediator
 models.}
 \item{model_y}{The model object from the fitted outcome model.}
-\item{miss_summary}{A data frame with counts of non-missing (\code{nmiss}) and
+\item{miss_summary}{A data frame with counts of non-missing (\code{n_obs}) and
 missing (\code{miss}) observations for each of the variables specified for \code{D},
 \code{M}, \code{Y}, and \code{C}.}
 
@@ -263,7 +262,7 @@ nlsy2$std_cesd_age40 <-
 linmed(
   data = nlsy2,
   D = "att22",
-  M = c("ever_unemp_age3539", "log_faminc_adj_age3539"),
+  M = list("ever_unemp_age3539", "log_faminc_adj_age3539"),
   Y = "std_cesd_age40",
   C = covariates
 )
@@ -272,7 +271,7 @@ linmed(
 linmed(
   data = nlsy2,
   D = "att22",
-  M = c("ever_unemp_age3539", "log_faminc_adj_age3539"),
+  M = list("ever_unemp_age3539", "log_faminc_adj_age3539"),
   Y = "std_cesd_age40",
   C = covariates,
   m = c(1, 3.5)

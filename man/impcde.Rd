@@ -14,7 +14,7 @@ impcde(
   m = 0,
   weights_name = NULL,
   boot = FALSE,
-  boot_reps = 1000,
+  boot_reps = 200,
   boot_conf_level = 0.95,
   boot_seed = NULL,
   boot_parallel = FALSE,
@@ -48,7 +48,7 @@ nonparametric bootstrap and return a two-sided confidence interval and
 p-value.}
 
 \item{boot_reps}{An integer scalar for the number of bootstrap replications
-to perform.}
+to perform. In practice, we recommend a minimum of 1000 replications.}
 
 \item{boot_conf_level}{A numeric scalar for the confidence level of the
 bootstrap interval.}

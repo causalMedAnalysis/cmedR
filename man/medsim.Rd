@@ -6,15 +6,16 @@
 \usage{
 medsim(
   data,
-  num_sim = 2000,
+  num_sim = 1000,
   cat_list = c("0", "1"),
   treatment,
   intv_med = NULL,
   model_spec,
   weights = NULL,
+  paths = FALSE,
   seed = NULL,
   boot = FALSE,
-  boot_reps = 100,
+  boot_reps = 200,
   boot_cores = NULL,
   boot_conf_level = 0.95
 )
@@ -37,11 +38,20 @@ includes the \code{func}, \code{formula}, and \code{args}.}
 that contains the weights to be used in weighted regression models and for
 calculating weighted means. Default is \code{NULL}.}
 
-\item{seed}{Seed for reproducibility. Default is \code{NULL}.}
+\item{paths}{Logical indicating whether to include path-specific effects in the
+returned output. Default is \code{FALSE}. When \code{FALSE}, only natural effects
+(or multivariate natural effects) are returned. When \code{TRUE}, path-specific
+effects decomposing the indirect effect are also returned. This argument only
+affects what is returned to the user; all path-specific effects are computed
+internally regardless of this setting.}
+
+\item{seed}{Integer seed for reproducibility. Controls all random draws,
+including the Monte Carlo simulation used for point estimation and, when
+\code{boot = TRUE}, the bootstrap resampling. Default is \code{NULL}.}
 
 \item{boot}{Logical indicating whether to perform bootstrapping. Default is \code{FALSE}.}
 
-\item{boot_reps}{Number of bootstrap replications. Default is 100.}
+\item{boot_reps}{Number of bootstrap replications. In practice, we recommend a minimum of 1000 replications.}
 
 \item{boot_cores}{Number of CPU cores for parallel bootstrap. Defaults to available cores minus 2.}
 
@@ -151,8 +161,9 @@ specified models, re-simulates the mediators and outcome, and recomputes the
 estimates of interest. Confidence intervals are constructed using the percentile
 method at the level specified by \code{boot_conf_level}. Parallel computation is
 supported through the \code{doParallel}, \code{doRNG}, and \code{foreach} packages, with the
-number of cores specified in \code{boot_cores}. The random seed can be set through
-the \code{seed} argument for reproducibility.
+number of cores specified in \code{boot_cores}. The \code{seed} argument sets the
+random seed for all random draws, including both the Monte Carlo simulation
+used for point estimation and, when \code{boot = TRUE}, the bootstrap resampling.
 
 Returns:
 If \code{boot = FALSE}, the function returns a list containing point estimates for
@@ -226,12 +237,15 @@ spec_nat_single <- list(
 # two mediators spec
 # M1: binary, M2: continuous, Y: continuous
 spec_nat <- list(
-  list(func = "glm", formula = as.formula(paste(M1, "~", paste(c(D, covariates),
-   collapse = " + "))), args = list(family = binomial())),
-  list(func = "lm",  formula = as.formula(paste(M2, "~", paste(c(M1, D, covariates),
-   collapse = " + ")))),
-  list(func = "lm",  formula = as.formula(paste(Y,  "~", paste(c(M2, M1, D, covariates),
-   collapse = " + "))))
+  list(func = "glm",
+       formula = as.formula(paste(M1, "~", paste(c(D, covariates), collapse = " + "))),
+       args = list(family = binomial())),
+  list(func = "lm",
+       formula = as.formula(paste(M2, "~",
+         paste(c(M1, D, covariates), collapse = " + ")))),
+  list(func = "lm",
+       formula = as.formula(paste(Y, "~",
+         paste(c(M2, M1, D, covariates), collapse = " + "))))
 )
 
 # ------------------------------------------- #
@@ -239,7 +253,7 @@ spec_nat <- list(
 # ------------------------------------------- #
 out_nat <- medsim(
   data = df,
-  num_sim = 1000,
+  num_sim = 100,    # use 1000+ in practice
   treatment = D,
   intv_med = NULL,               # no mediator intervention
   model_spec = spec_nat_single,
@@ -253,7 +267,7 @@ print(out_nat)
 # Randomize the second mediator (income).
 out_ide <- medsim(
   data = df,
-  num_sim = 1000,
+  num_sim = 100,    # use 1000+ in practice
   treatment = D,
   intv_med = M2,                 # interventional mediator
   model_spec = spec_nat,
@@ -267,7 +281,7 @@ print(out_ide)
 # Fix income at a specific level (e.g., log(50,000)).
 out_cde <- medsim(
   data = df,
-  num_sim = 1000,
+  num_sim = 100,    # use 1000+ in practice
   treatment = D,
   intv_med = paste0(M2, "=log(5e4)"),  # controlled value for mediator
   model_spec = spec_nat,
@@ -280,13 +294,31 @@ print(out_cde)
 # ------------------------------------------------ #
 # With two mediators in causal order (M1 -> M2), the output includes
 # path-specific components and their decomposition of the total effect.
+# Use paths = TRUE to include path-specific effects in the output.
 out_pse <- medsim(
   data = df,
-  num_sim = 1000,
+  num_sim = 100,    # use 1000+ in practice
   treatment = D,
   intv_med = NULL,               # natural propagation (needed for PSEs)
   model_spec = spec_nat,
+  paths = TRUE,                  # include path-specific effects
   seed = 60637
 )
 print(out_pse)
+
+# ------------------------------------------------ #
+# Example 5: Multivariate natural effects only     #
+# ------------------------------------------------ #
+# With paths = FALSE (the default), only multivariate natural direct
+# and indirect effects are returned, without path-specific decomposition.
+out_mnat <- medsim(
+  data = df,
+  num_sim = 100,    # use 1000+ in practice
+  treatment = D,
+  intv_med = NULL,
+  model_spec = spec_nat,
+  paths = FALSE,                 # default: omit path-specific effects
+  seed = 60637
+)
+print(out_mnat)
 }

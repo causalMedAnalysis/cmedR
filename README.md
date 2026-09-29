@@ -1,7 +1,7 @@
 # cmedR: An R Package for Analyzing Causal Mediation
 
 ## About cmedR 
-`cmedR` is a R package for implementing the methods described in [Causal Mediation Analysis](https://www.cambridge.org/us/universitypress/subjects/social-science-research-methods/quantitative-methods/causal-mediation-analysis) (Wodtke and Zhou Forthcoming, Cambridge University Press). This package is live and fully functional but also currently under active development. Functionality may change, and there may be bugs. Please report any issues to causalmed (at) gmail (dot) com.
+`cmedR` is a R package for implementing the methods described in Wodtke and Zhou (Forthcoming, Cambridge University Press) "Causal Mediation Analysis." This package is currently under active development. Functionality may change without notice, and there may be bugs or incomplete features. Use with caution and at your own risk.
 
 ## Table of Contents
 - [linmed – mediation analysis using linear models](#linmed-mediation-analysis-using-linear-models)
@@ -33,15 +33,15 @@ linmed(
   M,
   Y,
   C = NULL,
-  d,
-  dstar,
+  d = 1,
+  dstar = 0,
   m = rep(0, length(M)),
   interaction_DM = FALSE,
   interaction_DC = FALSE,
   interaction_MC = FALSE,
   weights_name = NULL,
   boot = FALSE,
-  boot_reps = 1000,
+  boot_reps = 200,
   boot_conf_level = 0.95,
   boot_seed = NULL,
   boot_parallel = FALSE,
@@ -65,7 +65,7 @@ linmed(
 | `interaction_MC` | Whether to include mediator × covariate interactions in the outcome model. |
 | `weights_name` | (Optional) Name of the weights variable, if using sampling weights. |
 | `boot` | Whether to perform nonparametric bootstrap. |
-| `boot_reps` | Number of bootstrap replications (default: 1000). |
+| `boot_reps` | Number of bootstrap replications (default: `200`). |
 | `boot_conf_level` | Confidence level for bootstrap intervals (default: 0.95). |
 | `boot_seed` | Random seed for reproducibility. |
 | `boot_parallel` | Whether to parallelize bootstrap (requires `doParallel`, `doRNG`, `foreach`). |
@@ -189,24 +189,25 @@ linmed(
 
 ## `medsim`: mediation analysis using a simulation approach
 
-The `medsim` function estimates natural direct and indirect effects, interventional direct and indirect effects, controlled direct effects, and path-specific effects using a simulation approach. It supports a wide variety of models (including the entire family of GLMs, multinomial logit, and ordered logit), and includes optional support for bootstrapping with parallel processing.
+The `medsim` function estimates natural direct and indirect effects, interventional direct and indirect effects, controlled direct effects, and path-specific effects using a simulation approach. It supports a wide variety of models (including the entire family of GLMs, multinomial logit, and ordered logistic), and includes optional support for bootstrapping with parallel processing.
 
 ### Function
 
 ```r
 medsim(
   data,
-  num_sim = 2000,
-  cat_list,
+  num_sim = 1000,
+  cat_list = c("0", "1"),
   treatment,
-  intv_med,
+  intv_med = NULL,
   model_spec,
-  seed = NULL
   weights = NULL,
+  paths = FALSE,
+  seed = NULL,
   boot = FALSE,
-  boot_reps = 100,
-  boot_conf_level = 0.95,
-  boot_cores = max(c(parallel::detectCores() - 2, 1))
+  boot_reps = 200,
+  boot_cores = NULL,
+  boot_conf_level = 0.95
 )
 ```
 
@@ -215,22 +216,23 @@ medsim(
 | Argument      | Description |
 |---------------|-------------|
 | `data`        | A data frame containing all variables referenced in the model specifications. |
-| `num_sim`     | Integer. Number of Monte Carlo simulation draws (default: `2000`). |
-| `cat_list`    | A vector of treatment levels to compare (default: `c(0, 1)`). |
+| `num_sim`     | Integer. Number of Monte Carlo simulation draws (default: `1000`). |
+| `cat_list`    | A vector of treatment levels to compare (default: `c("0", "1")`). |
 | `treatment`   | Name of the treatment variable (character). |
-| `intv_med`    | A list specifying the intervention(s) on the mediators. Set to `NULL` if interventional or controlled direct effects are not of interest. |
+| `intv_med`    | A list specifying the intervention(s) on the mediators. Set to `NULL` if interventional or controlled direct effects are not of interest (default: `NULL`). |
 | `model_spec`  | A list of lists defining the models for the mediators and the outcome supplied according to their assumed causal ordering. Each model must include: <br> • `func`: model-fitting function (e.g., `"glm"`, `"polr"`) <br> • `formula`: model formula <br> • `args`: (optional) list of additional arguments to pass to the function. |
 | `weights`     | (Optional) Name of the variable containing weights to use in model fitting. If `NULL`, no weights are applied. |
+| `paths`       | Logical. If `TRUE`, includes path-specific effects in the returned output. Default is `FALSE`. |
+| `seed`        | Integer or `NULL`. Seed for reproducibility. Controls all random draws, including Monte Carlo simulation and, when `boot = TRUE`, bootstrap resampling (default: `NULL`). |
 | `boot`        | Logical. If `TRUE`, performs nonparametric bootstrap to obtain confidence intervals and p-values (default: `FALSE`). Requires `doParallel`, `doRNG`, and `foreach`. |
-| `boot_reps` | Number of bootstrap replications (default: 100). |
-| `boot_conf_level` | Confidence level for bootstrap intervals (default: 0.95). |
-| `boot_cores` | Number of CPU cores to use when parallelizing. Defaults to available cores minus 2. |
-| `seed`        | Integer or `NULL`. Seed for reproducibility. |
+| `boot_reps`   | Number of bootstrap replications (default: `200`). |
+| `boot_cores`  | Number of CPU cores to use when parallelizing. Defaults to `NULL` (auto-detected). |
+| `boot_conf_level` | Confidence level for bootstrap intervals (default: `0.95`). |
 
 
 ### Specifying the `model_spec` argument
 
-The `model_spec` argument requires a list of lists detailing the model specifications for each mediator and the outcome. The models for each mediator should be listed in their assumed causal order, with the outcome model last, as the function automatically uses the last model specified as the outcome model and derives the causal order of the mediators from the order of the models supplied to this argument. At least one mediator model must be included, along with an outcome model.
+The `model_spec` argument requires a list of lists detailing the model specifications for each mediator and the outcome. The the models for each mediator should be listed in their assumed causal order, with the outcome model last, as the function automatically uses the last model specified as the outcome model and derives the causal order of the mediators from the order of the models supplied to this argument. At least one mediator model must be included, along with an outcome model.
 
 The `model_spec` argument accomodates many different types of models through its `func` and `args` options:
 
@@ -239,7 +241,7 @@ The `model_spec` argument accomodates many different types of models through its
 - **`lm`**: for normal linear regression, where no `args` are required.
 - **`glm`**: for generalized linear models, where the `args` can include `family` to specify different distributions and link functions. Current options include `"binomial"` (for logit or probit regressions) and `"poisson"` (for count data).
 
-Here is an example of how to specify the `model_spec` argument with two causally ordered mediators modeled using ordinal logit and poisson models, respectively, and an outcome modeled using normal linear regression:
+Here is an example of how to specify the the `model_spec` argument with two causally ordered mediators modeled using ordinal logit and poisson models, respectively, and an outcome modeled using normal linear regression:
 
 ```r
 # Specify models for M1 (ordinal logit), M2 (poisson) and Y (normal linear)
@@ -274,7 +276,7 @@ See below for additional examples.
   Fitted models for each mediator and the outcome
 
 - If `boot = TRUE`:
-  Fitted models for each mediator and the outcome.
+  Fitted models for each mediator and the outcome
   A data frame containing:
   - Point estimates for the mediation effects of interest  
   - bootstrap confidence intervals  
@@ -398,15 +400,15 @@ ipwmed(
   D,
   M,
   Y,
-  formula1_string,
-  formula2_string,
+  D_C_model,
+  D_CM_model,
   base_weights_name = NULL,
   stabilize = TRUE,
   censor = TRUE,
   censor_low = 0.01,
   censor_high = 0.99,
   boot = FALSE,
-  boot_reps = 1000,
+  boot_reps = 200,
   boot_conf_level = 0.95,
   boot_seed = NULL,
   boot_parallel = FALSE,
@@ -422,14 +424,14 @@ ipwmed(
 | `D` | Name of the exposure variable (character scalar; must identify a binary variable). |
 | `M` | Name(s) of mediator variable(s); a character vector (length 1 or more) identifying numeric variables. |
 | `Y` | Name of the outcome variable (character scalar; must identify a numeric variable). |
-| `formula1_string` | A formula (as a string) for estimating the probability of exposure given baseline covariates using a logit model, i.e., _f(D \| C)_. |
-| `formula2_string` | A formula (as a string) for estimating the probability of exposure given baseline covariates and mediators using a logit model, i.e., _s(D \| C, M)_. |
+| `D_C_model` | A formula object for estimating the probability of exposure given baseline covariates using a logit model, i.e., _f(D \| C)_. |
+| `D_CM_model` | A formula object for estimating the probability of exposure given baseline covariates and mediators using a logit model, i.e., _s(D \| C, M)_. |
 | `base_weights_name` | (Optional) Name of a variable containing sampling or base weights. |
 | `stabilize` | Logical. If `TRUE`, uses stabilized weights (default: `TRUE`). |
 | `censor` | Logical. If `TRUE`, applies weight censoring (default: `TRUE`). |
 | `censor_low`, `censor_high` | Quantile cutoffs for censoring weights (default: 0.01 and 0.99, respectively). |
 | `boot` | Logical. If `TRUE`, performs a bootstrap to return confidence intervals and p-values (default: `FALSE`). |
-| `boot_reps` | Number of bootstrap replications (default: `1000`). |
+| `boot_reps` | Number of bootstrap replications (default: `200`). |
 | `boot_conf_level` | Confidence level for bootstrap intervals (default: `0.95`). |
 | `boot_seed` | Integer seed for reproducibility. |
 | `boot_parallel` | Logical. If `TRUE`, parallelizes the bootstrap (requires `doParallel`, `doRNG`, and `foreach`). |
@@ -441,7 +443,7 @@ ipwmed(
   A **list** with the following elements:
   - `ATE`, `NDE`, `NIE`: Estimated effects
   - `weights1`, `weights2`, `weights3`: the inverse probability weights
-  - `model_d1`, `model_d2`: Fitted logit models from `formula1_string` and `formula2_string`
+  - `model_d1`, `model_d2`: Fitted logit models from `D_C_model` and `D_CM_model`
 
 - If `boot = TRUE`, the return includes the above, plus:
   - `ci_ATE`, `ci_NDE`, `ci_NIE`: Bootstrap confidence intervals
@@ -458,8 +460,8 @@ ipw_nat <- ipwmed(
   D = "att22",
   M = "ever_unemp_age3539",
   Y = "std_cesd_age40",
-  formula1_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3",
-  formula2_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3+ever_unemp_age3539"
+  D_C_model  = att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3,
+  D_CM_model = att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + ever_unemp_age3539
 )
 ```
 
@@ -471,8 +473,8 @@ ipw_mnat <- ipwmed(
   D = "att22",
   M = c("ever_unemp_age3539", "log_faminc_adj_age3539"),
   Y = "std_cesd_age40",
-  formula1_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3",
-  formula2_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3+ever_unemp_age3539+log_faminc_adj_age3539"
+  D_C_model  = att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3,
+  D_CM_model = att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + ever_unemp_age3539 + log_faminc_adj_age3539
 )
 ```
 
@@ -484,8 +486,8 @@ ipw_nat_boot <- ipwmed(
   D = "att22",
   M = "ever_unemp_age3539",
   Y = "std_cesd_age40",
-  formula1_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3",
-  formula2_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3+ever_unemp_age3539",
+  D_C_model  = att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3,
+  D_CM_model = att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + ever_unemp_age3539,
   boot = TRUE,
   boot_reps = 2000,
   boot_seed = 1234
@@ -500,8 +502,8 @@ ipw_nat_bootpar <- ipwmed(
   D = "att22",
   M = "ever_unemp_age3539",
   Y = "std_cesd_age40",
-  formula1_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3",
-  formula2_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3+ever_unemp_age3539",
+  D_C_model  = att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3,
+  D_CM_model = att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + ever_unemp_age3539,
   boot = TRUE,
   boot_reps = 2000,
   boot_seed = 1234,
@@ -522,12 +524,12 @@ impcde(
   model_y,
   D,
   M,
-  d,
-  dstar,
-  m,
+  d = 1,
+  dstar = 0,
+  m = 0,
   weights_name = NULL,
   boot = FALSE,
-  boot_reps = 1000,
+  boot_reps = 200,
   boot_conf_level = 0.95,
   boot_seed = NULL,
   boot_parallel = FALSE,
@@ -544,10 +546,10 @@ impcde(
 | `D` | Name of the exposure variable (character scalar). |
 | `M` | Name of the mediator variable (character scalar). |
 | `d`, `dstar` | Numeric values representing two levels of the exposure. The exposure contrast of interest is `d - dstar`. |
-| `m` | Numeric value at which to fix the mediator for CDE estimation. |
+| `m` | (Optional) Numeric value at which to fix the mediator for CDE estimation (default: `0`). |
 | `weights_name` | (Optional) Name of a variable containing sampling weights. |
 | `boot` | Logical. If `TRUE`, use the nonparametric bootstrap to obtain confidence intervals and p-values. |
-| `boot_reps` | Number of bootstrap replications (default: `1000`). |
+| `boot_reps` | Number of bootstrap replications (default: `200`). |
 | `boot_conf_level` | Confidence level for bootstrap interval (default: `0.95`). |
 | `boot_seed` | Integer seed for reproducibility. |
 | `boot_parallel` | Logical. If `TRUE`, parallelizes the bootstrap (requires `doParallel`, `doRNG`, and `foreach`). |
@@ -635,16 +637,16 @@ ipwcde(
   D,
   M,
   Y,
-  m,
-  formula_D_string,
-  formula_M_string,
+  m = 0,
+  D_C_model,
+  M_CD_model,
   base_weights_name = NULL,
   stabilize = TRUE,
   censor = TRUE,
   censor_low = 0.01,
   censor_high = 0.99,
   boot = FALSE,
-  boot_reps = 1000,
+  boot_reps = 200,
   boot_conf_level = 0.95,
   boot_seed = NULL,
   boot_parallel = FALSE,
@@ -661,14 +663,14 @@ ipwcde(
 | `M` | Name of the single mediator variable (character). Must be numeric and binary (0/1). |
 | `Y` | Name of the numeric outcome variable (character). |
 | `m` | Numeric value at which to fix the mediator for CDE estimation. |
-| `formula_D_string` | A string representing the formula for a logit model for the exposure, e.g., `"att22 ~ female + black + paredu"` (used to estimate _f(D \| C)_). |
-| `formula_M_string` | A string representing the formula for a logit model for the mediator, e.g., `"M ~ D + C"` (used to estimate _g(M \| C, D)_). |
+| `D_C_model` | A formula object for a logit model for the exposure given baseline covariates, e.g., `att22 ~ female + black + paredu` (used to estimate _f(D \| C)_). |
+| `M_CD_model` | A formula object for a logit model for the mediator given the exposure and baseline covariates, e.g., `ever_unemp_age3539 ~ att22 + female + black + paredu` (used to estimate _g(M \| C, D)_). |
 | `base_weights_name` | (Optional) Name of the base weights variable. |
 | `stabilize` | Logical. If `TRUE`, stabilizes the IPW weights (default: `TRUE`). |
 | `censor` | Logical. If `TRUE`, applies weight censoring  (default: `TRUE`). |
 | `censor_low`, `censor_high` | Quantiles for censoring the weights (default: 0.01 and 0.99). |
 | `boot` | Logical. If `TRUE`, performs a bootstrap to compute CIs and p-values. |
-| `boot_reps` | Number of bootstrap replications (default: `1000`). |
+| `boot_reps` | Number of bootstrap replications (default: `200`). |
 | `boot_conf_level` | Confidence level for bootstrap interval (default: `0.95`). |
 | `boot_seed` | Integer seed for reproducibility. |
 | `boot_parallel` | Logical. If `TRUE`, runs bootstrap in parallel (requires `doParallel`, `doRNG`, `foreach`). |
@@ -680,8 +682,8 @@ ipwcde(
   A list with:
   - `CDE`: Estimated controlled direct effect
   - `weights`: Final IPWs
-  - `model_d`: Fitted logit model for the exposure (`formula_D_string`)
-  - `model_m`: Fitted logit model for the mediator (`formula_M_string`)
+  - `model_d`: Fitted logit model for the exposure (`D_C_model`)
+  - `model_m`: Fitted logit model for the mediator (`M_CD_model`)
 
 - If `boot = TRUE`, the list also includes:
   - `ci_CDE`: Bootstrap confidence interval
@@ -693,14 +695,17 @@ ipwcde(
 #### Estimate the CDE
 
 ```r
+D_C_model  <- att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3
+M_CD_model <- ever_unemp_age3539 ~ att22 + female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3
+
 cde_est <- ipwcde(
   data = nlsy,
   D = "att22",
   M = "ever_unemp_age3539",
   Y = "std_cesd_age40",
   m = 1,
-  formula_D_string = "att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3",
-  formula_M_string = "ever_unemp_age3539 ~ att22 + female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3"
+  D_C_model = D_C_model,
+  M_CD_model = M_CD_model
 )
 ```
 
@@ -713,8 +718,8 @@ cde_est_boot <- ipwcde(
   M = "ever_unemp_age3539",
   Y = "std_cesd_age40",
   m = 1,
-  formula_D_string = "att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3",
-  formula_M_string = "ever_unemp_age3539 ~ att22 + female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3",
+  D_C_model = D_C_model,
+  M_CD_model = M_CD_model,
   boot = TRUE,
   boot_reps = 2000,
   boot_seed = 1234
@@ -730,8 +735,8 @@ cde_est_bootpar <- ipwcde(
   M = "ever_unemp_age3539",
   Y = "std_cesd_age40",
   m = 1,
-  formula_D_string = "att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3",
-  formula_M_string = "ever_unemp_age3539 ~ att22 + female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3",
+  D_C_model = D_C_model,
+  M_CD_model = M_CD_model,
   boot = TRUE,
   boot_reps = 2000,
   boot_seed = 1234,
@@ -751,16 +756,16 @@ rwrlite(
   data,
   D,
   C = NULL,
-  d,
-  dstar,
-  m,
+  d = 1,
+  dstar = 0,
+  m = 0,
   Y_formula,
   M_formula,
-  M_family,
+  M_family = gaussian,
   L_formula_list,
   weights = NULL,
   boot = FALSE,
-  boot_reps = 1000,
+  boot_reps = 200,
   boot_conf_level = 0.95,
   boot_seed = NULL,
   boot_parallel = FALSE,
@@ -879,14 +884,14 @@ linpath(
   M,
   Y,
   C = NULL,
-  d,
-  dstar,
+  d = 1,
+  dstar = 0,
   interaction_DM = FALSE,
   interaction_DC = FALSE,
   interaction_MC = FALSE,
   weights_name = NULL,
   boot = FALSE,
-  boot_reps = 1000,
+  boot_reps = 200,
   boot_conf_level = 0.95,
   boot_seed = NULL,
   boot_parallel = FALSE,
@@ -909,7 +914,7 @@ linpath(
 | `interaction_MC` | Logical. If `TRUE`, includes mediator × covariate interactions in the outcome model. |
 | `weights_name`   | Optional name of sampling weights variable in `data`. |
 | `boot` | Logical. If `TRUE`, use the nonparametric bootstrap to obtain confidence intervals and p-values. |
-| `boot_reps` | Number of bootstrap replications (default: `1000`). |
+| `boot_reps` | Number of bootstrap replications (default: `200`). |
 | `boot_conf_level` | Confidence level for bootstrap interval (default: `0.95`). |
 | `boot_seed` | Integer seed for reproducibility. |
 | `boot_parallel` | Logical. If `TRUE`, parallelizes the bootstrap (requires `doParallel`, `doRNG`, and `foreach`). |
@@ -1024,7 +1029,7 @@ ipwpath(
   censor_low = 0.01,
   censor_high = 0.99,
   boot = FALSE,
-  boot_reps = 1000,
+  boot_reps = 200,
   boot_conf_level = 0.95,
   boot_seed = NULL,
   boot_parallel = FALSE,
@@ -1046,7 +1051,7 @@ ipwpath(
 | `censor` | Logical. If `TRUE`, applies weight censoring (default: `TRUE`). |
 | `censor_low`, `censor_high` | Quantiles for censoring the weights (default: 0.01 and 0.99). |
 | `boot` | Logical. If `TRUE`, use the nonparametric bootstrap to obtain confidence intervals and p-values. |
-| `boot_reps` | Number of bootstrap replications (default: `1000`). |
+| `boot_reps` | Number of bootstrap replications (default: `200`). |
 | `boot_conf_level` | Confidence level for bootstrap interval (default: `0.95`). |
 | `boot_seed` | Integer seed for reproducibility. |
 | `boot_parallel` | Logical. If `TRUE`, parallelizes the bootstrap (requires `doParallel`, `doRNG`, and `foreach`). |
@@ -1155,19 +1160,20 @@ It computes the total effect and the path-specific effects (PSEs) of a binary tr
 
 ```r
 pathimp(
-  data,
   D,
   Y,
   M,
   Y_models,
   D_model = NULL,
-  out_ipw = FALSE,
-  boot_reps,
+  data,
+  boot = FALSE,
+  boot_reps = 200,
   boot_conf_level = 0.95,
   boot_seed = NULL,
-  boot_parallel = "no",
-  boot_cores = max(c(parallel::detectCores() - 2, 1)),
+  boot_parallel = FALSE,
   round_decimal = 3,
+  boot_cores = max(c(parallel::detectCores() - 2, 1)),
+  out_ipw = FALSE
 )
 ```
 
@@ -1175,19 +1181,20 @@ pathimp(
 
 | Argument         | Description |
 |------------------|-------------|
-| `data`           | Data frame |
 | `D`              | Name of binary treatment variable (numeric) |
 | `Y`              | Name of outcome variable (numeric) |
 | `M`              | List of mediator variables, ordered causally (all numeric) |
 | `Y_models`       | List of outcome models |
 | `D_model`        | Optional treatment model (`glm`, `gbm`, `ps`, `pbart`) |
-| `out_ipw`        | Logical: compute imputation-based weighting estimator? |
-| `boot_reps`      | Number of bootstrap samples |
-| `boot_conf_level`| Confidence level for bootstrap intervals |
-| `boot_seed`      | Random seed for reproducibility |
-| `boot_parallel`  | Parallel backend (`"no"`, `"multicore"`) |
+| `data`           | Data frame |
+| `boot`           | Logical. If `TRUE`, performs the nonparametric bootstrap (default: `FALSE`). |
+| `boot_reps`      | Number of bootstrap samples (default: `200`). |
+| `boot_conf_level`| Confidence level for bootstrap intervals (default: `0.95`). |
+| `boot_seed`      | Random seed for reproducibility. |
+| `boot_parallel`  | Logical. If `TRUE`, parallelizes the bootstrap (default: `FALSE`). |
+| `round_decimal`  | Digits to round estimates (default: `3`). |
 | `boot_cores`     | Number of CPU cores for parallel bootstrap. Defaults to available cores minus 2. |
-| `round_decimal`  | Digits to round estimates |
+| `out_ipw`        | Logical: compute imputation-based weighting estimator (default: `FALSE`)? |
 
 ### Output
 
@@ -1311,18 +1318,18 @@ mrmed(
     M,
     C,
     D_C_model,
-    D_MC_model = NULL,
-    Y_DC_model = NULL,
-    Y_DMC_model,
-    M_DC_model = NULL,
+    D_CM_model = NULL,
+    Y_CD_model = NULL,
+    Y_CDM_model,
+    M_CD_model = NULL,
     data,
     d = 1,
     dstar = 0,
     censor = TRUE,
     censor_low = 0.01,
     censor_high = 0.99,
-    boot = TRUE,
-    boot_reps = 2,
+    boot = FALSE,
+    boot_reps = 200,
     boot_conf_level = 0.95,
     boot_seed = NULL,
     boot_parallel = FALSE,
@@ -1340,17 +1347,18 @@ mrmed(
 | `M`              | A character vector (or list) of mediator variables (all numeric) |
 | `C`              | Optional character vector of baseline covariates. |
 | `D_C_model`      | Formula for logit model of P(D\C) (required) |
-| `D_MC_model`     | Formula for logit model of P(D\C,M) (required for type 2 estimator) |
-| `Y_DMC_model`    | Formula for linear model of E(Y\C,M,D) (required) |
-| `Y_DC_model`     | Formula for linear model of E(E(Y\C,D=d,M)\C,D) (required for type 2 estimator) |
-| `M_DC_model`     | Formula for logit model of P(M\C,D) (required for type 1 estimator) |
+| `D_CM_model`     | Formula for logit model of P(D\C,M) (required for type 2 estimator) |
+| `Y_CDM_model`    | Formula for linear model of E(Y\C,M,D) (required) |
+| `Y_CD_model`     | Formula for linear model of E(E(Y\C,D=d,M)\C,D) (required for type 2 estimator) |
+| `M_CD_model`     | Formula for logit model of P(M\C,D) (required for type 1 estimator) |
 | `d`, `dstar`     | Numeric values specifying the exposure contrast of interest (`d - dstar`) |
 | `censor`         | Logical indicating whether IPW weights should be censored (default: `TRUE`) |
 | `censor_low`, `censor_high` | Quantiles for censoring IPW weights |
-| `boot_reps`      | Number of bootstrap samples |
-| `boot_conf_level`| Confidence level for bootstrap intervals |
-| `boot_seed`      | Random seed for reproducibility |
-| `boot_parallel`  | Parallel backend (`"no"`, `"multicore"`) |
+| `boot`           | Logical. If `TRUE`, performs the nonparametric bootstrap to obtain confidence intervals and p-values (default: `FALSE`). |
+| `boot_reps`      | Number of bootstrap samples (default: `200`). |
+| `boot_conf_level`| Confidence level for bootstrap intervals (default: `0.95`). |
+| `boot_seed`      | Random seed for reproducibility. |
+| `boot_parallel`  | Logical. If `TRUE`, parallelizes the bootstrap (requires `doParallel`, `doRNG`, `foreach`). |
 | `boot_cores`     | Number of CPU cores for parallel bootstrap. Defaults to available cores minus 2. |
 
 ### Returns
@@ -1405,11 +1413,11 @@ df <- nlsy[complete.cases(nlsy[, key_vars]), ] %>%
 ```r
 # D Models
 D_C_model <- as.formula(paste(D, " ~ ", paste(C, collapse= "+")))
-D_MC_model <- as.formula(paste(D, " ~ ", paste(c(C, M[1]), collapse= "+")))
+D_CM_model <- as.formula(paste(D, " ~ ", paste(c(C, M[1]), collapse= "+")))
 
 # Y Models
-Y_DC_model <- as.formula(paste(Y, " ~ ", paste(c(C, D), collapse= "+")))
-Y_DMC_model <- as.formula(paste(Y, " ~ ", paste(c(C, D, M[1]), collapse= "+")))
+Y_CD_model <- as.formula(paste(Y, " ~ ", paste(c(C, D), collapse= "+")))
+Y_CDM_model <- as.formula(paste(Y, " ~ ", paste(c(C, D, M[1]), collapse= "+")))
 ```
 
 #### Implement Type 2 Estimator with a Single Mediator
@@ -1421,11 +1429,11 @@ mrmed_rst1 <- mrmed(
   M=M[[1]],
   C=C,
   D_C_model=D_C_model,
-  D_MC_model=D_MC_model,
-  Y_DC_model=Y_DC_model,
-  Y_DMC_model=Y_DMC_model,
+  D_CM_model=D_CM_model,
+  Y_CD_model=Y_CD_model,
+  Y_CDM_model=Y_CDM_model,
   data = df,
-  boot = TRUE, boot_reps = 2000
+  boot = TRUE, boot_reps = 2000,
   boot_parallel = FALSE
 )
 ```
@@ -1444,8 +1452,8 @@ mrpath(
   M,
   C,
   data,
-  d,
-  dstar,
+  d = 1,
+  dstar = 0,
   censor = TRUE,
   censor_low = 0.01,
   censor_high = 0.99,
@@ -1470,7 +1478,7 @@ mrpath(
 | `Y`                         | Name of the numeric outcome variable (character).                                               |
 | `M`                         | A list of character vectors identifying mediators in hypothesized causal order.                             |
 | `C`                         | Optional character vector of baseline covariates.                                               |
-| `d`, `dstar`                | Numeric values representing treatment and control levels. Re-coded as 1 and 0 if not already.   |
+| `d`, `dstar`                | Numeric values representing treatment and control levels (defaults: `1` and `0`). Re-coded as 1 and 0 if not already.   |
 | `interaction_DM`            | Logical. If `TRUE`, include exposure-mediator interactions in the outcome model.                |
 | `interaction_DC`            | Logical. If `TRUE`, include exposure-covariate interactions in the outcome model.               |
 | `interaction_MC`            | Logical. If `TRUE`, include mediator-covariate interactions in the outcome model.               |
@@ -1513,8 +1521,8 @@ If `boot = FALSE`, `mrpath` returns:
 
 * `ATE`: Estimated average total effect.
 * `PSE`: Named list of path-specific effects (length = `length(M) + 1`).
-* `model_lst_D`: List of fitted exposure models.
-* `model_lst_Y`: List of sequential outcome models, with mediators added recursively.
+* `models_lst_D`: List of fitted exposure models.
+* `models_lst_Y`: List of sequential outcome models, with mediators added recursively.
 
 If `boot = TRUE`, additional outputs include:
 
@@ -1621,16 +1629,16 @@ dmlmed(
   M,
   C,
   D_C_model,
-  D_MC_model = NULL,
-  Y_DC_model = NULL,
-  Y_DMC_model,
-  M_DC_model = NULL,
+  D_CM_model = NULL,
+  Y_CD_model = NULL,
+  Y_CDM_model,
+  M_CD_model = NULL,
   data,
-  d,
-  dstar,
+  d = 1,
+  dstar = 0,
   K = 5,
   V = 5L,
-  seed,
+  seed = NULL,
   SL.library = c("SL.mean", "SL.glmnet"),
   stratifyCV = TRUE,
   minimal = TRUE,
@@ -1649,10 +1657,10 @@ dmlmed(
 | `M`                         | Name(s) of mediator variable(s). For multiple mediators, supply as a list of names.          |
 | `C`                         | Optional character vector of baseline covariates.                                            |
 | `D_C_model`                 | Formula for the exposure model: exposure \~ covariates. Required for both Type 1 and Type 2. |
-| `D_MC_model`                | (Optional) Formula for exposure \~ mediator(s) + covariates. Required for Type 2.            |
-| `Y_DMC_model`               | Formula for outcome \~ exposure + mediator(s) + covariates. Required for both types.         |
-| `Y_DC_model`                | (Optional) Formula for predicted outcome model. Required for Type 2.                         |
-| `M_DC_model`                | (Optional) Formula for mediator \~ exposure + covariates. Required for Type 1.               |
+| `D_CM_model`                | (Optional) Formula for exposure \~ mediator(s) + covariates. Required for Type 2.            |
+| `Y_CDM_model`               | Formula for outcome \~ exposure + mediator(s) + covariates. Required for both types.         |
+| `Y_CD_model`                | (Optional) Formula for predicted outcome model. Required for Type 2.                         |
+| `M_CD_model`                | (Optional) Formula for mediator \~ exposure + covariates. Required for Type 1.               |
 | `data`                      | A data frame containing all variables.                                                       |
 | `d`, `dstar`                | Numeric values specifying the treatment and control conditions (d-dstar defines contrast).   |
 | `K`                         | Number of cross-fitting folds (default: 5).                                                  |
@@ -1684,8 +1692,8 @@ If `minimal` is set to `FALSE`, the function will return the following additiona
 
 ### Estimation Types
 
-* **Type 1 Estimator**: Requires `D_C_model`, `Y_DMC_model`, and `M_DC_model`
-* **Type 2 Estimator**: Requires `D_C_model`, `D_MC_model`, `Y_DMC_model`, and `Y_DC_model`
+* **Type 1 Estimator**: Requires `D_C_model`, `Y_CDM_model`, and `M_CD_model`
+* **Type 2 Estimator**: Requires `D_C_model`, `D_CM_model`, `Y_CDM_model`, and `Y_CD_model`
 
 ### Examples
 
@@ -1698,8 +1706,8 @@ dmlmed(
   M = "ever_unemp_age3539",
   C = c("female", "black", "hispan", "paredu", "parprof", "parinc_prank", "famsize", "afqt3"),
   D_C_model = "att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3",
-  Y_DMC_model = "std_cesd_age40 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22 + ever_unemp_age3539",
-  M_DC_model = "ever_unemp_age3539 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22",
+  Y_CDM_model = "std_cesd_age40 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22 + ever_unemp_age3539",
+  M_CD_model = "ever_unemp_age3539 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22",
   data = df,
   d = 1,
   dstar = 0,
@@ -1719,9 +1727,9 @@ dmlmed(
   M = "ever_unemp_age3539",
   C = c("female", "black", "hispan", "paredu", "parprof", "parinc_prank", "famsize", "afqt3"),
   D_C_model = "att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3",
-  D_MC_model = "att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + ever_unemp_age3539",
-  Y_DMC_model = "std_cesd_age40 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22 + ever_unemp_age3539",
-  Y_DC_model = "std_cesd_age40 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22",
+  D_CM_model = "att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + ever_unemp_age3539",
+  Y_CDM_model = "std_cesd_age40 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22 + ever_unemp_age3539",
+  Y_CD_model = "std_cesd_age40 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22",
   data = df,
   d = 1,
   dstar = 0,
@@ -1762,17 +1770,17 @@ dmlpath(
   M,
   C,
   data,
-  d,
-  dstar,
+  d = 1,
+  dstar = 0,
   censor = TRUE,
   censor_low = 0.01,
   censor_high = 0.99,
   interaction_DM = FALSE,
   interaction_DC = FALSE,
   interaction_MC = FALSE,
-  num_folds = 5,
+  K = 5,
   V = 5L,
-  seed,
+  seed = NULL,
   SL.library = c("SL.mean", "SL.glmnet"),
   stratifyCV = TRUE
 )
@@ -1787,15 +1795,15 @@ dmlpath(
 | `M`                         | A character list identifying the names of the mediator variables.                          |   
 | `C`                         | Character vector of covariate names to include in all models.                              |
 | `data`                      | A data frame containing all variables.                                                     |
-| `d`, `dstar`                | Numeric values specifying the treatment and control levels.                                |
+| `d`, `dstar`                | Numeric values specifying the treatment and control levels (defaults: `1` and `0`).        |
 | `interaction_DM`            | Whether to include exposure × mediator interactions in the outcome model.                  |
 | `interaction_DC`            | Whether to include exposure × covariate interactions in both mediator and outcome models.  |
 | `interaction_MC`            | Whether to include mediator × covariate interactions in the outcome model.                 |
 | `censor`                    | Whether to censor the inverse probability weights.                                         |
 | `censor_low`, `censor_high` | Quantile thresholds for censoring IPW weights (defaults: 0.01, 0.99).                      |
-| `num_folds`                 | Number of folds for cross-fitting (default: 5).                                            |
+| `K`                         | Number of folds for cross-fitting (default: 5).                                            |
 | `V`                         | Number of Super Learner CV folds (default: 5L).                                            |
-| `seed`                      | Random seed for reproducibility.                                                           |
+| `seed`                      | Random seed for reproducibility (default: `NULL`).                                         |
 | `SL.library`                | Learners to be used in the Super Learner ensemble.                                         |
 | `stratifyCV`                | Whether to use stratified CV folds for treatment models.                                   |
 
@@ -1855,7 +1863,7 @@ results <- dmlpath(
   interaction_DM = FALSE,
   interaction_DC = FALSE,
   interaction_MC = FALSE,
-  num_folds = 5,
+  K = 5,
   V = 5L,
   seed = 02138,
   SL.library = c("SL.mean", "SL.glmnet", "SL.ranger"),

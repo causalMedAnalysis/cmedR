@@ -20,8 +20,8 @@ ipwcde_inner <- function(
   M,
   Y,
   m = 0,
-  formula_D_string,
-  formula_M_string,
+  D_C_model,
+  M_CD_model,
   base_weights_name = NULL,
   stabilize = TRUE,
   censor = TRUE,
@@ -50,15 +50,20 @@ ipwcde_inner <- function(
   # rescale base weights
   base_weights_rsc <- base_weights / mean(base_weights)
 
+  # ensure formula objects are evaluated in this environment so local
+  # variables (e.g. base_weights_rsc) are visible to glm()
+  environment(D_C_model)  <- environment()
+  environment(M_CD_model) <- environment()
+
   # fit specified models
   d_model <- glm(
-    as.formula(formula_D_string),
+    D_C_model,
     data = df,
     family = quasibinomial(link = "logit"),
     weights = base_weights_rsc
   )
   m_model <- glm(
-    as.formula(formula_M_string),
+    M_CD_model,
     data = df,
     family = quasibinomial(link = "logit"),
     weights = base_weights_rsc
@@ -166,13 +171,12 @@ ipwcde_inner <- function(
 #'   must be numeric.
 #' @param m A numeric scalar denoting a specific value to set the mediator `M`
 #'   to, for estimating the CDE.
-#' @param formula_D_string A character scalar for the formula to be fitted for a
-#'   GLM of the exposure given baseline covariates (denoted in the book as
-#'   f(D|C)). E.g., `formula_D_string = "att22~female+black+paredu"`.
-#' @param formula_M_string A character scalar for the formula to be fitted for a
-#'   GLM of the mediator given baseline covariates and the exposure (denoted in
-#'   the book as g(M|C,D)). E.g.,
-#'   `formula_M_string = "ever_unemp_age3539~female+black+paredu+att22"`.
+#' @param D_C_model A formula object for the GLM of the exposure given baseline
+#'   covariates (denoted in the book as f(D|C)). E.g.,
+#'   `D_C_model = att22 ~ female + black + paredu`.
+#' @param M_CD_model A formula object for the GLM of the mediator given the
+#'   exposure and baseline covariates (denoted in the book as g(M|C,D)). E.g.,
+#'   `M_CD_model = ever_unemp_age3539 ~ att22 + female + black + paredu`.
 #' @param base_weights_name A character scalar identifying the name of the base
 #'   weights variable in `data`, if applicable (e.g., if you have---and want to
 #'   use---sampling weights).
@@ -192,7 +196,7 @@ ipwcde_inner <- function(
 #'   nonparametric bootstrap and return a two-sided confidence interval and
 #'   p-value.
 #' @param boot_reps An integer scalar for the number of bootstrap replications
-#'   to perform.
+#'   to perform. In practice, we recommend a minimum of 1000 replications.
 #' @param boot_conf_level A numeric scalar for the confidence level of the
 #'   bootstrap interval.
 #' @param boot_seed An integer scalar specifying the random-number seed used in
@@ -220,10 +224,10 @@ ipwcde_inner <- function(
 #' \item{weights}{A numeric vector with the final inverse probability weights.}
 #' \item{model_d}{The model object from the fitted exposure model (of the
 #'   exposure given baseline covariates, denoted in the book as f(D|C)),
-#'   corresponding to `formula_D_string`.}
+#'   corresponding to `D_C_model`.}
 #' \item{model_m}{The model object from the fitted mediator model (of the
-#'   mediator given baseline covariates and the exposure, denoted in the book
-#'   as g(M|C,D)), corresponding to `formula_M_string`.}
+#'   mediator given the exposure and baseline covariates, denoted in the book
+#'   as g(M|C,D)), corresponding to `M_CD_model`.}
 #'
 #' If you request the bootstrap (by setting the `boot` argument to TRUE), then
 #' the function returns all of the elements listed above, as well as the
@@ -262,6 +266,12 @@ ipwcde_inner <- function(
 #' nlsy1$std_cesd_age40 <-
 #'   (nlsy1$cesd_age40 - mean(nlsy1$cesd_age40)) /
 #'   sd(nlsy1$cesd_age40)
+#' ## Specify model formulas
+#' D_C_model <- att22 ~ female + black + hispan + paredu + parprof +
+#'   parinc_prank + famsize + afqt3
+#' M_CD_model <- ever_unemp_age3539 ~ att22 + female + black + hispan +
+#'   paredu + parprof + parinc_prank + famsize + afqt3
+#'
 #' ## Estimate CDE for m=1
 #' out1 <- ipwcde(
 #'   data = nlsy1,
@@ -269,10 +279,8 @@ ipwcde_inner <- function(
 #'   M = "ever_unemp_age3539",
 #'   Y = "std_cesd_age40",
 #'   m = 1,
-#'   formula_D_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+
-#'   famsize+afqt3",
-#'   formula_M_string = "ever_unemp_age3539~att22+female+black+hispan+paredu+
-#'   parprof+parinc_prank+famsize+afqt3"
+#'   D_C_model = D_C_model,
+#'   M_CD_model = M_CD_model
 #' )
 #' head(out1,1)
 #'
@@ -283,10 +291,8 @@ ipwcde_inner <- function(
 #'   M = "ever_unemp_age3539",
 #'   Y = "std_cesd_age40",
 #'   m = 1,
-#'   formula_D_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+
-#'   famsize+afqt3",
-#'   formula_M_string = "ever_unemp_age3539~att22+female+black+hispan+paredu+
-#'   parprof+parinc_prank+famsize+afqt3",
+#'   D_C_model = D_C_model,
+#'   M_CD_model = M_CD_model,
 #'   base_weights_name = "weight"
 #' )
 #' head(out2,1)
@@ -299,10 +305,8 @@ ipwcde_inner <- function(
 #'     M = "ever_unemp_age3539",
 #'     Y = "std_cesd_age40",
 #'     m = 1,
-#'     formula_D_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+
-#'     famsize+afqt3",
-#'     formula_M_string = "ever_unemp_age3539~att22+female+black+hispan+paredu+
-#'     parprof+parinc_prank+famsize+afqt3",
+#'     D_C_model = D_C_model,
+#'     M_CD_model = M_CD_model,
 #'     boot = TRUE,
 #'     boot_reps = 2000,
 #'     boot_seed = 1234
@@ -322,10 +326,8 @@ ipwcde_inner <- function(
 #'     M = "ever_unemp_age3539",
 #'     Y = "std_cesd_age40",
 #'     m = 1,
-#'     formula_D_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+
-#'     famsize+afqt3",
-#'     formula_M_string = "ever_unemp_age3539~att22+female+black+hispan+paredu+
-#'     parprof+parinc_prank+famsize+afqt3",
+#'     D_C_model = D_C_model,
+#'     M_CD_model = M_CD_model,
 #'     boot = TRUE,
 #'     boot_reps = 2000,
 #'     boot_seed = 1234,
@@ -343,15 +345,15 @@ ipwcde <- function(
   M,
   Y,
   m = 0,
-  formula_D_string,
-  formula_M_string,
+  D_C_model,
+  M_CD_model,
   base_weights_name = NULL,
   stabilize = TRUE,
   censor = TRUE,
   censor_low = 0.01,
   censor_high = 0.99,
   boot = FALSE,
-  boot_reps = 1000,
+  boot_reps = 200,
   boot_conf_level = 0.95,
   boot_seed = NULL,
   boot_parallel = FALSE,
@@ -413,11 +415,11 @@ ipwcde <- function(
   if (! m %in% c(0,1)) {
     stop(paste(strwrap("Error: Because only binary mediator variables are supported, the selected mediator value for the CDE (in the m argument) must be either 0 or 1."), collapse = "\n"))
   }
-  if (grepl(pattern = M, x = formula_D_string, fixed = TRUE)) {
-    warning(paste(strwrap("Warning: Check whether the mediator variable is among the predictors in the formula_D_string. The mediator should not be among the predictors in the formula_D_string."), collapse = "\n"))
+  if (grepl(pattern = M, x = paste(deparse(D_C_model), collapse = " "), fixed = TRUE)) {
+    warning(paste(strwrap("Warning: Check whether the mediator variable is among the predictors in D_C_model. The mediator should not be among the predictors in D_C_model."), collapse = "\n"))
   }
-  if (!grepl(pattern = D, x = formula_M_string, fixed = TRUE)) {
-    warning(paste(strwrap("Warning: Check whether the exposure variable is among the predictors in the formula_M_string. The exposure should be among the predictors in the formula_M_string."), collapse = "\n"))
+  if (!grepl(pattern = D, x = paste(deparse(M_CD_model), collapse = " "), fixed = TRUE)) {
+    warning(paste(strwrap("Warning: Check whether the exposure variable is among the predictors in M_CD_model. The exposure should be among the predictors in M_CD_model."), collapse = "\n"))
   }
   # ^ Note that the grepl-based warning checks are fairly simple, based solely
   # on whether the string is detected. For now, we are not using more complex
@@ -431,8 +433,8 @@ ipwcde <- function(
     M = M,
     Y = Y,
     m = m,
-    formula_D_string = formula_D_string,
-    formula_M_string = formula_M_string,
+    D_C_model = D_C_model,
+    M_CD_model = M_CD_model,
     base_weights_name = base_weights_name,
     stabilize = stabilize,
     censor = censor,
@@ -455,8 +457,8 @@ ipwcde <- function(
         M = M,
         Y = Y,
         m = m,
-        formula_D_string = formula_D_string,
-        formula_M_string = formula_M_string,
+        D_C_model = D_C_model,
+        M_CD_model = M_CD_model,
         base_weights_name = base_weights_name,
         stabilize = stabilize,
         censor = censor,

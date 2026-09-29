@@ -10,15 +10,15 @@ ipwcde(
   M,
   Y,
   m = 0,
-  formula_D_string,
-  formula_M_string,
+  D_C_model,
+  M_CD_model,
   base_weights_name = NULL,
   stabilize = TRUE,
   censor = TRUE,
   censor_low = 0.01,
   censor_high = 0.99,
   boot = FALSE,
-  boot_reps = 1000,
+  boot_reps = 200,
   boot_conf_level = 0.95,
   boot_seed = NULL,
   boot_parallel = FALSE,
@@ -44,14 +44,13 @@ must be numeric.}
 \item{m}{A numeric scalar denoting a specific value to set the mediator \code{M}
 to, for estimating the CDE.}
 
-\item{formula_D_string}{A character scalar for the formula to be fitted for a
-GLM of the exposure given baseline covariates (denoted in the book as
-f(D|C)). E.g., \code{formula_D_string = "att22~female+black+paredu"}.}
+\item{D_C_model}{A formula object for the GLM of the exposure given baseline
+covariates (denoted in the book as f(D|C)). E.g.,
+\code{D_C_model = att22 ~ female + black + paredu}.}
 
-\item{formula_M_string}{A character scalar for the formula to be fitted for a
-GLM of the mediator given baseline covariates and the exposure (denoted in
-the book as g(M|C,D)). E.g.,
-\code{formula_M_string = "ever_unemp_age3539~female+black+paredu+att22"}.}
+\item{M_CD_model}{A formula object for the GLM of the mediator given the
+exposure and baseline covariates (denoted in the book as g(M|C,D)). E.g.,
+\code{M_CD_model = ever_unemp_age3539 ~ att22 + female + black + paredu}.}
 
 \item{base_weights_name}{A character scalar identifying the name of the base
 weights variable in \code{data}, if applicable (e.g., if you have---and want to
@@ -77,7 +76,7 @@ nonparametric bootstrap and return a two-sided confidence interval and
 p-value.}
 
 \item{boot_reps}{An integer scalar for the number of bootstrap replications
-to perform.}
+to perform. In practice, we recommend a minimum of 1000 replications.}
 
 \item{boot_conf_level}{A numeric scalar for the confidence level of the
 bootstrap interval.}
@@ -110,10 +109,10 @@ the exposure contrast 1 - 0: CDE(1,0,\code{m}).}
 \item{weights}{A numeric vector with the final inverse probability weights.}
 \item{model_d}{The model object from the fitted exposure model (of the
 exposure given baseline covariates, denoted in the book as f(D|C)),
-corresponding to \code{formula_D_string}.}
+corresponding to \code{D_C_model}.}
 \item{model_m}{The model object from the fitted mediator model (of the
-mediator given baseline covariates and the exposure, denoted in the book
-as g(M|C,D)), corresponding to \code{formula_M_string}.}
+mediator given the exposure and baseline covariates, denoted in the book
+as g(M|C,D)), corresponding to \code{M_CD_model}.}
 
 If you request the bootstrap (by setting the \code{boot} argument to TRUE), then
 the function returns all of the elements listed above, as well as the
@@ -165,6 +164,12 @@ nlsy1 <- nlsy1[complete.cases(nlsy1[,key_variables1]),]
 nlsy1$std_cesd_age40 <-
   (nlsy1$cesd_age40 - mean(nlsy1$cesd_age40)) /
   sd(nlsy1$cesd_age40)
+## Specify model formulas
+D_C_model <- att22 ~ female + black + hispan + paredu + parprof +
+  parinc_prank + famsize + afqt3
+M_CD_model <- ever_unemp_age3539 ~ att22 + female + black + hispan +
+  paredu + parprof + parinc_prank + famsize + afqt3
+
 ## Estimate CDE for m=1
 out1 <- ipwcde(
   data = nlsy1,
@@ -172,10 +177,8 @@ out1 <- ipwcde(
   M = "ever_unemp_age3539",
   Y = "std_cesd_age40",
   m = 1,
-  formula_D_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+
-  famsize+afqt3",
-  formula_M_string = "ever_unemp_age3539~att22+female+black+hispan+paredu+
-  parprof+parinc_prank+famsize+afqt3"
+  D_C_model = D_C_model,
+  M_CD_model = M_CD_model
 )
 head(out1,1)
 
@@ -186,10 +189,8 @@ out2 <- ipwcde(
   M = "ever_unemp_age3539",
   Y = "std_cesd_age40",
   m = 1,
-  formula_D_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+
-  famsize+afqt3",
-  formula_M_string = "ever_unemp_age3539~att22+female+black+hispan+paredu+
-  parprof+parinc_prank+famsize+afqt3",
+  D_C_model = D_C_model,
+  M_CD_model = M_CD_model,
   base_weights_name = "weight"
 )
 head(out2,1)
@@ -202,10 +203,8 @@ head(out2,1)
     M = "ever_unemp_age3539",
     Y = "std_cesd_age40",
     m = 1,
-    formula_D_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+
-    famsize+afqt3",
-    formula_M_string = "ever_unemp_age3539~att22+female+black+hispan+paredu+
-    parprof+parinc_prank+famsize+afqt3",
+    D_C_model = D_C_model,
+    M_CD_model = M_CD_model,
     boot = TRUE,
     boot_reps = 2000,
     boot_seed = 1234
@@ -225,10 +224,8 @@ head(out2,1)
     M = "ever_unemp_age3539",
     Y = "std_cesd_age40",
     m = 1,
-    formula_D_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+
-    famsize+afqt3",
-    formula_M_string = "ever_unemp_age3539~att22+female+black+hispan+paredu+
-    parprof+parinc_prank+famsize+afqt3",
+    D_C_model = D_C_model,
+    M_CD_model = M_CD_model,
     boot = TRUE,
     boot_reps = 2000,
     boot_seed = 1234,

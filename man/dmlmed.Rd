@@ -10,16 +10,16 @@ dmlmed(
   M,
   C,
   D_C_model,
-  D_MC_model = NULL,
-  Y_DC_model = NULL,
-  Y_DMC_model,
-  M_DC_model = NULL,
+  D_CM_model = NULL,
+  Y_CD_model = NULL,
+  Y_CDM_model,
+  M_CD_model = NULL,
   data,
-  d,
-  dstar,
+  d = 1,
+  dstar = 0,
   K = 5,
   V = 5L,
-  seed,
+  seed = NULL,
   SL.library = c("SL.mean", "SL.glmnet"),
   stratifyCV = TRUE,
   minimal = TRUE,
@@ -37,8 +37,8 @@ must be numeric and binary, with two distinct values.}
 \code{data}. \code{Y} is a character string, but the outcome variable it identifies
 must be numeric.}
 
-\item{M}{A character vector (of one or more elements) identifying the names
-of the mediator variables in \code{data}. If you are estimating univariate
+\item{M}{A character vector or list (of one or more elements) identifying the
+names of the mediator variables in \code{data}. If you are estimating univariate
 natural effects (with a single mediator), \code{M} should be a character scalar
 (i.e., a vector with only one element)—e.g., \code{M = "ever_unemp_age3539"}. If you
 are estimating multivariate natural effects (with multiple mediators), \code{M}
@@ -52,38 +52,38 @@ include, leave \code{C} as its default null argument.}
 
 \item{D_C_model}{A character scalar specifying the formula to be fitted for a
 model of the exposure given baseline covariates (denoted in the book as
-π(D|C)). This specification is required for Type 1 and Type 2 estimators. E.g.,
+\eqn{\pi(D|C)}). This specification is required for Type 1 and Type 2 estimators. E.g.,
 \code{D_C_model = "att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3"}.}
 
-\item{D_MC_model}{A character scalar specifying the formula to be fitted for a
+\item{D_CM_model}{A character scalar specifying the formula to be fitted for a
 model of the exposure given baseline covariates and the mediator(s)
-(denoted in the book as π(D|C,M)). This specification is required only for
+(denoted in the book as \eqn{\pi(D|C,M)}). This specification is required only for
 Type 2 estimation. When this input is not NULL, the model will compute the Type 2
 estimator by default. E.g.,
-\code{D_MC_model = "att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + ever_unemp_age3539"}.}
+\code{D_CM_model = "att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + ever_unemp_age3539"}.}
 
-\item{Y_DC_model}{A character scalar specifying the formula to be fitted for a
-model of the conditional mean of μ(Y|C,M,D) given baseline covariates
-and the treatment variable (denoted in the book as ν_D(C)). This specification
+\item{Y_CD_model}{A character scalar specifying the formula to be fitted for a
+model of the conditional mean of \eqn{\mu(Y|C,M,D)} given baseline covariates
+and the treatment variable (denoted in the book as \eqn{\nu_D(C)}). This specification
 allows the user to specify interactions between D and C. In implementation,
 the outcome variable is substituted with the estimated conditional mean from
-the \code{Y_DMC_model}. This specification is required only for Type 2 estimation.
+the \code{Y_CDM_model}. This specification is required only for Type 2 estimation.
 When this input is not NULL, the model will compute the Type 2 estimator by
 default. E.g.,
-\code{Y_DC_model = "std_cesd_age40 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22"}.}
+\code{Y_CD_model = "std_cesd_age40 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22"}.}
 
-\item{Y_DMC_model}{A character scalar specifying the formula to be fitted for a
+\item{Y_CDM_model}{A character scalar specifying the formula to be fitted for a
 model of the outcome given baseline covariates, mediator(s), and the
-treatment variable (denoted in the book as μ(Y|C,M,D)). This specification is
+treatment variable (denoted in the book as \eqn{\mu(Y|C,M,D)}). This specification is
 required for both Type 1 and Type 2 estimators. E.g.,
-\code{Y_DMC_model = "std_cesd_age40 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22 + ever_unemp_age3539"}.}
+\code{Y_CDM_model = "std_cesd_age40 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22 + ever_unemp_age3539"}.}
 
-\item{M_DC_model}{A character scalar specifying the formula to be fitted for a
+\item{M_CD_model}{A character scalar specifying the formula to be fitted for a
 model of P(M|C,D), the conditional probability of the mediator given baseline covariates
 and the treatment variable. This specification allows the user to specify
 interactions between D and C, and is required only for Type 1 estimation.
 When this input is not NULL, the model will compute the Type 1 estimator by default. E.g.,
-\code{M_DC_model = "ever_unemp_age3539 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22"}.}
+\code{M_CD_model = "ever_unemp_age3539 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22"}.}
 
 \item{data}{A data frame.}
 
@@ -106,7 +106,7 @@ sizes may benefit from a higher \code{V} to better balance bias and variance
 in model evaluation. The default number is \code{5L}.}
 
 \item{seed}{Seed value for reproducibility. Controls the randomization in cross-validation
-and other stochastic components of the procedure.}
+and other stochastic components of the procedure. Defaults to NULL.}
 
 \item{SL.library}{Character vector. Specifies the set of candidate algorithms to be
 used in the Super Learner ensemble. Each element should be the name of a valid learner
@@ -169,14 +169,17 @@ learning methods such as LASSO, random forests, or neural networks.
 The function accommodates two types of identification strategies based on user-specified
 nuisance functions:
 \itemize{
-\item \strong{Type 1 Specification}: Requires an exposure model (π(D|C)), a mediator model (P(M|D,C)),
-and an outcome model (μ(Y|C,M,D)).
-\item \strong{Type 2 Specification}: Requires two exposure models (π(D|C) and π(D|C,M)), and two outcome
-models (μ(Y|C,M,D) and its projected version ν_D(C)). This setup is particularly well-suited
+\item \strong{Type 1 Specification}: Requires an exposure model (\eqn{\pi(D|C)}), a mediator model (P(M|D,C)),
+and an outcome model (\eqn{\mu(Y|C,M,D)}).
+\item \strong{Type 2 Specification}: Requires two exposure models (\eqn{\pi(D|C)} and \eqn{\pi(D|C,M)}), and two outcome
+models (\eqn{\mu(Y|C,M,D)} and its projected version \eqn{\nu_D(C)}). This setup is particularly well-suited
 for analyses of multivariate mediators.
 }
 }
 \examples{
+\donttest{
+if (requireNamespace("glmnet", quietly = TRUE) &&
+    requireNamespace("ranger", quietly = TRUE)) {
 #------------------------------------------#
 # Initial Specification and Clean the Data:
 #------------------------------------------#
@@ -222,12 +225,12 @@ dplyr::mutate(std_cesd_age40 = (cesd_age40 - mean(cesd_age40)) / sd(cesd_age40))
 #----------------------------------------#
 # D Models:
 D_C_model <- as.formula(paste(D, " ~ ", paste(C, collapse= "+")))
-D_MC_model <- as.formula(paste(D, " ~ ", paste(c(C, M[1]), collapse= "+")))
+D_CM_model <- as.formula(paste(D, " ~ ", paste(c(C, M[1]), collapse= "+")))
 # M model:
-M_DC_model <- as.formula(paste(M[1], " ~ ", paste(c(C, D), collapse= "+")))
+M_CD_model <- as.formula(paste(M[1], " ~ ", paste(c(C, D), collapse= "+")))
 # Y Models:
-Y_DC_model <- as.formula(paste(Y, " ~ ", paste(c(C, D), collapse= "+")))
-Y_DMC_model <- as.formula(paste(Y, " ~ ", paste(c(C, D, M[1]), collapse= "+")))
+Y_CD_model <- as.formula(paste(Y, " ~ ", paste(c(C, D), collapse= "+")))
+Y_CDM_model <- as.formula(paste(Y, " ~ ", paste(c(C, D, M[1]), collapse= "+")))
 
 # ---------------------------------------------- #
 # Example 1: Single mediator — Type 2 estimator  #
@@ -238,11 +241,11 @@ dmlmed(
   Y,
   M[[1]],
   C,
-  D_C_model,              # π(D|C)
-  D_MC_model,             # π(D|C,M)
-  Y_DC_model,             # ν_D(C)
-  Y_DMC_model,            # μ(Y|C,M,D)
-  M_DC_model = NULL,      # NULL → Type 2
+  D_C_model,              # P(D|C)
+  D_CM_model,             # P(D|C,M)
+  Y_CD_model,             # nu_D(C)
+  Y_CDM_model,            # E(Y|C,M,D)
+  M_CD_model = NULL,      # NULL -> Type 2
   data = df,
   d = 1, dstar = 0,
   K = 5, V = 5L, seed = 1234,
@@ -252,21 +255,20 @@ dmlmed(
   censor = TRUE, censor_low = 0.01, censor_high = 0.99
 )
 
-# ------------------------------------------------------------ #
-# Example 2: Single mediator — Type 2 estimator                #
-# Super Learner: Marginal mean, Lasso and Random forest        #
-# ------------------------------------------------------------ #
-\dontrun{
+# ----------------------------------------------------------------- #
+# Example 2: Single mediator — Type 2 estimator                     #
+# Super Learner: Marginal mean, Lasso and Random forest             #
+# ----------------------------------------------------------------- #
 dmlmed(
   D,
   Y,
   M[[1]],
   C,
-  D_C_model,              # π(D|C)
-  D_MC_model,             # π(D|C,M)
-  Y_DC_model,             # ν_D(C)
-  Y_DMC_model,            # μ(Y|C,M,D)
-  M_DC_model = NULL,      # NULL → Type 2
+  D_C_model,              # P(D|C)
+  D_CM_model,             # P(D|C,M)
+  Y_CD_model,             # nu_D(C)
+  Y_CDM_model,            # E(Y|C,M,D)
+  M_CD_model = NULL,      # NULL -> Type 2
   data = df,
   d = 1, dstar = 0,
   K = 5, V = 5L, seed = 1234,
@@ -275,25 +277,23 @@ dmlmed(
   minimal = TRUE,
   censor = TRUE, censor_low = 0.01, censor_high = 0.99
 )
-}
 
-# ------------------------------------------------------- #
+# -------------------------------------------------------- #
 # Example 3: Single mediator — Type 1 estimator           #
 # Super Learner: Marginal mean, Lasso and Random forest   #
-# ------------------------------------------------------- #
+# -------------------------------------------------------- #
 # (Switch to Type 1 by supplying P(M|D,C) and dropping
-#  π(D|C,M) and ν_D(C).)
-\dontrun{
+#  P(D|C,M) and nu_D(C).)
 dmlmed(
   D,
   Y,
   M[[1]],
   C,
-  D_C_model,               # π(D|C)
-  D_MC_model = NULL,       # not used in Type 1
-  Y_DC_model = NULL,       # not used in Type 1
-  Y_DMC_model,             # μ(Y|C,M,D)
-  M_DC_model,              # P(M|D,C) → Type 1
+  D_C_model,               # P(D|C)
+  D_CM_model = NULL,       # not used in Type 1
+  Y_CD_model = NULL,       # not used in Type 1
+  Y_CDM_model,             # E(Y|C,M,D)
+  M_CD_model,              # P(M|D,C) -> Type 1
   data = df,
   d = 1, dstar = 0,
   K = 5, V = 5L, seed = 1234,
@@ -302,26 +302,25 @@ dmlmed(
   minimal = TRUE,
   censor = TRUE, censor_low = 0.01, censor_high = 0.99
 )
-}
 
-# -------------------------------------------------------- #
-# Example 4: Multiple mediators — Type 2 estimator         #
-# Super Learner: Marginal mean, Lasso and Random forest    #
-# -------------------------------------------------------- #
-# Update π(D|C,M) and μ(Y|C,M,D) to include all mediators
-D_MC_model_multi  <- as.formula(paste(D, " ~ ", paste(c(C, unlist(M)), collapse = "+")))
-Y_DMC_model_multi <- as.formula(paste(Y, " ~ ", paste(c(C, D, unlist(M)), collapse = "+")))
-\dontrun{
+# ------------------------------------------------------- #
+# Example 4: Multiple mediators — Type 2 estimator        #
+# Super Learner: Marginal mean, Lasso and Random forest   #
+# ------------------------------------------------------- #
+# Update P(D|C,M) and E(Y|C,M,D) to include all mediators
+D_CM_model_multi  <- as.formula(paste(D, " ~ ", paste(c(C, unlist(M)), collapse = "+")))
+Y_CDM_model_multi <- as.formula(paste(Y, " ~ ", paste(c(C, D, unlist(M)), collapse = "+")))
+
 dmlmed(
   D,
   Y,
   M,                        #full mediator list
   C,
-  D_C_model,                # π(D|C)
-  D_MC_model_multi,         # π(D|C,M1,M2,…)
-  Y_DC_model,               # ν_D(C)
-  Y_DMC_model_multi,        # μ(Y|C,M1,M2,…,D)
-  M_DC_model = NULL,        # NULL → Type 2
+  D_C_model,                # P(D|C)
+  D_CM_model_multi,         # P(D|C,M1,M2,...)
+  Y_CD_model,               # nu_D(C)
+  Y_CDM_model_multi,        # E(Y|C,M1,M2,...,D)
+  M_CD_model = NULL,        # NULL -> Type 2
   data = df,
   d = 1, dstar = 0,
   K = 5, V = 5L, seed = 1234,
@@ -330,6 +329,7 @@ dmlmed(
   minimal = TRUE,
   censor = TRUE, censor_low = 0.01, censor_high = 0.99
 )
+} # end requireNamespace check
 }
 
 }

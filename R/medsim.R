@@ -61,7 +61,7 @@ print.medsim_boot <- function(x, ...) {
 #'
 #' @return A list of point estimates for the mediation effects.
 #' @noRd
-medsim_core <- function(data, num_sim = 2000, cat_list = c("0", "1"), treatment,
+medsim_core <- function(data, num_sim = 1000, cat_list = c("0", "1"), treatment,
                         intv_med = NULL, model_spec, weights = NULL, minimal = FALSE) {
 
   # Initialize point estimates list
@@ -481,7 +481,7 @@ medsim_core <- function(data, num_sim = 2000, cat_list = c("0", "1"), treatment,
       point.est[paste("NIE(", treatment, "=", cat_list[2], ",", treatment, "*=", cat_list[1], ")")] <- mean(Y_all_treated_pse) - mean(sapply(Y_first_treated, function(x) x[[num_mediators]]))
     } else {
       # PSE for the direct path from treatment to outcome
-      point.est[paste("PSE(", treatment, "->", outcome, ") or MNDE(", treatment, "=", cat_list[2], ",", treatment, "*=", cat_list[1], ")")] <- mean(sapply(Y_first_treated, function(x) x[[num_mediators]])) - mean(Y_all_controlled_pse)
+      point.est[paste("MNDE(", treatment, "=", cat_list[2], ",", treatment, "*=", cat_list[1], ") or PSE(", treatment, "->", outcome, ")")] <- mean(sapply(Y_first_treated, function(x) x[[num_mediators]])) - mean(Y_all_controlled_pse)
 
       # PSE for the all indirect path from treatment to outcome
       point.est[paste("MNIE(", treatment, "=", cat_list[2], ",", treatment, "*=", cat_list[1], ")")] <- mean(Y_all_treated_pse) - mean(sapply(Y_first_treated, function(x) x[[num_mediators]]))
@@ -568,9 +568,17 @@ medsim_core <- function(data, num_sim = 2000, cat_list = c("0", "1"), treatment,
 #' @param weights Optional. A string specifying the name of the column in the data
 #'   that contains the weights to be used in weighted regression models and for
 #'   calculating weighted means. Default is `NULL`.
-#' @param seed Seed for reproducibility. Default is `NULL`.
+#' @param paths Logical indicating whether to include path-specific effects in the
+#'   returned output. Default is `FALSE`. When `FALSE`, only natural effects
+#'   (or multivariate natural effects) are returned. When `TRUE`, path-specific
+#'   effects decomposing the indirect effect are also returned. This argument only
+#'   affects what is returned to the user; all path-specific effects are computed
+#'   internally regardless of this setting.
+#' @param seed Integer seed for reproducibility. Controls all random draws,
+#'   including the Monte Carlo simulation used for point estimation and, when
+#'   `boot = TRUE`, the bootstrap resampling. Default is `NULL`.
 #' @param boot Logical indicating whether to perform bootstrapping. Default is `FALSE`.
-#' @param boot_reps Number of bootstrap replications. Default is 100.
+#' @param boot_reps Number of bootstrap replications. In practice, we recommend a minimum of 1000 replications.
 #' @param boot_cores Number of CPU cores for parallel bootstrap. Defaults to available cores minus 2.
 #' @param boot_conf_level Confidence level for bootstrap intervals. Default is `0.95`.
 #'
@@ -667,8 +675,9 @@ medsim_core <- function(data, num_sim = 2000, cat_list = c("0", "1"), treatment,
 #' estimates of interest. Confidence intervals are constructed using the percentile
 #' method at the level specified by `boot_conf_level`. Parallel computation is
 #' supported through the `doParallel`, `doRNG`, and `foreach` packages, with the
-#' number of cores specified in `boot_cores`. The random seed can be set through
-#' the `seed` argument for reproducibility.
+#' number of cores specified in `boot_cores`. The `seed` argument sets the
+#' random seed for all random draws, including both the Monte Carlo simulation
+#' used for point estimation and, when `boot = TRUE`, the bootstrap resampling.
 #'
 #' Returns:
 #' If `boot = FALSE`, the function returns a list containing point estimates for
@@ -712,12 +721,15 @@ medsim_core <- function(data, num_sim = 2000, cat_list = c("0", "1"), treatment,
 #' # two mediators spec
 #' # M1: binary, M2: continuous, Y: continuous
 #' spec_nat <- list(
-#'   list(func = "glm", formula = as.formula(paste(M1, "~", paste(c(D, covariates),
-#'    collapse = " + "))), args = list(family = binomial())),
-#'   list(func = "lm",  formula = as.formula(paste(M2, "~", paste(c(M1, D, covariates),
-#'    collapse = " + ")))),
-#'   list(func = "lm",  formula = as.formula(paste(Y,  "~", paste(c(M2, M1, D, covariates),
-#'    collapse = " + "))))
+#'   list(func = "glm",
+#'        formula = as.formula(paste(M1, "~", paste(c(D, covariates), collapse = " + "))),
+#'        args = list(family = binomial())),
+#'   list(func = "lm",
+#'        formula = as.formula(paste(M2, "~",
+#'          paste(c(M1, D, covariates), collapse = " + ")))),
+#'   list(func = "lm",
+#'        formula = as.formula(paste(Y, "~",
+#'          paste(c(M2, M1, D, covariates), collapse = " + "))))
 #' )
 #'
 #' # ------------------------------------------- #
@@ -725,7 +737,7 @@ medsim_core <- function(data, num_sim = 2000, cat_list = c("0", "1"), treatment,
 #' # ------------------------------------------- #
 #' out_nat <- medsim(
 #'   data = df,
-#'   num_sim = 1000,
+#'   num_sim = 100,    # use 1000+ in practice
 #'   treatment = D,
 #'   intv_med = NULL,               # no mediator intervention
 #'   model_spec = spec_nat_single,
@@ -739,7 +751,7 @@ medsim_core <- function(data, num_sim = 2000, cat_list = c("0", "1"), treatment,
 #' # Randomize the second mediator (income).
 #' out_ide <- medsim(
 #'   data = df,
-#'   num_sim = 1000,
+#'   num_sim = 100,    # use 1000+ in practice
 #'   treatment = D,
 #'   intv_med = M2,                 # interventional mediator
 #'   model_spec = spec_nat,
@@ -753,7 +765,7 @@ medsim_core <- function(data, num_sim = 2000, cat_list = c("0", "1"), treatment,
 #' # Fix income at a specific level (e.g., log(50,000)).
 #' out_cde <- medsim(
 #'   data = df,
-#'   num_sim = 1000,
+#'   num_sim = 100,    # use 1000+ in practice
 #'   treatment = D,
 #'   intv_med = paste0(M2, "=log(5e4)"),  # controlled value for mediator
 #'   model_spec = spec_nat,
@@ -766,25 +778,44 @@ medsim_core <- function(data, num_sim = 2000, cat_list = c("0", "1"), treatment,
 #' # ------------------------------------------------ #
 #' # With two mediators in causal order (M1 -> M2), the output includes
 #' # path-specific components and their decomposition of the total effect.
+#' # Use paths = TRUE to include path-specific effects in the output.
 #' out_pse <- medsim(
 #'   data = df,
-#'   num_sim = 1000,
+#'   num_sim = 100,    # use 1000+ in practice
 #'   treatment = D,
 #'   intv_med = NULL,               # natural propagation (needed for PSEs)
 #'   model_spec = spec_nat,
+#'   paths = TRUE,                  # include path-specific effects
 #'   seed = 60637
 #' )
 #' print(out_pse)
+#'
+#' # ------------------------------------------------ #
+#' # Example 5: Multivariate natural effects only     #
+#' # ------------------------------------------------ #
+#' # With paths = FALSE (the default), only multivariate natural direct
+#' # and indirect effects are returned, without path-specific decomposition.
+#' out_mnat <- medsim(
+#'   data = df,
+#'   num_sim = 100,    # use 1000+ in practice
+#'   treatment = D,
+#'   intv_med = NULL,
+#'   model_spec = spec_nat,
+#'   paths = FALSE,                 # default: omit path-specific effects
+#'   seed = 60637
+#' )
+#' print(out_mnat)
 medsim <- function(data,
-                   num_sim = 2000,
+                   num_sim = 1000,
                    cat_list = c("0", "1"),
                    treatment,
                    intv_med = NULL,
                    model_spec,
                    weights = NULL,
+                   paths = FALSE,
                    seed = NULL,
                    boot = FALSE,
-                   boot_reps = 100,
+                   boot_reps = 200,
                    boot_cores = NULL,
                    boot_conf_level = 0.95) {
 
@@ -800,8 +831,10 @@ medsim <- function(data,
     no_cores <- if (!is.null(boot_cores)) {
       if (boot_cores > available_cores) stop(paste0("Error: boot_cores (", boot_cores, ") > available cores (", available_cores, ")."))
       boot_cores
+    } else if (nzchar(Sys.getenv("_R_CHECK_LIMIT_CORES_", ""))) {
+      2L
     } else {
-      available_cores - 2
+      max(1L, available_cores - 2L)
     }
 
     cl <- parallel::makeCluster(no_cores)
@@ -832,10 +865,20 @@ medsim <- function(data,
     core_out <- medsim_core(data = df, num_sim = num_sim, cat_list = cat_list, treatment = treatment,
                             intv_med = intv_med, model_spec = model_spec, weights = weights)
 
-    est_names <- setdiff(names(core_out), c("Mmodels", "Ymodel"))
+    all_est_names <- setdiff(names(core_out), c("Mmodels", "Ymodel"))
+
+    # Filter out path-specific effects if paths = FALSE
+    if (!paths) {
+      keep_idx  <- which(!grepl("^PSE\\(", all_est_names))
+      est_names <- all_est_names[keep_idx]
+    } else {
+      keep_idx  <- seq_along(all_est_names)
+      est_names <- all_est_names
+    }
+
     point.est <- round(unlist(core_out[est_names]), 3)
-    p_values  <- round(p_values, 3)
-    ci_limits <- round(ci_limits, 3)
+    p_values  <- round(p_values[keep_idx], 3)
+    ci_limits <- round(ci_limits[, keep_idx, drop = FALSE], 3)
 
     ll_label <- paste0("ll.", boot_conf_level * 100, "ci")
     ul_label <- paste0("ul.", boot_conf_level * 100, "ci")
@@ -849,7 +892,20 @@ medsim <- function(data,
     class(out) <- c("medsim_boot", "list")
     return(out)
   } else {
-    return(medsim_core(data = df, num_sim = num_sim, cat_list = cat_list, treatment = treatment,
-                       intv_med = intv_med, model_spec = model_spec, weights = weights))
+    core_out <- medsim_core(data = df, num_sim = num_sim, cat_list = cat_list, treatment = treatment,
+                            intv_med = intv_med, model_spec = model_spec, weights = weights)
+
+    # Filter out path-specific effects if paths = FALSE
+    if (!paths) {
+      est_names <- setdiff(names(core_out), c("Mmodels", "Ymodel"))
+      est_names_filtered <- est_names[!grepl("^PSE\\(", est_names)]
+
+      # Create filtered output
+      filtered_out <- core_out[c(est_names_filtered, "Mmodels", "Ymodel")]
+      class(filtered_out) <- class(core_out)
+      return(filtered_out)
+    }
+
+    return(core_out)
   }
 }

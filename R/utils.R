@@ -12,8 +12,8 @@ trim <- function(x, min = 0.01, max = 1) {
 }
 
 trimQ <- function(x, low = 0.01, high = 0.99) {
-  min <- quantile(x, low)
-  max <- quantile(x, high)
+  min <- quantile(x, low, na.rm = TRUE)
+  max <- quantile(x, high, na.rm = TRUE)
 
   x[x<min] <- min
   x[x>max] <- max

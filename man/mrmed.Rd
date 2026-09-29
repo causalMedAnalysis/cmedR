@@ -11,18 +11,18 @@ mrmed(
   M,
   C,
   D_C_model,
-  D_MC_model = NULL,
-  Y_DC_model = NULL,
-  Y_DMC_model,
-  M_DC_model = NULL,
+  D_CM_model = NULL,
+  Y_CD_model = NULL,
+  Y_CDM_model,
+  M_CD_model = NULL,
   data,
   d = 1,
   dstar = 0,
   censor = TRUE,
   censor_low = 0.01,
   censor_high = 0.99,
-  boot = TRUE,
-  boot_reps = 2,
+  boot = FALSE,
+  boot_reps = 200,
   boot_conf_level = 0.95,
   boot_seed = NULL,
   boot_parallel = FALSE,
@@ -38,13 +38,13 @@ must be numeric and binary, with two distinct values.}
 \code{data}. \code{Y} is a character string, but the outcome variable it identifies
 must be numeric.}
 
-\item{M}{A character vector (of one or more elements) identifying the names
-of the mediator variables in \code{data}. If you are estimating univariate
+\item{M}{A character vector or list (of one or more elements) identifying the
+names of the mediator variables in \code{data}. If you are estimating univariate
 natural effects (with a single mediator), \code{M} should be a character scalar
 (i.e., a vector with only one element)—e.g., \code{M = "ever_unemp_age3539"}. If you
 are estimating multivariate natural effects (with multiple mediators), \code{M}
-should be a character vector listing all mediators—e.g.,
-\code{M = c("ever_unemp_age3539", "log_faminc_adj_age3539")}.}
+should be a list identifying all mediators—e.g.,
+\code{M = list("ever_unemp_age3539", "log_faminc_adj_age3539")}.}
 
 \item{C}{A character vector (of one or more elements) identifying the names
 of the covariate variables in \code{data} that you wish to include in both the
@@ -53,40 +53,40 @@ include, leave \code{C} as its default null argument.}
 
 \item{D_C_model}{A character scalar specifying the formula to be fitted for a
 logit model of the exposure given baseline covariates (denoted in the book as
-π(D|C)). This specification is required for both types of formula. E.g.,
+\eqn{\pi(D|C)}). This specification is required for both types of formula. E.g.,
 \code{D_C_model = "att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3"}.}
 
-\item{D_MC_model}{A character scalar specifying the formula to be fitted for a
+\item{D_CM_model}{A character scalar specifying the formula to be fitted for a
 logit model of the exposure given baseline covariates and the mediator(s)
-(denoted in the book as π(D|C,M)). This specification is required only for
+(denoted in the book as \eqn{\pi(D|C,M)}). This specification is required only for
 the Type 2 estimator. When this input is not NULL, the function will implement the Type 2
 estimator by default and will throw an error if other models required for Type 2 estimation are
 NULL. E.g.,
-\code{D_MC_model = "att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + ever_unemp_age3539"}.}
+\code{D_CM_model = "att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + ever_unemp_age3539"}.}
 
-\item{Y_DC_model}{A character scalar specifying the formula to be fitted for a
-linear model of the conditional mean of μ(Y|C,M,D) given baseline covariates
-and the treatment variable (denoted in the book as ν_D(C)). This specification
+\item{Y_CD_model}{A character scalar specifying the formula to be fitted for a
+linear model of the conditional mean of \eqn{\mu(Y|C,M,D)} given baseline covariates
+and the treatment variable (denoted in the book as \eqn{\nu_D(C)}). This specification
 allows the user to specify interactions between D and C. In implementation,
 the outcome variable is substituted with the estimated conditional mean from
-the \code{Y_DMC_model}. This specification is required only for the Type 2 estimator.
+the \code{Y_CDM_model}. This specification is required only for the Type 2 estimator.
 When this input is not NULL, the function will implement the Type 2 estimator by
 default and will throw an error if other models required for Type 2 estimation are
 NULL. E.g.,
-\code{Y_DC_model = "std_cesd_age40 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22"}.}
+\code{Y_CD_model = "std_cesd_age40 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22"}.}
 
-\item{Y_DMC_model}{A character scalar specifying the formula to be fitted for a
+\item{Y_CDM_model}{A character scalar specifying the formula to be fitted for a
 linear model of the outcome given baseline covariates, mediator(s), and the
-treatment variable (denoted in the book as μ(Y|C,M,D)). This specification is
+treatment variable (denoted in the book as \eqn{\mu(Y|C,M,D)}). This specification is
 required for both types of estimator. E.g.,
-\code{Y_DMC_model = "std_cesd_age40 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22 + ever_unemp_age3539"}.}
+\code{Y_CDM_model = "std_cesd_age40 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22 + ever_unemp_age3539"}.}
 
-\item{M_DC_model}{A character scalar specifying the formula to be fitted for a
+\item{M_CD_model}{A character scalar specifying the formula to be fitted for a
 logit model of the conditional mean of P(M|C,D) given baseline covariates
 and the treatment variable. This specification allows the user to specify
 interactions between D and C, and is required only for Type 1 estimation.
 When this input is not NULL, the function will implement the Type 1 estimator by default. E.g.,
-\code{M_DC_model = "ever_unemp_age3539 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22"}.}
+\code{M_CD_model = "ever_unemp_age3539 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22"}.}
 
 \item{data}{A data frame.}
 
@@ -112,7 +112,7 @@ the nonparametric bootstrap and return two-sided confidence intervals and
 p-values.}
 
 \item{boot_reps}{An integer scalar specifying the number of bootstrap replications
-to perform.}
+to perform. In practice, we recommend a minimum of 1000 replications.}
 
 \item{boot_conf_level}{A numeric scalar specifying the confidence level for the
 bootstrap interval.}
@@ -145,16 +145,16 @@ Type 1 and Type 2 estimators, the function will return a list of estimated resul
 otherwise, it will return a tibble named \code{est1} for Type 1 or \code{est2} for Type 2.}
 
 \item{models_D}{A list of model objects from the fitted exposure models. For Type 1
-estimation, this corresponds to the π(D|C) model (\code{D_C_model}); for Type 2,
-this includes both the π(D|C,M) model (\code{D_MC_model}) and π(D|C) model (\code{D_C_model}).}
+estimation, this corresponds to the \eqn{\pi(D|C)} model (\code{D_C_model}); for Type 2,
+this includes both the \eqn{\pi(D|C,M)} model (\code{D_CM_model}) and \eqn{\pi(D|C)} model (\code{D_C_model}).}
 
 \item{models_M}{A model object from the fitted mediator model. This will only be returned
-if the user specifies a model for the nuisance function \code{M_DC_model} for Type 1 estimation.}
+if the user specifies a model for the nuisance function \code{M_CD_model} for Type 1 estimation.}
 
 \item{models_Y}{A list of model objects from the fitted outcome models.
-For the Type 1 estimator, this includes μ(Y|C,M,D), corresponding to
-\code{Y_DMC_model}. For the Type 2 estimator, it additionally includes
-the ν_D(C) model under D = d and D = d*.}
+For the Type 1 estimator, this includes \eqn{\mu(Y|C,M,D)}, corresponding to
+\code{Y_CDM_model}. For the Type 2 estimator, it additionally includes
+the \eqn{\nu_D(C)} model under D = d and D = d*.}
 
 If you request the bootstrap (by setting the \code{boot} argument to TRUE), the
 function returns all of the elements listed above, as well as the
@@ -247,9 +247,9 @@ rhs <- function(xs) paste(xs, collapse = " + ")
 # ------------------------------------------------ #
 # Models: D|C ; D|M,C ; Y|D,C ; Y|D,M,C
 D_C_model   <- as.formula(paste(D, "~", rhs(C)))
-D_MC_model  <- as.formula(paste(D, "~", rhs(c(M, C))))
-Y_DC_model  <- as.formula(paste(Y, "~", rhs(c(D, C))))
-Y_DMC_model <- as.formula(paste(Y, "~", rhs(c(D, M, C))))
+D_CM_model  <- as.formula(paste(D, "~", rhs(c(M, C))))
+Y_CD_model  <- as.formula(paste(Y, "~", rhs(c(D, C))))
+Y_CDM_model <- as.formula(paste(Y, "~", rhs(c(D, M, C))))
 
 mrmed(
   D = D,
@@ -257,12 +257,12 @@ mrmed(
   M = M,
   C = C,
   D_C_model   = D_C_model,
-  D_MC_model  = D_MC_model,
-  Y_DC_model  = Y_DC_model,
-  Y_DMC_model = Y_DMC_model,
-  M_DC_model  = NULL,      # NULL -> Type 2 estimator
+  D_CM_model  = D_CM_model,
+  Y_CD_model  = Y_CD_model,
+  Y_CDM_model = Y_CDM_model,
+  M_CD_model  = NULL,      # NULL -> Type 2 estimator
   data = nlsy1,
-  d = 1, 
+  d = 1,
   dstar = 0
 )
 
@@ -283,19 +283,19 @@ paste(D, "~", paste(C, collapse = " + "), "+", DC_int_terms)
 )
 
 # D | M, C with M:C interactions
-D_MC_model_int <- as.formula(
+D_CM_model_int <- as.formula(
   paste(D, "~",
         paste(c(M, C), collapse = " + "), "+", MC_int_terms)
 )
 
 # Y | D, C with D:C interactions
-Y_DC_model_int <- as.formula(
+Y_CD_model_int <- as.formula(
   paste(Y, "~",
         paste(c(D, C), collapse = " + "), "+", DC_int_terms)
 )
 
 # Y | D, M, C with both D:C and M:C interactions
-Y_DMC_model_int <- as.formula(
+Y_CDM_model_int <- as.formula(
   paste(Y, "~",
         paste(c(D, M, C), collapse = " + "), "+",
         DC_int_terms, "+", MC_int_terms)
@@ -307,12 +307,12 @@ mrmed(
   M = M,
   C = C,
   D_C_model   = D_C_model_int,
-  D_MC_model  = D_MC_model_int,
-  Y_DC_model  = Y_DC_model_int,
-  Y_DMC_model = Y_DMC_model_int,
-  M_DC_model  = NULL,      # NULL -> Type 2 estimator
+  D_CM_model  = D_CM_model_int,
+  Y_CD_model  = Y_CD_model_int,
+  Y_CDM_model = Y_CDM_model_int,
+  M_CD_model  = NULL,      # NULL -> Type 2 estimator
   data = nlsy1,
-  d = 1, 
+  d = 1,
   dstar = 0
 )
 
@@ -322,8 +322,8 @@ mrmed(
 # ----------------------------------------------- #
 # Models (additive)
 D_C_model   <- as.formula(paste(D, "~", rhs(C)))               # P(D|C)
-M_DC_model  <- as.formula(paste(M, "~", rhs(c(D, C))))         # P(M|D,C)
-Y_DMC_model <- as.formula(paste(Y, "~", rhs(c(D, M, C))))      # E(Y|C,D,M)
+M_CD_model  <- as.formula(paste(M, "~", rhs(c(D, C))))         # P(M|D,C)
+Y_CDM_model <- as.formula(paste(Y, "~", rhs(c(D, M, C))))      # E(Y|C,D,M)
 
 mrmed(
   D = D,
@@ -331,10 +331,10 @@ mrmed(
   M = M,
   C = C,
   D_C_model   = D_C_model,
-  D_MC_model  = NULL,        # not used in Type 1
-  Y_DC_model  = NULL,        # not used in Type 1
-  Y_DMC_model = Y_DMC_model,
-  M_DC_model  = M_DC_model,  # required for Type 1
+  D_CM_model  = NULL,        # not used in Type 1
+  Y_CD_model  = NULL,        # not used in Type 1
+  Y_CDM_model = Y_CDM_model,
+  M_CD_model  = M_CD_model,  # required for Type 1
   data = nlsy1,
   d = 1, dstar = 0,
   boot = TRUE,
@@ -365,15 +365,15 @@ nlsy2$std_cesd_age40 <- (nlsy2$cesd_age40 - mean(nlsy2$cesd_age40)) /
 
 # Variable names
 D <- "att22"
-M <- c("ever_unemp_age3539", "log_faminc_adj_age3539")
+M <- list("ever_unemp_age3539", "log_faminc_adj_age3539")
 Y <- "std_cesd_age40"
 C <- covariates
 
 # Models (additive)
 D_C_model   <- as.formula(paste(D, "~", rhs(C)))               # P(D|C)
-D_MC_model  <- as.formula(paste(D, "~", rhs(c(M, C))))         # P(D|C,M1,M2)
-Y_DC_model  <- as.formula(paste(Y, "~", rhs(c(D, C))))         # E(E(Y|C,M,D=d)|C,D)
-Y_DMC_model <- as.formula(paste(Y, "~", rhs(c(D, M, C))))      # E(Y|C,D,M1,M2)
+D_CM_model  <- as.formula(paste(D, "~", rhs(c(M, C))))         # P(D|C,M1,M2)
+Y_CD_model  <- as.formula(paste(Y, "~", rhs(c(D, C))))         # E(E(Y|C,M,D=d)|C,D)
+Y_CDM_model <- as.formula(paste(Y, "~", rhs(c(D, M, C))))      # E(Y|C,D,M1,M2)
 
 # Estimate multiply robust natural effects
 mrmed(
@@ -382,12 +382,12 @@ mrmed(
   M = M,
   C = C,
   D_C_model   = D_C_model,
-  D_MC_model  = D_MC_model,
-  Y_DC_model  = Y_DC_model,
-  Y_DMC_model = Y_DMC_model,
-  M_DC_model  = NULL,        # NULL -> Type 2 estimator
+  D_CM_model  = D_CM_model,
+  Y_CD_model  = Y_CD_model,
+  Y_CDM_model = Y_CDM_model,
+  M_CD_model  = NULL,        # NULL -> Type 2 estimator
   data = nlsy2,
-  d = 1, 
+  d = 1,
   dstar = 0,
   boot = TRUE,
   boot_reps = 200,

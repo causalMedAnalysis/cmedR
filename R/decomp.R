@@ -19,7 +19,6 @@
 #'  \item{twocomp}{Two component decomposition of the rATE into rNDE and rNIE.}
 #'  \item{fourcomp}{Four component decomposition of the rATE into CDE, rINTREF, rPIE, and rINTMED.}
 #' @import stats
-#' @importFrom purrr partial
 #' @export
 #' @seealso \code{\link{rwrmed}} for implementing the regression-with-residuals (RWR)
 #'   approach to causal mediation.
@@ -94,7 +93,7 @@ decomp <- function(object, a0 = 0, a1 = 1, m = 0, bootstrap = TRUE, rep = 500){
       data <- object$data[indices, , drop = FALSE]
 
       # refit the post-treatment confounder models
-      glm_partial <- partial(glm, data = data, weights = weights)
+      glm_partial <- \(...) glm(..., data = data, weights = weights)
       zmodels <- Map(glm_partial, z_forms, z_families)
 
       # take pre- and post-treatment confounders

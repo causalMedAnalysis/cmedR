@@ -10,8 +10,8 @@ mrpath(
   M,
   C,
   data,
-  d,
-  dstar,
+  d = 1,
+  dstar = 0,
   censor = TRUE,
   censor_low = 0.01,
   censor_high = 0.99,
@@ -80,7 +80,7 @@ the nonparametric bootstrap and return two-sided confidence intervals and
 p-values.}
 
 \item{boot_reps}{An integer scalar specifying the number of bootstrap replications
-to perform.}
+to perform. In practice, we recommend a minimum of 1000 replications.}
 
 \item{boot_conf_level}{A numeric scalar specifying the confidence level for the
 bootstrap interval.}
@@ -298,6 +298,7 @@ mrpath(
 # ----------------------------------------- #
 # Example 4: Bootstrap with parallelization #
 # ----------------------------------------- #
+\dontrun{
 mrpath(
   data = nlsy_ex,
   D = "att22",
@@ -309,8 +310,9 @@ mrpath(
   boot = TRUE,
   boot_reps = 200,
   boot_seed = 1234,
-  boot_parallel = FALSE
+  boot_parallel = TRUE
 )
+}
 
 # ------------------------------------------- #
 # Example 5: Three mediators, additive models #

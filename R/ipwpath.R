@@ -67,8 +67,8 @@ ipwpath_inner <- function(
       D = D,
       M = unlist(M[1:k]),
       Y = Y,
-      formula1_string = formula1_D_string,
-      formula2_string = formula2_D_string,
+      D_C_model = as.formula(formula1_D_string),
+      D_CM_model = as.formula(formula2_D_string),
       base_weights_name = base_weights_name,
       stabilize = stabilize,
       censor = censor,
@@ -232,13 +232,12 @@ ipwpath_inner <- function(
 #' @param D A character scalar identifying the name of the exposure variable in
 #'   `data`. `D` is a character string, but the exposure variable it identifies
 #'   must be numeric.
-#' @param M A character vector (of one or more elements) identifying the names
-#'   of the mediator variables in `data`. The character vector MUST specify the
-#'   mediators in causal order, starting from the first in the hypothesized
-#'   causal sequence to the last. If you only specify a single mediator
-#'   variable, then the function will simply return the natural effects. Also
-#'   note that `M` is a character vector, but the mediator variable(s) it
-#'   identifies must each be numeric.
+#' @param M A list of character vectors identifying the names of the mediator
+#'   variables in `data`. The list MUST specify the mediators in causal order,
+#'   starting from the first in the hypothesized causal sequence to the last.
+#'   If you only specify a single mediator, then the function will simply return
+#'   the natural effects. Also note that `M` is a list, but the mediator
+#'   variable(s) it identifies must each be numeric.
 #' @param Y A character scalar identifying the name of the outcome variable in
 #'   `data`. `Y` is a character string, but the outcome variable it identifies
 #'   must be numeric.
@@ -265,7 +264,7 @@ ipwpath_inner <- function(
 #'   nonparametric bootstrap and return two-sided confidence intervals and
 #'   p-values.
 #' @param boot_reps An integer scalar for the number of bootstrap replications
-#'   to perform.
+#'   to perform. In practice, we recommend a minimum of 1000 replications.
 #' @param boot_conf_level A numeric scalar for the confidence level of the
 #'   bootstrap interval.
 #' @param boot_seed An integer scalar specifying the random-number seed used in
@@ -368,7 +367,7 @@ ipwpath_inner <- function(
 #' ipwpath(
 #'   data = nlsy,
 #'   D = "att22",
-#'   M = c("ever_unemp_age3539", "log_faminc_adj_age3539"),
+#'   M = list("ever_unemp_age3539", "log_faminc_adj_age3539"),
 #'   # ^ note that this order encodes our assumption that ever_unemp_age3539
 #'   # causally precedes log_faminc_adj_age3539
 #'   Y = "std_cesd_age40",
@@ -389,7 +388,7 @@ ipwpath_inner <- function(
 #' ipwpath(
 #'   data = nlsy,
 #'   D = "att22",
-#'   M = c("ever_unemp_age3539", "log_faminc_adj_age3539"),
+#'   M = list("ever_unemp_age3539", "log_faminc_adj_age3539"),
 #'   Y = "std_cesd_age40",
 #'   C = covariates,
 #'   base_weights_name = "weight"
@@ -400,7 +399,7 @@ ipwpath_inner <- function(
 #'   ipwpath(
 #'     data = nlsy,
 #'     D = "att22",
-#'     M = c("ever_unemp_age3539", "log_faminc_adj_age3539"),
+#'     M = list("ever_unemp_age3539", "log_faminc_adj_age3539"),
 #'     Y = "std_cesd_age40",
 #'     C = covariates,
 #'     boot = TRUE,
@@ -414,7 +413,7 @@ ipwpath_inner <- function(
 #'   ipwpath(
 #'     data = nlsy,
 #'     D = "att22",
-#'     M = c("ever_unemp_age3539", "log_faminc_adj_age3539"),
+#'     M = list("ever_unemp_age3539", "log_faminc_adj_age3539"),
 #'     Y = "std_cesd_age40",
 #'     C = covariates,
 #'     boot = TRUE,
@@ -441,7 +440,7 @@ ipwpath_inner <- function(
 #' ipwpath(
 #'   data = df_ex6,
 #'   D = "att22",
-#'   M = c("cesd_1992","ever_unemp_age3539","log_faminc_adj_age3539"),
+#'   M = list("cesd_1992","ever_unemp_age3539","log_faminc_adj_age3539"),
 #'   # order encodes: cesd_1992 -> ever_unemp_age3539 -> log_faminc_adj_age3539
 #'   Y = "std_cesd_age40",
 #'   C = covariates
@@ -460,7 +459,7 @@ ipwpath <- function(
     censor_low = 0.01,
     censor_high = 0.99,
     boot = FALSE,
-    boot_reps = 1000,
+    boot_reps = 200,
     boot_conf_level = 0.95,
     boot_seed = NULL,
     boot_parallel = FALSE,

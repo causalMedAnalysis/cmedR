@@ -58,10 +58,10 @@ mrpath_inner <- function(
     }
     # Y Models
     if(interaction_DC == FALSE) {
-      Y_DC_model <- as.formula(paste(Y, " ~ ", paste(c(C, D), collapse= "+")))
+      Y_CD_model <- as.formula(paste(Y, " ~ ", paste(c(C, D), collapse= "+")))
     }
     else {
-      Y_DC_model <- as.formula(
+      Y_CD_model <- as.formula(
         paste(
           Y,
           " ~ ",
@@ -106,10 +106,10 @@ mrpath_inner <- function(
         M = unlist(M[1:k]),
         C = C,
         D_C_model = D_C_model, # D ~ C
-        D_MC_model = D_MC_model, # D ~ M,C
-        Y_DC_model = Y_DC_model, # Y ~ D,C
-        Y_DMC_model = Y_DMC_model, # Y ~ D,M,C
-        M_DC_model = NULL, # M ~ D,C
+        D_CM_model = D_MC_model, # D ~ M,C
+        Y_CD_model = Y_CD_model, # Y ~ D,C
+        Y_CDM_model = Y_DMC_model, # Y ~ D,M,C
+        M_CD_model = NULL, # M ~ D,C
         data = data,
         d = d,
         dstar = dstar,
@@ -309,7 +309,7 @@ mrpath_inner <- function(
 #'   the nonparametric bootstrap and return two-sided confidence intervals and
 #'   p-values.
 #' @param boot_reps An integer scalar specifying the number of bootstrap replications
-#'   to perform.
+#'   to perform. In practice, we recommend a minimum of 1000 replications.
 #' @param boot_conf_level A numeric scalar specifying the confidence level for the
 #'   bootstrap interval.
 #' @param boot_seed An integer scalar specifying the random-number seed used in
@@ -453,6 +453,7 @@ mrpath_inner <- function(
 #' # ----------------------------------------- #
 #' # Example 4: Bootstrap with parallelization #
 #' # ----------------------------------------- #
+#' \dontrun{
 #' mrpath(
 #'   data = nlsy_ex,
 #'   D = "att22",
@@ -464,8 +465,9 @@ mrpath_inner <- function(
 #'   boot = TRUE,
 #'   boot_reps = 200,
 #'   boot_seed = 1234,
-#'   boot_parallel = FALSE
+#'   boot_parallel = TRUE
 #' )
+#' }
 #'
 #' # ------------------------------------------- #
 #' # Example 5: Three mediators, additive models #
@@ -496,8 +498,8 @@ mrpath <- function(
     M,
     C,
     data,
-    d,
-    dstar,
+    d = 1,
+    dstar = 0,
     censor = TRUE,
     censor_low = 0.01,
     censor_high = 0.99,
@@ -571,7 +573,7 @@ mrpath <- function(
         d = d,
         dstar = dstar,
         minimal = TRUE,
-        censor = TRUE,
+        censor = censor,
         interaction_DM = interaction_DM,
         interaction_DC = interaction_DC,
         interaction_MC = interaction_MC,

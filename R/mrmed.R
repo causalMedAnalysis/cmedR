@@ -21,10 +21,10 @@ mrmed_inner <- function(
     M,
     C,
     D_C_model, # D ~ C
-    D_MC_model = NULL, # D ~ M,C
-    Y_DC_model = NULL, # Y ~ D,C
-    Y_DMC_model, # Y ~ D,M,C
-    M_DC_model = NULL, # M ~ D,C
+    D_CM_model = NULL, # D ~ M,C
+    Y_CD_model = NULL, # Y ~ D,C
+    Y_CDM_model, # Y ~ D,M,C
+    M_CD_model = NULL, # M ~ D,C
     data,
     d = 1,
     dstar = 0,
@@ -33,6 +33,7 @@ mrmed_inner <- function(
     censor_low = 0.01,
     censor_high = 0.99
 ){
+  M <- unlist(M)
   # ---------------Section 1: Check the arguments -----------------#
   # 1. Make sure the treatment is dummy and numeric:
   if (!is.numeric(data[[D]])) {
@@ -51,7 +52,7 @@ mrmed_inner <- function(
     miss_summary <- sapply(
       key_vars,
       FUN = function(v) c(
-        nmiss = sum(!is.na(data[[v]])),
+        n_obs = sum(!is.na(data[[v]])),
         miss = sum(is.na(data[[v]]))
       )
     ) |>
@@ -77,8 +78,8 @@ mrmed_inner <- function(
     return(model)
   }
   # Check  nuisance function specification:
-  if (is.null(M_DC_model) && (is.null(D_MC_model) || is.null(Y_DC_model))) {
-    warning(
+  if (is.null(M_CD_model) && (is.null(D_CM_model) || is.null(Y_CD_model))) {
+    stop(
       "Please specify models for the required nuisance function(s):\n",
       "- Specify a model for P(M|C,D) to implement the MR estimator in equation (6.17);\n",
       "- Specify models for P(D|C,M) and E(Y|D,C) to implement the MR estimator in equation (6.20);\n",
@@ -86,10 +87,10 @@ mrmed_inner <- function(
     )
   } else {
     method_type <- c()
-    if (!is.null(M_DC_model)) {
+    if (!is.null(M_CD_model)) {
       method_type <- c(method_type, 1)
       # P(M|D,C):
-      M_DC_model <- check_formula(M_DC_model, M, "outcome")
+      M_CD_model <- check_formula(M_CD_model, M, "mediator")
       if (!all(unique(data[[M]][!is.na(data[[M]])]) %in% c(0, 1))) {
         stop(
           paste0("Variable '", M, "' must be a dummy variable (0/1 only).
@@ -98,13 +99,13 @@ mrmed_inner <- function(
       }
     }
 
-    if (!is.null(D_MC_model) && !is.null(Y_DC_model)) {
+    if (!is.null(D_CM_model) && !is.null(Y_CD_model)) {
       method_type <- c(method_type, 2)
       # π(D|M,C):
-      D_MC_model <- check_formula(D_MC_model, D, "exposure")
+      D_CM_model <- check_formula(D_CM_model, D, "exposure")
       # E(Y|D,C):
-      Y_DC_model <- check_formula(Y_DC_model, Y, "outcome")
-      if(any(c(unlist(M)) %in% attr(terms(Y_DC_model), "term.labels"))){
+      Y_CD_model <- check_formula(Y_CD_model, Y, "outcome")
+      if(any(c(unlist(M)) %in% attr(terms(Y_CD_model), "term.labels"))){
         stop(
           paste0("The outcome model should only include baseline covariates
               and treatment variables; mediators are incorrectly included."
@@ -125,13 +126,13 @@ mrmed_inner <- function(
     )
   }
 
-  # 4.2 Y_DMC_model: E(Y|D,M,C)
-  Y_DMC_model <- check_formula(Y_DMC_model, Y, "outcome")
+  # 4.2 Y_CDM_model: E(Y|D,M,C)
+  Y_CDM_model <- check_formula(Y_CDM_model, Y, "outcome")
 
   # Code the treatment variable to match the specified d and dstar:
   data <-
     data %>%
-    mutate(
+    dplyr::mutate(
       !!sym(D) :=
         if_else(!!sym(D) == d, 1, 0)
     )
@@ -139,9 +140,9 @@ mrmed_inner <- function(
   # ------------Section 2: Initialize some common specifications --------------#
   # Prediction Matrix for μD(C,M):
   # For E[Y|C,M,d*|C,d*], E[Y|C,M,d*], P(M|C,d*)
-  pred_dstar <- data %>% mutate(!!sym(D) := dstar)
+  pred_dstar <- data %>% dplyr::mutate(!!sym(D) := dstar)
   # For E[Y|C,M,d|C,d], E[Y|C,M,d], P(M|C,d),:
-  pred_d <- data %>% mutate(!!sym(D) := d)
+  pred_d <- data %>% dplyr::mutate(!!sym(D) := d)
 
   # -----Fit the exposure model πD(C), πD(C,M),get the predicted weights------#
   # πD(C):P(D|C):
@@ -150,7 +151,7 @@ mrmed_inner <- function(
 
   # ------Fit the outcome model: μD(C,M), get the predicted values ----------#
 
-  mu_DMC <- lm(Y_DMC_model, data = data)
+  mu_DMC <- lm(Y_CDM_model, data = data)
   data$mu_hat_DMC_d <- predict(mu_DMC, newdata = pred_d)
   data$mu_hat_DMC_dstar <- predict(mu_DMC, newdata = pred_dstar)
 
@@ -163,17 +164,17 @@ mrmed_inner <- function(
     # Additional Specification for mrmed2:
     #=======================================#
     # πD(C,M):P(D|C,M)
-    pi_DCM <- glm(D_MC_model, family = binomial("logit"), data = data)
+    pi_DCM <- glm(D_CM_model, family = binomial("logit"), data = data)
     data$pi_hat_DCM <- pi_DCM$fitted.values
 
     # ----Fit the outcome model: νD(C,M), get the predicted values --------------#
     nu_DMC_d_hat_model <-
       reformulate(
-        attr(terms(Y_DC_model), "term.labels"),
+        attr(terms(Y_CD_model), "term.labels"),
         response = "mu_hat_DMC_d")
     nu_DMC_dstar_hat_model <-
       reformulate(
-        attr(terms(Y_DC_model), "term.labels"),
+        attr(terms(Y_CD_model), "term.labels"),
         response = "mu_hat_DMC_dstar")
     nu_DMC_d_hat <- lm(nu_DMC_d_hat_model, data = data)
     nu_DMC_dstar_hat <- lm(nu_DMC_dstar_hat_model, data = data)
@@ -188,7 +189,7 @@ mrmed_inner <- function(
 
     stat_df2 <-
       data %>%
-      select(
+      dplyr::select(
         Y,
         D,
         .data$pi_hat_DC,
@@ -200,11 +201,11 @@ mrmed_inner <- function(
         .data$nu_dstar_d,
         .data$nu_dstar_dstar
       ) %>%
-      rename(
+      dplyr::rename(
         pi_hat_d_DCM = .data$pi_hat_DCM,
         pi_hat_d_DC = .data$pi_hat_DC
       ) %>%
-      mutate(
+      dplyr::mutate(
         pi_hat_dstar_DCM = 1 - .data$pi_hat_d_DCM,
         pi_hat_dstar_DC = 1 - .data$pi_hat_d_DC
       )
@@ -226,7 +227,7 @@ mrmed_inner <- function(
           d2_val <- val_map[[d2]]
           rst_df <-
             stat_df2 %>%
-            mutate(
+            dplyr::mutate(
               # Weight in the first Line:
               !!sym(paste0("W1_", d1 ,"_", d2)) :=
                 ((as.double(.data[[D]] == d2_val))/ !!sym(paste0("pi_hat_",d1,"_DC"))) *
@@ -253,15 +254,15 @@ mrmed_inner <- function(
 
           rst_trm_df <-
             rst_df %>%
-            mutate(
+            dplyr::mutate(
               !!sym(paste0("S_",d1,"_",d2)) :=
                 # First Line in equation (6.17)
                 !!sym(paste0("W1_", d1 ,"_", d2)) * (!!sym(Y) - !!sym(paste0("mu_hat_DMC_",d2))) +
                 !!sym(paste0("W2_", d1)) * (!!sym(paste0("mu_hat_DMC_",d2)) - !!sym(paste0("nu_",d1,"_",d2))) +
                 !!sym(paste0("nu_",d1,"_",d2))
             ) %>%
-            mutate(
-              .row_id = row_number()
+            dplyr::mutate(
+              .row_id = dplyr::row_number()
             )
           return(rst_trm_df)
         }
@@ -279,23 +280,23 @@ mrmed_inner <- function(
             ),
             intersect)
       ) %>%
-      select(
+      dplyr::select(
         -.data$W2_d.x,
         -.data$W2_dstar.x
       ) %>%
-      rename(
+      dplyr::rename(
         W2_dstar = .data$W2_dstar.y,
         W2_d = .data$W2_d.y
       ) %>%
-      mutate(
+      dplyr::mutate(
         ATE = .data$S_d_d - .data$S_dstar_dstar,
         NDE = .data$S_dstar_d - .data$S_dstar_dstar,
         NIE = .data$S_d_d - .data$S_dstar_d
       ) %>%
-      summarise(
-        `ATE(1,0)` = wtd.mean(.data$ATE),
-        `NDE(1,0)` = wtd.mean(.data$NDE),
-        `NIE(1,0)` = wtd.mean(.data$NIE)
+      dplyr::summarise(
+        `ATE(1,0)` = Hmisc::wtd.mean(.data$ATE),
+        `NDE(1,0)` = Hmisc::wtd.mean(.data$NDE),
+        `NIE(1,0)` = Hmisc::wtd.mean(.data$NIE)
       )
 
     model2_rst <-
@@ -320,15 +321,15 @@ mrmed_inner <- function(
     # Additional Specification for mrmed1:
     #=======================================#
     # For E[Y|C,d,m]:
-    pred_d_m <- data %>% mutate(!!sym(D) := d) %>% mutate(!!sym(M) := 1)
+    pred_d_m <- data %>% dplyr::mutate(!!sym(D) := d) %>% dplyr::mutate(!!sym(M) := 1)
     # For E[Y|C,d,m*]:
-    pred_d_mstar <- data %>% mutate(!!sym(D) := d) %>% mutate(!!sym(M) := 0)
+    pred_d_mstar <- data %>% dplyr::mutate(!!sym(D) := d) %>% dplyr::mutate(!!sym(M) := 0)
     # For E[Y|C,d*,m]:
-    pred_dstar_m <- data %>% mutate(!!sym(D) := dstar) %>% mutate(!!sym(M) := 1)
+    pred_dstar_m <- data %>% dplyr::mutate(!!sym(D) := dstar) %>% dplyr::mutate(!!sym(M) := 1)
     # For E[Y|C,d*,m*]:
-    pred_dstar_mstar <- data %>% mutate(!!sym(D) := dstar) %>% mutate(!!sym(M) := 0)
+    pred_dstar_mstar <- data %>% dplyr::mutate(!!sym(D) := dstar) %>% dplyr::mutate(!!sym(M) := 0)
     # ---------Fit the mediator model P(M|C,D),get the predicted weights--------#
-    M_DC <- glm(M_DC_model, family = binomial("logit"), data = data)
+    M_DC <- glm(M_CD_model, family = binomial("logit"), data = data)
     data$M_hat_d <- predict(M_DC, newdata = pred_d, type = "response")
     data$M_hat_dstar <- predict(M_DC, newdata = pred_dstar, type = "response")
     # ------- For μd(C,m), μd(C,m*), μd*(C,m), μd*(C,m*)--------#
@@ -342,25 +343,25 @@ mrmed_inner <- function(
     #=======================================#
     stat_df1 <-
       data %>%
-      select(
+      dplyr::select(
         Y,
         D,
         M,
         .data$pi_hat_DC,
-        starts_with("M_hat_"),
-        starts_with("mu_hat_")
+        dplyr::starts_with("M_hat_"),
+        dplyr::starts_with("mu_hat_")
       ) %>%
-      rename(
+      dplyr::rename(
         pi_hat_d_DC = .data$pi_hat_DC
       ) %>%
-      mutate(
+      dplyr::mutate(
         M_hat_d_m = .data$M_hat_d,
         M_hat_dstar_m = .data$M_hat_dstar,
         pi_hat_dstar_DC = 1 - .data$pi_hat_d_DC,
         M_hat_d_mstar = 1 - .data$M_hat_d_m,
         M_hat_dstar_mstar = 1 - .data$M_hat_dstar_m
       ) %>%
-      mutate(
+      dplyr::mutate(
         M_hat_d = ifelse(
           !!sym(M) == 1,
           .data$M_hat_d_m,
@@ -390,7 +391,7 @@ mrmed_inner <- function(
           d2_val <- val_map[[d2]]
           rst_df <-
             stat_df1 %>%
-            mutate(
+            dplyr::mutate(
               # Weight in the first Line:
               !!sym(paste0("W1_", d1 ,"_", d2)) :=
                 ((as.double(.data[[D]] == d2_val))/ !!sym(paste0("pi_hat_",d2,"_DC"))) *
@@ -417,7 +418,7 @@ mrmed_inner <- function(
 
           rst_trm_df <-
             rst_df %>%
-            mutate(
+            dplyr::mutate(
               !!sym(paste0("S_",d1,"_",d2)) :=
                 # First Line in equation (6.14):
                 !!sym(paste0("W1_", d1 ,"_", d2)) * (!!sym(Y) - !!sym(paste0("mu_hat_DMC_",d2))) +
@@ -435,8 +436,8 @@ mrmed_inner <- function(
                     !!sym(paste0("mu_hat_DMC_",d2,"_","mstar")) * !!sym(paste0("M_hat_",d1,"_","mstar"))
                 )
             ) %>%
-            mutate(
-              .row_id = row_number()
+            dplyr::mutate(
+              .row_id = dplyr::row_number()
             )
           return(rst_trm_df)
         }
@@ -454,23 +455,23 @@ mrmed_inner <- function(
             ),
             intersect)
       ) %>%
-      select(
+      dplyr::select(
         -.data$W2_d.x,
         -.data$W2_dstar.x
       ) %>%
-      rename(
+      dplyr::rename(
         W2_dstar = .data$W2_dstar.y,
         W2_d = .data$W2_d.y
       ) %>%
-      mutate(
+      dplyr::mutate(
         ATE = .data$S_d_d - .data$S_dstar_dstar,
         NDE = .data$S_dstar_d - .data$S_dstar_dstar,
         NIE = .data$S_d_d - .data$S_dstar_d
       ) %>%
-      summarise(
-        `ATE(1,0)` = wtd.mean(.data$ATE),
-        `NDE(1,0)` = wtd.mean(.data$NDE),
-        `NIE(1,0)` = wtd.mean(.data$NIE)
+      dplyr::summarise(
+        `ATE(1,0)` = Hmisc::wtd.mean(.data$ATE),
+        `NDE(1,0)` = Hmisc::wtd.mean(.data$NDE),
+        `NIE(1,0)` = Hmisc::wtd.mean(.data$NIE)
       )
     model1_rst <-
       list(
@@ -554,13 +555,13 @@ mrmed_inner <- function(
 #' @param D A character scalar identifying the name of the exposure variable in
 #'   `data`. `D` is a character string, but the exposure variable it identifies
 #'   must be numeric and binary, with two distinct values.
-#' @param M A character vector (of one or more elements) identifying the names
-#'   of the mediator variables in `data`. If you are estimating univariate
+#' @param M A character vector or list (of one or more elements) identifying the
+#'   names of the mediator variables in `data`. If you are estimating univariate
 #'   natural effects (with a single mediator), `M` should be a character scalar
 #'   (i.e., a vector with only one element)—e.g., `M = "ever_unemp_age3539"`. If you
 #'   are estimating multivariate natural effects (with multiple mediators), `M`
-#'   should be a character vector listing all mediators—e.g.,
-#'   `M = c("ever_unemp_age3539", "log_faminc_adj_age3539")`.
+#'   should be a list identifying all mediators—e.g.,
+#'   `M = list("ever_unemp_age3539", "log_faminc_adj_age3539")`.
 #' @param Y A character scalar identifying the name of the outcome variable in
 #'   `data`. `Y` is a character string, but the outcome variable it identifies
 #'   must be numeric.
@@ -570,36 +571,36 @@ mrmed_inner <- function(
 #'   include, leave `C` as its default null argument.
 #' @param D_C_model A character scalar specifying the formula to be fitted for a
 #'   logit model of the exposure given baseline covariates (denoted in the book as
-#'   π(D|C)). This specification is required for both types of formula. E.g.,
+#'   \eqn{\pi(D|C)}). This specification is required for both types of formula. E.g.,
 #'   `D_C_model = "att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3"`.
-#' @param D_MC_model A character scalar specifying the formula to be fitted for a
+#' @param D_CM_model A character scalar specifying the formula to be fitted for a
 #'   logit model of the exposure given baseline covariates and the mediator(s)
-#'   (denoted in the book as π(D|C,M)). This specification is required only for
+#'   (denoted in the book as \eqn{\pi(D|C,M)}). This specification is required only for
 #'   the Type 2 estimator. When this input is not NULL, the function will implement the Type 2
 #'   estimator by default and will throw an error if other models required for Type 2 estimation are
 #'   NULL. E.g.,
-#'   `D_MC_model = "att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + ever_unemp_age3539"`.
-#' @param Y_DMC_model A character scalar specifying the formula to be fitted for a
+#'   `D_CM_model = "att22 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + ever_unemp_age3539"`.
+#' @param Y_CDM_model A character scalar specifying the formula to be fitted for a
 #'   linear model of the outcome given baseline covariates, mediator(s), and the
-#'   treatment variable (denoted in the book as μ(Y|C,M,D)). This specification is
+#'   treatment variable (denoted in the book as \eqn{\mu(Y|C,M,D)}). This specification is
 #'   required for both types of estimator. E.g.,
-#'   `Y_DMC_model = "std_cesd_age40 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22 + ever_unemp_age3539"`.
-#' @param Y_DC_model A character scalar specifying the formula to be fitted for a
-#'   linear model of the conditional mean of μ(Y|C,M,D) given baseline covariates
-#'   and the treatment variable (denoted in the book as ν_D(C)). This specification
+#'   `Y_CDM_model = "std_cesd_age40 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22 + ever_unemp_age3539"`.
+#' @param Y_CD_model A character scalar specifying the formula to be fitted for a
+#'   linear model of the conditional mean of \eqn{\mu(Y|C,M,D)} given baseline covariates
+#'   and the treatment variable (denoted in the book as \eqn{\nu_D(C)}). This specification
 #'   allows the user to specify interactions between D and C. In implementation,
 #'   the outcome variable is substituted with the estimated conditional mean from
-#'   the `Y_DMC_model`. This specification is required only for the Type 2 estimator.
+#'   the `Y_CDM_model`. This specification is required only for the Type 2 estimator.
 #'   When this input is not NULL, the function will implement the Type 2 estimator by
 #'   default and will throw an error if other models required for Type 2 estimation are
 #'   NULL. E.g.,
-#'   `Y_DC_model = "std_cesd_age40 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22"`.
-#' @param M_DC_model A character scalar specifying the formula to be fitted for a
+#'   `Y_CD_model = "std_cesd_age40 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22"`.
+#' @param M_CD_model A character scalar specifying the formula to be fitted for a
 #'   logit model of the conditional mean of P(M|C,D) given baseline covariates
 #'   and the treatment variable. This specification allows the user to specify
 #'   interactions between D and C, and is required only for Type 1 estimation.
 #'    When this input is not NULL, the function will implement the Type 1 estimator by default. E.g.,
-#'   `M_DC_model = "ever_unemp_age3539 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22"`.
+#'   `M_CD_model = "ever_unemp_age3539 ~ female + black + hispan + paredu + parprof + parinc_prank + famsize + afqt3 + att22"`.
 #' @param d The numeric value of the treatment variable that the user defines as
 #'   the treatment status. If not equal to 1, the function will recode it as 1.
 #' @param dstar The numeric value of the treatment variable that the user defines
@@ -617,7 +618,7 @@ mrmed_inner <- function(
 #'   the nonparametric bootstrap and return two-sided confidence intervals and
 #'   p-values.
 #' @param boot_reps An integer scalar specifying the number of bootstrap replications
-#'   to perform.
+#'   to perform. In practice, we recommend a minimum of 1000 replications.
 #' @param boot_conf_level A numeric scalar specifying the confidence level for the
 #'   bootstrap interval.
 #' @param boot_seed An integer scalar specifying the random-number seed used in
@@ -645,16 +646,16 @@ mrmed_inner <- function(
 #' otherwise, it will return a tibble named `est1` for Type 1 or `est2` for Type 2.}
 #'
 #' \item{models_D}{A list of model objects from the fitted exposure models. For Type 1
-#' estimation, this corresponds to the π(D|C) model (`D_C_model`); for Type 2,
-#' this includes both the π(D|C,M) model (`D_MC_model`) and π(D|C) model (`D_C_model`).}
+#' estimation, this corresponds to the \eqn{\pi(D|C)} model (`D_C_model`); for Type 2,
+#' this includes both the \eqn{\pi(D|C,M)} model (`D_CM_model`) and \eqn{\pi(D|C)} model (`D_C_model`).}
 #'
 #' \item{models_M}{A model object from the fitted mediator model. This will only be returned
-#' if the user specifies a model for the nuisance function `M_DC_model` for Type 1 estimation.}
+#' if the user specifies a model for the nuisance function `M_CD_model` for Type 1 estimation.}
 #'
 #' \item{models_Y}{A list of model objects from the fitted outcome models.
-#'  For the Type 1 estimator, this includes μ(Y|C,M,D), corresponding to
-#'  `Y_DMC_model`. For the Type 2 estimator, it additionally includes
-#'  the ν_D(C) model under D = d and D = d*.}
+#'  For the Type 1 estimator, this includes \eqn{\mu(Y|C,M,D)}, corresponding to
+#'  `Y_CDM_model`. For the Type 2 estimator, it additionally includes
+#'  the \eqn{\nu_D(C)} model under D = d and D = d*.}
 #'
 #' If you request the bootstrap (by setting the `boot` argument to TRUE), the
 #' function returns all of the elements listed above, as well as the
@@ -731,9 +732,9 @@ mrmed_inner <- function(
 #' # ------------------------------------------------ #
 #' # Models: D|C ; D|M,C ; Y|D,C ; Y|D,M,C
 #' D_C_model   <- as.formula(paste(D, "~", rhs(C)))
-#' D_MC_model  <- as.formula(paste(D, "~", rhs(c(M, C))))
-#' Y_DC_model  <- as.formula(paste(Y, "~", rhs(c(D, C))))
-#' Y_DMC_model <- as.formula(paste(Y, "~", rhs(c(D, M, C))))
+#' D_CM_model  <- as.formula(paste(D, "~", rhs(c(M, C))))
+#' Y_CD_model  <- as.formula(paste(Y, "~", rhs(c(D, C))))
+#' Y_CDM_model <- as.formula(paste(Y, "~", rhs(c(D, M, C))))
 #'
 #' mrmed(
 #'   D = D,
@@ -741,12 +742,12 @@ mrmed_inner <- function(
 #'   M = M,
 #'   C = C,
 #'   D_C_model   = D_C_model,
-#'   D_MC_model  = D_MC_model,
-#'   Y_DC_model  = Y_DC_model,
-#'   Y_DMC_model = Y_DMC_model,
-#'   M_DC_model  = NULL,      # NULL -> Type 2 estimator
+#'   D_CM_model  = D_CM_model,
+#'   Y_CD_model  = Y_CD_model,
+#'   Y_CDM_model = Y_CDM_model,
+#'   M_CD_model  = NULL,      # NULL -> Type 2 estimator
 #'   data = nlsy1,
-#'   d = 1, 
+#'   d = 1,
 #'   dstar = 0
 #' )
 #'
@@ -767,19 +768,19 @@ mrmed_inner <- function(
 #' )
 #'
 #' # D | M, C with M:C interactions
-#' D_MC_model_int <- as.formula(
+#' D_CM_model_int <- as.formula(
 #'   paste(D, "~",
 #'         paste(c(M, C), collapse = " + "), "+", MC_int_terms)
 #' )
 #'
 #' # Y | D, C with D:C interactions
-#' Y_DC_model_int <- as.formula(
+#' Y_CD_model_int <- as.formula(
 #'   paste(Y, "~",
 #'         paste(c(D, C), collapse = " + "), "+", DC_int_terms)
 #' )
 #'
 #' # Y | D, M, C with both D:C and M:C interactions
-#' Y_DMC_model_int <- as.formula(
+#' Y_CDM_model_int <- as.formula(
 #'   paste(Y, "~",
 #'         paste(c(D, M, C), collapse = " + "), "+",
 #'         DC_int_terms, "+", MC_int_terms)
@@ -791,12 +792,12 @@ mrmed_inner <- function(
 #'   M = M,
 #'   C = C,
 #'   D_C_model   = D_C_model_int,
-#'   D_MC_model  = D_MC_model_int,
-#'   Y_DC_model  = Y_DC_model_int,
-#'   Y_DMC_model = Y_DMC_model_int,
-#'   M_DC_model  = NULL,      # NULL -> Type 2 estimator
+#'   D_CM_model  = D_CM_model_int,
+#'   Y_CD_model  = Y_CD_model_int,
+#'   Y_CDM_model = Y_CDM_model_int,
+#'   M_CD_model  = NULL,      # NULL -> Type 2 estimator
 #'   data = nlsy1,
-#'   d = 1, 
+#'   d = 1,
 #'   dstar = 0
 #' )
 #'
@@ -806,8 +807,8 @@ mrmed_inner <- function(
 #' # ----------------------------------------------- #
 #' # Models (additive)
 #' D_C_model   <- as.formula(paste(D, "~", rhs(C)))               # P(D|C)
-#' M_DC_model  <- as.formula(paste(M, "~", rhs(c(D, C))))         # P(M|D,C)
-#' Y_DMC_model <- as.formula(paste(Y, "~", rhs(c(D, M, C))))      # E(Y|C,D,M)
+#' M_CD_model  <- as.formula(paste(M, "~", rhs(c(D, C))))         # P(M|D,C)
+#' Y_CDM_model <- as.formula(paste(Y, "~", rhs(c(D, M, C))))      # E(Y|C,D,M)
 #'
 #' mrmed(
 #'   D = D,
@@ -815,10 +816,10 @@ mrmed_inner <- function(
 #'   M = M,
 #'   C = C,
 #'   D_C_model   = D_C_model,
-#'   D_MC_model  = NULL,        # not used in Type 1
-#'   Y_DC_model  = NULL,        # not used in Type 1
-#'   Y_DMC_model = Y_DMC_model,
-#'   M_DC_model  = M_DC_model,  # required for Type 1
+#'   D_CM_model  = NULL,        # not used in Type 1
+#'   Y_CD_model  = NULL,        # not used in Type 1
+#'   Y_CDM_model = Y_CDM_model,
+#'   M_CD_model  = M_CD_model,  # required for Type 1
 #'   data = nlsy1,
 #'   d = 1, dstar = 0,
 #'   boot = TRUE,
@@ -849,15 +850,15 @@ mrmed_inner <- function(
 #'
 #' # Variable names
 #' D <- "att22"
-#' M <- c("ever_unemp_age3539", "log_faminc_adj_age3539")
+#' M <- list("ever_unemp_age3539", "log_faminc_adj_age3539")
 #' Y <- "std_cesd_age40"
 #' C <- covariates
 #'
 #' # Models (additive)
 #' D_C_model   <- as.formula(paste(D, "~", rhs(C)))               # P(D|C)
-#' D_MC_model  <- as.formula(paste(D, "~", rhs(c(M, C))))         # P(D|C,M1,M2)
-#' Y_DC_model  <- as.formula(paste(Y, "~", rhs(c(D, C))))         # E(E(Y|C,M,D=d)|C,D)
-#' Y_DMC_model <- as.formula(paste(Y, "~", rhs(c(D, M, C))))      # E(Y|C,D,M1,M2)
+#' D_CM_model  <- as.formula(paste(D, "~", rhs(c(M, C))))         # P(D|C,M1,M2)
+#' Y_CD_model  <- as.formula(paste(Y, "~", rhs(c(D, C))))         # E(E(Y|C,M,D=d)|C,D)
+#' Y_CDM_model <- as.formula(paste(Y, "~", rhs(c(D, M, C))))      # E(Y|C,D,M1,M2)
 #'
 #' # Estimate multiply robust natural effects
 #' mrmed(
@@ -866,12 +867,12 @@ mrmed_inner <- function(
 #'   M = M,
 #'   C = C,
 #'   D_C_model   = D_C_model,
-#'   D_MC_model  = D_MC_model,
-#'   Y_DC_model  = Y_DC_model,
-#'   Y_DMC_model = Y_DMC_model,
-#'   M_DC_model  = NULL,        # NULL -> Type 2 estimator
+#'   D_CM_model  = D_CM_model,
+#'   Y_CD_model  = Y_CD_model,
+#'   Y_CDM_model = Y_CDM_model,
+#'   M_CD_model  = NULL,        # NULL -> Type 2 estimator
 #'   data = nlsy2,
-#'   d = 1, 
+#'   d = 1,
 #'   dstar = 0,
 #'   boot = TRUE,
 #'   boot_reps = 200,
@@ -887,18 +888,18 @@ mrmed <- function(
     M,
     C,
     D_C_model, # D ~ C
-    D_MC_model = NULL, # D ~ M,C
-    Y_DC_model = NULL, # Y ~ D,C
-    Y_DMC_model, # Y ~ D,M,C
-    M_DC_model = NULL, # M ~ D,C
+    D_CM_model = NULL, # D ~ M,C
+    Y_CD_model = NULL, # Y ~ D,C
+    Y_CDM_model, # Y ~ D,M,C
+    M_CD_model = NULL, # M ~ D,C
     data,
     d = 1,
     dstar = 0,
     censor = TRUE,
     censor_low = 0.01,
     censor_high = 0.99,
-    boot = TRUE,
-    boot_reps = 2,
+    boot = FALSE,
+    boot_reps = 200,
     boot_conf_level = 0.95,
     boot_seed = NULL,
     boot_parallel = FALSE,
@@ -906,6 +907,7 @@ mrmed <- function(
 ) {
   # load data
   data_outer <- data
+  M <- unlist(M)
 
   # create adjusted boot_parallel logical
   boot_parallel_rev <- ifelse(boot_cores>1, boot_parallel, FALSE)
@@ -934,10 +936,10 @@ mrmed <- function(
       M,
       C,
       D_C_model,
-      D_MC_model,
-      Y_DC_model,
-      Y_DMC_model,
-      M_DC_model,
+      D_CM_model,
+      Y_CD_model,
+      Y_CDM_model,
+      M_CD_model,
       data = data_outer,
       d,
       dstar,
@@ -952,7 +954,7 @@ mrmed <- function(
     # bootstrap function
     boot_fnc <- function() {
       # sample from the data with replacement
-      boot_data <- data_outer %>% sample_frac(replace = TRUE)
+      boot_data <- data_outer %>% dplyr::sample_frac(replace = TRUE)
 
       # compute point estimates in the replicate sample
       mrmed_inner(
@@ -961,10 +963,10 @@ mrmed <- function(
         M,
         C,
         D_C_model,
-        D_MC_model,
-        Y_DC_model,
-        Y_DMC_model,
-        M_DC_model,
+        D_CM_model,
+        Y_CD_model,
+        Y_CDM_model,
+        M_CD_model,
         data = boot_data,
         d,
         dstar,
@@ -1007,17 +1009,17 @@ mrmed <- function(
         out_filtered <- out[!sapply(out, is.null)]
         purrr::imap_dfr(out_filtered, ~
                           .x %>%
-                          mutate(method_type = .y, boot_id = i)
+                          dplyr::mutate(method_type = .y, boot_id = i)
         )
       }
     } else {
-      boot_res <- bind_rows(
+      boot_res <- dplyr::bind_rows(
         lapply(seq_len(boot_reps), function(i) {
           out <- boot_fnc()
           out_filtered <- out[!sapply(out, is.null)]
           purrr::imap_dfr(out_filtered, ~
                             .x %>%
-                            mutate(method_type = .y, boot_id = i)
+                            dplyr::mutate(method_type = .y, boot_id = i)
           )
         })
       )
@@ -1027,7 +1029,6 @@ mrmed <- function(
       parallel::stopCluster(x_cluster)
       rm(x_cluster)
     }
-   }
 
   # compute bootstrap confidence intervals
   # from percentiles of the bootstrap distributions
@@ -1069,6 +1070,7 @@ mrmed <- function(
         )
       }
     )
+  }
 
     # final output
     out <- est

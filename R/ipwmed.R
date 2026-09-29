@@ -19,8 +19,8 @@ ipwmed_inner <- function(
   D,
   M,
   Y,
-  formula1_string,
-  formula2_string,
+  D_C_model,
+  D_CM_model,
   base_weights_name = NULL,
   stabilize = TRUE,
   censor = TRUE,
@@ -28,6 +28,17 @@ ipwmed_inner <- function(
   censor_high = 0.99,
   minimal = FALSE
 ) {
+  M <- unlist(M)
+  if (!inherits(D_C_model, "formula"))
+    stop("D_C_model must be a formula object, e.g. as.formula('D ~ C').")
+  if (!inherits(D_CM_model, "formula"))
+    stop("D_CM_model must be a formula object, e.g. as.formula('D ~ C + M').")
+  # ensure formula environments point to this function's scope so that
+  # glm() can find locally-defined objects (e.g. base_weights_rsc) when
+  # evaluating the weights argument
+  environment(D_C_model)  <- environment()
+  environment(D_CM_model) <- environment()
+
   # preliminaries
   d <- 1
   dstar <- 0
@@ -51,13 +62,13 @@ ipwmed_inner <- function(
 
   # fit exposure models
   d_model1 <- glm(
-    as.formula(formula1_string),
+    D_C_model,
     data = df,
     family = quasibinomial(link = "logit"),
     weights = base_weights_rsc
   )
   d_model2 <- glm(
-    as.formula(formula2_string),
+    D_CM_model,
     data = df,
     family = quasibinomial(link = "logit"),
     weights = base_weights_rsc
@@ -169,23 +180,22 @@ ipwmed_inner <- function(
 #' @param D A character scalar identifying the name of the exposure variable in
 #'   `data`. `D` is a character string, but the exposure variable it identifies
 #'   must be numeric.
-#' @param M A character vector (of one or more elements) identifying the names
-#'   of the mediator variables in `data`. If you are estimating univariate
+#' @param M A character vector or list (of one or more elements) identifying the
+#'   names of the mediator variables in `data`. If you are estimating univariate
 #'   natural effects (with a single mediator), `M` should be a character scalar
 #'   (a vector with only one element)---e.g., `M = "ever_unemp_age3539"`. If you
 #'   are estimating multivariate natural effects (with multiple mediators), `M`
-#'   should be a character vector identifying all of the mediators---e.g.,
-#'   `M = c("ever_unemp_age3539", "log_faminc_adj_age3539")`.
+#'   should be a list identifying all of the mediators---e.g.,
+#'   `M = list("ever_unemp_age3539", "log_faminc_adj_age3539")`.
 #' @param Y A character scalar identifying the name of the outcome variable in
 #'   `data`. `Y` is a character string, but the outcome variable it identifies
 #'   must be numeric.
-#' @param formula1_string A character scalar for the formula to be fitted for a
-#'   GLM of the exposure given baseline covariates (denoted in the book as
-#'   f(D|C)). E.g., `formula1_string = "att22~female+black+paredu"`.
-#' @param formula2_string A character scalar for the formula to be fitted for a
-#'   GLM of the exposure given baseline covariates and the mediator (denoted in
-#'   the book as s(D|C,M)). E.g.,
-#'   `formula2_string = "att22~female+black+paredu+ever_unemp_age3539"`.
+#' @param D_C_model A formula for the GLM of the exposure given baseline
+#'   covariates (denoted in the book as f(D|C)).
+#'   E.g., `D_C_model = att22~female+black+paredu`.
+#' @param D_CM_model A formula for the GLM of the exposure given baseline
+#'   covariates and the mediator(s) (denoted in the book as s(D|C,M)).
+#'   E.g., `D_CM_model = att22~female+black+paredu+ever_unemp_age3539`.
 #' @param base_weights_name A character scalar identifying the name of the base
 #'   weights variable in `data`, if applicable (e.g., if you have---and want to
 #'   use---sampling weights).
@@ -205,7 +215,7 @@ ipwmed_inner <- function(
 #'   nonparametric bootstrap and return two-sided confidence intervals and
 #'   p-values.
 #' @param boot_reps An integer scalar for the number of bootstrap replications
-#'   to perform.
+#'   to perform. In practice, we recommend a minimum of 1000 replications.
 #' @param boot_conf_level A numeric scalar for the confidence level of the
 #'   bootstrap interval.
 #' @param boot_seed An integer scalar specifying the random-number seed used in
@@ -242,10 +252,10 @@ ipwmed_inner <- function(
 #'   for w_3, as defined in the book.}
 #' \item{model_d1}{The model object from the first fitted exposure model
 #'   (of the exposure given baseline covariates, denoted in the book as f(D|C)),
-#'   corresponding to `formula1_string`.}
+#'   corresponding to `D_C_model`.}
 #' \item{model_d2}{The model object from the second fitted exposure model
 #'   (of the exposure given baseline covariates and the mediator(s), denoted in
-#'   the book as s(D|C,M)), corresponding to `formula2_string`.}
+#'   the book as s(D|C,M)), corresponding to `D_CM_model`.}
 #'
 #' If you request the bootstrap (by setting the `boot` argument to TRUE), then
 #' the function returns all of the elements listed above, as well as the
@@ -297,15 +307,16 @@ ipwmed_inner <- function(
 #'   (nlsy1$cesd_age40 - mean(nlsy1$cesd_age40)) /
 #'   sd(nlsy1$cesd_age40)
 #' ## Estimate natural effects
+#' # specify formulas for exposure models
+#' dform_reduced  <- att22~female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3
+#' dform_expanded <- update(dform_reduced, . ~ . + ever_unemp_age3539)
 #' out1 <- ipwmed(
 #'   data = nlsy1,
 #'   D = "att22",
 #'   M = "ever_unemp_age3539",
 #'   Y = "std_cesd_age40",
-#'   formula1_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+
-#'   famsize+afqt3",
-#'   formula2_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+
-#'   famsize+afqt3+ever_unemp_age3539"
+#'   D_C_model  = dform_reduced,
+#'   D_CM_model = dform_expanded
 #' )
 #' head(out1,3)
 #'
@@ -315,10 +326,8 @@ ipwmed_inner <- function(
 #'   D = "att22",
 #'   M = "ever_unemp_age3539",
 #'   Y = "std_cesd_age40",
-#'   formula1_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+
-#'   famsize+afqt3",
-#'   formula2_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+
-#'   famsize+afqt3+ever_unemp_age3539",
+#'   D_C_model  = dform_reduced,
+#'   D_CM_model = dform_expanded,
 #'   base_weights_name = "weight"
 #' )
 #' head(out2,3)
@@ -335,29 +344,31 @@ ipwmed_inner <- function(
 #'   (nlsy2$cesd_age40 - mean(nlsy2$cesd_age40)) /
 #'   sd(nlsy2$cesd_age40)
 #' ## Estimate natural effects
+#' # specify expanded formula including both mediators
+#' dform_expanded_multM <- update(dform_reduced,
+#'   . ~ . + ever_unemp_age3539 + log_faminc_adj_age3539)
 #' out3 <- ipwmed(
 #'   data = nlsy2,
 #'   D = "att22",
-#'   M = c("ever_unemp_age3539", "log_faminc_adj_age3539"),
+#'   M = list("ever_unemp_age3539", "log_faminc_adj_age3539"),
 #'   Y = "std_cesd_age40",
-#'   formula1_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+
-#'   famsize+afqt3",
-#'   formula2_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+
-#'   famsize+afqt3+ever_unemp_age3539+log_faminc_adj_age3539"
+#'   D_C_model  = dform_reduced,
+#'   D_CM_model = dform_expanded_multM
 #' )
 #' head(out3,3)
 #'
 #' # Example 4: Perform a nonparametric bootstrap, with 2,000 replications
 #' \dontrun{
+#'   # specify formulas for exposure models
+#'   dform_reduced  <- att22~female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3
+#'   dform_expanded <- update(dform_reduced, . ~ . + ever_unemp_age3539)
 #'   out4 <- ipwmed(
 #'     data = nlsy1,
 #'     D = "att22",
 #'     M = "ever_unemp_age3539",
 #'     Y = "std_cesd_age40",
-#'     formula1_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+
-#'     famsize+afqt3",
-#'     formula2_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+
-#'     famsize+afqt3+ever_unemp_age3539",
+#'     D_C_model  = dform_reduced,
+#'     D_CM_model = dform_expanded,
 #'     boot = TRUE,
 #'     boot_reps = 2000,
 #'     boot_seed = 1234
@@ -377,15 +388,16 @@ ipwmed_inner <- function(
 #'
 #' # Example 5: Parallelize the bootstrap, to attempt to reduce runtime
 #' \dontrun{
+#'   # specify formulas for exposure models
+#'   dform_reduced  <- att22~female+black+hispan+paredu+parprof+parinc_prank+famsize+afqt3
+#'   dform_expanded <- update(dform_reduced, . ~ . + ever_unemp_age3539)
 #'   out5 <- ipwmed(
 #'     data = nlsy1,
 #'     D = "att22",
 #'     M = "ever_unemp_age3539",
 #'     Y = "std_cesd_age40",
-#'     formula1_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+
-#'     famsize+afqt3",
-#'     formula2_string = "att22~female+black+hispan+paredu+parprof+parinc_prank+
-#'     famsize+afqt3+ever_unemp_age3539",
+#'     D_C_model  = dform_reduced,
+#'     D_CM_model = dform_expanded,
 #'     boot = TRUE,
 #'     boot_reps = 2000,
 #'     boot_seed = 1234,
@@ -409,15 +421,15 @@ ipwmed <- function(
   D,
   M,
   Y,
-  formula1_string,
-  formula2_string,
+  D_C_model,
+  D_CM_model,
   base_weights_name = NULL,
   stabilize = TRUE,
   censor = TRUE,
   censor_low = 0.01,
   censor_high = 0.99,
   boot = FALSE,
-  boot_reps = 1000,
+  boot_reps = 200,
   boot_conf_level = 0.95,
   boot_seed = NULL,
   boot_parallel = FALSE,
@@ -425,6 +437,7 @@ ipwmed <- function(
 ) {
   # load data
   data_outer <- data
+  M <- unlist(M)
 
   # create adjusted boot_parallel logical
   boot_parallel_rev <- ifelse(boot_cores>1, boot_parallel, FALSE)
@@ -461,17 +474,18 @@ ipwmed <- function(
   if (any(! data_outer[[D]] %in% c(0,1))) {
     stop(paste(strwrap("Error: The exposure variable (identified by the string argument D in data) must be a numeric variable consisting only of the values 0 or 1. There is at least one observation in the data that does not meet this criterion."), collapse = "\n"))
   }
+  if (!inherits(D_C_model, "formula"))
+    stop("D_C_model must be a formula object, e.g. as.formula('D ~ C').")
+  if (!inherits(D_CM_model, "formula"))
+    stop("D_CM_model must be a formula object, e.g. as.formula('D ~ C + M').")
   for (M_k in M) {
-    if (grepl(pattern = M_k, x = formula1_string, fixed = TRUE)) {
-      warning(paste(strwrap("Warning: Check whether (each) mediator variable is among the predictors in the formula1_string. The mediator(s) should not be among the predictors in the formula1_string."), collapse = "\n"))
+    if (M_k %in% attr(terms(D_C_model), "term.labels")) {
+      warning(paste(strwrap("Warning: Check whether (each) mediator variable is among the predictors in D_C_model. The mediator(s) should not be among the predictors in D_C_model."), collapse = "\n"))
     }
-    if (!grepl(pattern = M_k, x = formula2_string, fixed = TRUE)) {
-      warning(paste(strwrap("Warning: Check whether (each) mediator variable is among the predictors in the formula2_string. The mediator(s) should be among the predictors in the formula2_string."), collapse = "\n"))
+    if (!M_k %in% attr(terms(D_CM_model), "term.labels")) {
+      warning(paste(strwrap("Warning: Check whether (each) mediator variable is among the predictors in D_CM_model. The mediator(s) should be among the predictors in D_CM_model."), collapse = "\n"))
     }
   }
-  # ^ Note that the grepl-based warning checks are fairly simple, based solely
-  # on whether the string is detected. For now, we are not using more complex
-  # checks searching for full words in the model formula.
 
   # compute point estimates
   est <- ipwmed_inner(
@@ -479,8 +493,8 @@ ipwmed <- function(
     D = D,
     M = M,
     Y = Y,
-    formula1_string = formula1_string,
-    formula2_string = formula2_string,
+    D_C_model = D_C_model,
+    D_CM_model = D_CM_model,
     base_weights_name = base_weights_name,
     stabilize = stabilize,
     censor = censor,
@@ -502,8 +516,8 @@ ipwmed <- function(
         D = D,
         M = M,
         Y = Y,
-        formula1_string = formula1_string,
-        formula2_string = formula2_string,
+        D_C_model = D_C_model,
+        D_CM_model = D_CM_model,
         base_weights_name = base_weights_name,
         stabilize = stabilize,
         censor = censor,

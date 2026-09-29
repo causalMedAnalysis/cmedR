@@ -10,17 +10,17 @@ dmlpath(
   M,
   C,
   data,
-  d,
-  dstar,
+  d = 1,
+  dstar = 0,
   censor = TRUE,
   censor_low = 0.01,
   censor_high = 0.99,
   interaction_DM = FALSE,
   interaction_DC = FALSE,
   interaction_MC = FALSE,
-  num_folds = 5,
+  K = 5,
   V = 5L,
-  seed,
+  seed = NULL,
   SL.library = c("SL.mean", "SL.glmnet"),
   stratifyCV = TRUE
 )
@@ -78,7 +78,7 @@ exposure with each covariate in \code{C}.}
 should include interactions of each mediator in \code{M} with each covariate in
 \code{C}.}
 
-\item{num_folds}{Integer. The number of folds (partitions) used for repeated cross-fitting.
+\item{K}{Integer. The number of folds (partitions) used for repeated cross-fitting.
 The data is randomly divided into \code{K} approximately equal-sized subsets.
 Models are trained on \code{K - 1} folds and evaluated on the held-out fold.
 The procedure is repeated across all partitions. Typical values range from 4 to 10.
@@ -90,7 +90,7 @@ integer (e.g., \code{5L}) to ensure proper handling by certain functions.
 The default number is \code{5L}.}
 
 \item{seed}{Seed value for reproducibility. Controls the randomization in cross-validation
-and other stochastic components of the estimation procedure.}
+and other stochastic components of the estimation procedure. Defaults to NULL.}
 
 \item{SL.library}{Character vector. Specifies the set of candidate algorithms to be
 used in the Super Learner ensemble. Each element should be the name of a valid learner
@@ -107,7 +107,7 @@ By default, \code{dmlpath()} returns a tibble with the following columns:
 
 \item{Estimand}{A character vector describing each estimand, including the total effect (ATE)
 and the path-specific effects (PSEs) for each mediator path. Notation follows the format used
-in Wodtke and Zhou, e.g., \eqn{ATE(1,0)} or \eqn{PSE: D → M1 → Y(1,0)}.}
+in Wodtke and Zhou, e.g., \eqn{ATE(1,0)} or \eqn{PSE: D \rightarrow M1 \rightarrow Y(1,0)}.}
 
 \item{Mean}{A numeric vector of point estimates for each estimand.}
 
@@ -119,9 +119,9 @@ as \verb{Mean ± 1.96 × SE}.}
 }
 \description{
 \code{dmlpath()} uses a debiased machine learning approach to estimate path-specific
-effects.If there are K causally ordered mediators, dmlpath provides estimates
+effects. If there are n causally ordered mediators, dmlpath provides estimates
 for: a direct effect of the exposure on the outcome that does not operate through
-any of the mediators, and then K path-specific effects, with each of these
+any of the mediators, and then n path-specific effects, with each of these
 effects operating through one mediator, net of the mediators preceding it in
 causal order. If only one mediator is specified, \code{dmlpath()} computes
 conventional natural direct and indirect effects.
@@ -136,7 +136,7 @@ The Type 2 estimator (Equation 6.20 in Wodtke and Zhou) requires modeling
 P(D|C), P(D|C,M), E(Y|C,M,D), and E(E(Y|C,M,D=d)|C,D). The \code{dmlpath()} function uses
 the SuperLearner algorithm, allowing users to specify multiple machine learning algorithms
 and to estimate the above models non-parametrically.
-#' To compute path-specific effects with K causally ordered mediators, \code{dmlpath()}
+#' To compute path-specific effects with n causally ordered mediators, \code{dmlpath()}
 recursively estimates a series of natural direct effects (NDEs).
 Specifically:
 \itemize{
@@ -193,6 +193,9 @@ then you can use the following syntax for the \code{M} argument:
 \code{M = list("ever_unemp_age3539", c("log_faminc_adj_age3539", "m3"), c("level2","level3","level4"))}.
 }
 \examples{
+\donttest{
+if (requireNamespace("glmnet", quietly = TRUE) &&
+    requireNamespace("ranger", quietly = TRUE)) {
 
 # ----------------------------- #
 #     Data and shared setup     #
@@ -232,7 +235,7 @@ dmlpath(
   Y = Y,
   C = covariates,
   d = 1, dstar = 0,
-  num_folds = 5, V = 5L, seed = 1234,
+  K = 5, V = 5L, seed = 1234,
   SL.library = c("SL.mean","SL.glmnet"),
   stratifyCV = TRUE
 )
@@ -241,7 +244,6 @@ dmlpath(
 # Example 2: Two mediators                               #
 # Super Learner: Marginal mean, Lasso and Random forest  #
 # ------------------------------------------------------ #
-\dontrun{
 dmlpath(
   data = nlsy_ex,
   D = D,
@@ -249,18 +251,16 @@ dmlpath(
   Y = Y,
   C = covariates,
   d = 1, dstar = 0,
-  num_folds = 5, V = 5L, seed = 1234,
+  K = 5, V = 5L, seed = 1234,
   SL.library = c("SL.mean","SL.glmnet","SL.ranger"),
   stratifyCV = TRUE
 )
-}
 
 # ------------------------------------------------------ #
 # Example 3: Single mediator                             #
 # Super Learner: Marginal mean, Lasso and Random forest  #
 # ------------------------------------------------------ #
 # With a single mediator, the function returns ATE, NDE, and NIE.
-\dontrun{
 dmlpath(
   data = nlsy_ex,
   D = D,
@@ -268,11 +268,10 @@ dmlpath(
   Y = Y,
   C = covariates,
   d = 1, dstar = 0,
-  num_folds = 5, V = 5L, seed = 1234,
+  K = 5, V = 5L, seed = 1234,
   SL.library = c("SL.mean","SL.glmnet","SL.ranger"),
   stratifyCV = TRUE
 )
-}
 
 # --------------------------------------------------------#
 # Example 4: Three mediators                              #
@@ -284,7 +283,6 @@ nlsy_ex4 <- nlsy[complete.cases(nlsy[, key_variables4]), ]
 nlsy_ex4$std_cesd_age40 <-
   (nlsy_ex4$cesd_age40 - mean(nlsy_ex4$cesd_age40)) / sd(nlsy_ex4$cesd_age40)
 
-\dontrun{
 dmlpath(
   data = nlsy_ex4,
   D = D,
@@ -292,9 +290,10 @@ dmlpath(
   Y = Y,
   C = covariates,
   d = 1, dstar = 0,
-  num_folds = 5, V = 5L, seed = 1234,
+  K = 5, V = 5L, seed = 1234,
   SL.library = c("SL.mean","SL.glmnet","SL.ranger"),
   stratifyCV = TRUE
 )
+} # end requireNamespace check
 }
 }

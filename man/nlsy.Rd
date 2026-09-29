@@ -5,8 +5,7 @@
 \alias{nlsy}
 \title{National Longitudinal Survey of Youth, 1979 cohort}
 \format{
-A data frame with 5583 rows and 38 variables. \describe{
-}
+A data frame with 5583 rows and 38 variables.
 }
 \usage{
 nlsy
