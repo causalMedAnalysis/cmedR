@@ -212,7 +212,12 @@
 #'   minimal = TRUE,
 #'   censor = TRUE, censor_low = 0.01, censor_high = 0.99
 #' )
+#' } # end requireNamespace check
+#' }
 #'
+#' # Examples 2-4 below are not run automatically because they take several
+#' # minutes each (Super Learner with random forests and K-fold cross-fitting).
+#' \dontrun{
 #' # ----------------------------------------------------------------- #
 #' # Example 2: Single mediator — Type 2 estimator                     #
 #' # Super Learner: Marginal mean, Lasso and Random forest             #
@@ -287,7 +292,6 @@
 #'   minimal = TRUE,
 #'   censor = TRUE, censor_low = 0.01, censor_high = 0.99
 #' )
-#' } # end requireNamespace check
 #' }
 #'
 

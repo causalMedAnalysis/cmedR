@@ -161,13 +161,14 @@
 #'   Y_models = glm_ymodels,
 #'   data = df,
 #'   boot = TRUE,
-#'   boot_reps = 250,
+#'   boot_reps = 20, # use 250+ in practice
 #'   boot_conf_level = 0.95,
 #'   boot_seed = 2138,
 #'   out_ipw = FALSE
 #' )
 #' print(fit_ex1)
 #'
+#' \donttest{
 #' # Example 2: Adding imputation-based weighting
 #' glm_ps <- glm(
 #'   att22 ~ female + black + hispan + paredu + parprof +
@@ -190,6 +191,7 @@
 #'   out_ipw = TRUE
 #' )
 #' print(fit_ex2)
+#' }
 #'
 #' # Example 3: Pure imputation with three mediators
 #'
@@ -245,6 +247,7 @@
 #' print(fit_ex3)
 #'}
 #'
+#' \donttest{
 #' # Example 4: Pure imputation with two mediators including treatment–mediator
 #' #            interactions
 #'
@@ -363,6 +366,7 @@
 #' # Note: With a single mediator, the effect labeled as the path-specific
 #' # effect (D -> M -> Y) is the natural indirect effect (NIE), and the
 #' # effect of the direct path (D -> Y) is the natural direct effect (NDE).
+#' }
 #'
 
 pathimp <- function(

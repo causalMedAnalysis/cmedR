@@ -801,6 +801,8 @@ mrmed_inner <- function(
 #'   dstar = 0
 #' )
 #'
+#' \donttest{
+#' # The bootstrap examples below take longer to run.
 #' # ----------------------------------------------- #
 #' # Example 3: Single mediator, Type 1 estimator    #
 #' # (with bootstrap: 200 reps)                      #
@@ -880,6 +882,7 @@ mrmed_inner <- function(
 #'   boot_seed = 02138,
 #'   boot_parallel = FALSE
 #' )
+#' }
 #---------------------- The Outer Function ----------------------#
 
 mrmed <- function(

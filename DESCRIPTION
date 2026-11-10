@@ -1,6 +1,6 @@
 Package: cmedR
 Title: Causal Mediation Analysis
-Version: 0.1.0
+Version: 0.1.1
 Authors@R: c(
     person("Geoffrey T.", "Wodtke", email = "wodtke@uchicago.edu", role = c("cre", "aut")),
 	person("Xiang", "Zhou", email = "xiang_zhou@fas.harvard.edu", role = "aut"),
@@ -8,8 +8,14 @@ Authors@R: c(
     person("Jesse", "Zhou", email = "jessezhou1@uchicago.edu", role = "aut"),
     person("Weiqi", "Wang", email = "weiqiw@uchicago.edu", role = "aut"),
 	person("Xinyi", "Yao", email = "xinyiy@uchicago.edu", role = "aut"))
-Description: Provides functions for conducting causal mediation analysis
-  using the methods described in Wodtke and Zhou "Causal Mediation Analysis."
+Description: Provides functions for causal mediation analysis, including
+  estimators of total, natural direct and indirect, interventional, controlled
+  direct, and path-specific effects. Estimation approaches include regression
+  imputation, inverse probability weighting, regression with residuals, linear
+  models, multiply robust estimation, debiased machine learning, and
+  simulation-based estimation with bootstrap inference. The methods are
+  described in Wodtke and Zhou (2026, ISBN:9781009222228) "Causal Mediation
+  Analysis", Cambridge University Press.
 Language: en-US
 License: MIT + file LICENSE
 Encoding: UTF-8
@@ -40,6 +46,7 @@ Suggests:
     glmnet,
     ranger,
     testthat (>= 3.0.0)
+Config/testthat/edition: 3
 LazyData: true
 Config/roxygen2/version: 8.0.0
 RoxygenNote: 7.3.2

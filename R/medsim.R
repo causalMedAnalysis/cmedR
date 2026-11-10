@@ -745,6 +745,7 @@ medsim_core <- function(data, num_sim = 1000, cat_list = c("0", "1"), treatment,
 #' )
 #' print(out_nat)
 #'
+#' \donttest{
 #' # ------------------------------------------------ #
 #' # Example 2: Interventional effects (IDE and IIE)  #
 #' # ------------------------------------------------ #
@@ -805,6 +806,7 @@ medsim_core <- function(data, num_sim = 1000, cat_list = c("0", "1"), treatment,
 #'   seed = 60637
 #' )
 #' print(out_mnat)
+#' }
 medsim <- function(data,
                    num_sim = 1000,
                    cat_list = c("0", "1"),

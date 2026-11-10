@@ -316,6 +316,8 @@ mrmed(
   dstar = 0
 )
 
+\donttest{
+# The bootstrap examples below take longer to run.
 # ----------------------------------------------- #
 # Example 3: Single mediator, Type 1 estimator    #
 # (with bootstrap: 200 reps)                      #
@@ -395,4 +397,5 @@ mrmed(
   boot_seed = 02138,
   boot_parallel = FALSE
 )
+}
 }

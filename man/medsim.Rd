@@ -261,6 +261,7 @@ out_nat <- medsim(
 )
 print(out_nat)
 
+\donttest{
 # ------------------------------------------------ #
 # Example 2: Interventional effects (IDE and IIE)  #
 # ------------------------------------------------ #
@@ -321,4 +322,5 @@ out_mnat <- medsim(
   seed = 60637
 )
 print(out_mnat)
+}
 }
